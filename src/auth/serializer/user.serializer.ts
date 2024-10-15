@@ -41,9 +41,9 @@ export class UserSerializer extends ModelSerializer {
   })
   isTwoFAEnabled: boolean;
 
-  @ApiProperty()
-  @Transform(({ value }) => (value !== 'null' ? value : ''))
-  contact: string;
+  // @ApiProperty()
+  // @Transform(({ value }) => (value !== 'null' ? value : ''))
+  // contact: string;
 
   @ApiProperty()
   @Transform(({ value }) => (value !== 'null' ? value : ''))
