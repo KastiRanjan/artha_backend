@@ -59,7 +59,7 @@ export default class CreatePermissionSeed {
     for (const data of permission.route) {
       data.resource = data.resource || resource;
       data.description = data.description || description;
-      data.isDefault = isDefault;
+      data.isDefault = true;
     }
     this.permissions = this.permissions.concat(permission.route);
   }

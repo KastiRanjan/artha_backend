@@ -6,6 +6,7 @@ import {
   Entity,
   Index,
   JoinColumn,
+  OneToMany,
   OneToOne
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -14,6 +15,7 @@ import { Exclude } from 'class-transformer';
 import { UserStatusEnum } from 'src/auth/user-status.enum';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { RoleEntity } from 'src/role/entities/role.entity';
+import { WorkLog } from 'src/worklogs/entities/worklog.entity';
 
 /**
  * User Entity
@@ -44,24 +46,25 @@ export class UserEntity extends CustomBaseEntity {
   @Column()
   name: string;
 
-  @Column()
-  address: string;
-
-  @Column()
+  @Column({
+    nullable: true})
   contact: string;
 
-  @Column()
+  @Column({nullable: true})
   avatar: string;
 
   @Column()
   status: UserStatusEnum;
 
-  @Column()
+  @Column({nullable: true})
   @Exclude({
     toPlainOnly: true
   })
   token: string;
 
+  @OneToMany(() => WorkLog, worklog=> worklog.user)
+  worklog: WorkLog;
+  
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP'

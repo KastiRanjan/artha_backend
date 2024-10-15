@@ -31,9 +31,9 @@ export class UserSerializer extends ModelSerializer {
   @ApiProperty()
   name: string;
 
-  @ApiProperty()
-  @Transform(({ value }) => (value !== 'null' ? value : ''))
-  address: string;
+  // @ApiProperty()
+  // @Transform(({ value }) => (value !== 'null' ? value : ''))
+  // address: string;
 
   @ApiProperty()
   @Expose({
