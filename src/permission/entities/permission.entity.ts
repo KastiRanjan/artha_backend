@@ -26,7 +26,7 @@ export class PermissionEntity extends CustomBaseEntity {
   })
   method: string;
 
-  @Column()
+  @Column({default: false})
   isDefault: boolean;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

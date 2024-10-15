@@ -31,9 +31,6 @@ export class UserSerializer extends ModelSerializer {
   @ApiProperty()
   name: string;
 
-  // @ApiProperty()
-  // @Transform(({ value }) => (value !== 'null' ? value : ''))
-  // address: string;
 
   @ApiProperty()
   @Expose({
@@ -41,9 +38,6 @@ export class UserSerializer extends ModelSerializer {
   })
   isTwoFAEnabled: boolean;
 
-  // @ApiProperty()
-  // @Transform(({ value }) => (value !== 'null' ? value : ''))
-  // contact: string;
 
   @ApiProperty()
   @Transform(({ value }) => (value !== 'null' ? value : ''))

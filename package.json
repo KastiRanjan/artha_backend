@@ -56,6 +56,7 @@
     "config": "^3.3.7",
     "cookie-parser": "^1.4.6",
     "coveralls": "^3.1.1",
+    "dotenv": "^16.4.5",
     "helmet": "^5.1.1",
     "ioredis": "^4.28.5",
     "mysql": "^2.18.1",

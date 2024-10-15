@@ -70,6 +70,7 @@ export class AuthController {
       browser: ua.browser.name,
       os: ua.os.name
     };
+    console.log('sadhkjahd');
     const cookiePayload = await this.authService.login(
       userLoginDto,
       refreshTokenPayload

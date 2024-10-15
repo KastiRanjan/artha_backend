@@ -12,6 +12,10 @@ import * as cookieParser from 'cookie-parser';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 import { AppModule } from 'src/app.module';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
 
 async function bootstrap() {
   const serverConfig = config.get('server');
@@ -23,7 +27,6 @@ async function bootstrap() {
   if (process.env.NODE_ENV === 'development') {
     app.enableCors({
       origin: true,
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true
     });
     const swaggerConfig = new DocumentBuilder()
