@@ -6,6 +6,8 @@ import {
   Entity,
   Index,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
   OneToMany,
   OneToOne
 } from 'typeorm';
@@ -15,7 +17,11 @@ import { Exclude } from 'class-transformer';
 import { UserStatusEnum } from 'src/auth/user-status.enum';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { RoleEntity } from 'src/role/entities/role.entity';
-import { WorkLog } from 'src/worklogs/entities/worklog.entity';
+import { UserProfileEntity } from 'src/users/entities/user.profile.entity';
+import { UserBankDetailEntity } from 'src/users/entities/user.bankdetail.entity';
+import { UserDocumentEntity } from 'src/users/entities/user.document.entity';
+import { Task } from 'src/tasks/entities/task.entity';
+import { Project } from 'src/projects/entities/project.entity';
 
 /**
  * User Entity
@@ -46,25 +52,18 @@ export class UserEntity extends CustomBaseEntity {
   @Column()
   name: string;
 
-  @Column({
-    nullable: true})
-  contact: string;
-
-  @Column({nullable: true})
+  @Column({ nullable: true })
   avatar: string;
 
   @Column()
   status: UserStatusEnum;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   @Exclude({
     toPlainOnly: true
   })
   token: string;
 
-  @OneToMany(() => WorkLog, worklog=> worklog.user)
-  worklog: WorkLog;
-  
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP'
@@ -110,6 +109,46 @@ export class UserEntity extends CustomBaseEntity {
 
   @Column()
   roleId: number;
+
+  @OneToOne(() => UserProfileEntity, (profile) => profile.user)
+  profile: UserProfileEntity;
+
+  @OneToOne(() => UserDocumentEntity, (document) => document.user)
+  document: UserDocumentEntity;
+
+  @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
+  bank_detail: UserBankDetailEntity;
+
+  @ManyToMany(() => Task, (task) => task.assignees)
+  @JoinTable({
+    name: 'user_tasks', // Custom join table name
+    joinColumn: {
+      name: 'taskId',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'userId',
+      referencedColumnName: 'id'
+    }
+  })
+  assignedTasks: Task[];
+
+  @ManyToMany(() => Project, (project) => project.users)
+  @JoinTable({
+    name: 'user_project',
+    joinColumn: {
+      name: 'projectId',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'userId',
+      referencedColumnName: 'id'
+    }
+  })
+  projects: Project[];
+
+  @OneToMany(() => Task, (task) => task.reporter)
+  reporterTasks: Task[];
 
   @BeforeInsert()
   async hashPasswordBeforeInsert() {

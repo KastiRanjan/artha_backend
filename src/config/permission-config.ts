@@ -332,6 +332,110 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         }
       ]
+    },
+    {
+      name: 'Project Management',
+      resource: 'emailTemplates',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all Projects',
+          route: [
+            {
+              path: '/projects',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Store new project',
+          route: [
+            {
+              path: '/projects',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.PUT
+            }
+          ]
+        },
+        {
+          name: 'Delete project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task group Management',
+      resource: 'emailTemplates',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all taskGroup',
+          route: [
+            {
+              path: '/projects',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Store new project',
+          route: [
+            {
+              path: '/projects',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.PUT
+            }
+          ]
+        },
+        {
+          name: 'Delete project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
     }
   ]
 };
