@@ -1,11 +1,9 @@
 import { Task } from 'src/tasks/entities/task.entity';
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
+  Entity,
   ManyToOne,
-  CreateDateColumn,
-  BeforeInsert
+  PrimaryGeneratedColumn
 } from 'typeorm';
 
 @Entity()

@@ -1,9 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { PermissionGuard } from 'src/common/guard/permission.guard';
+import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 
+
+@ApiTags('tasks')
+@UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('tasks')
+@ApiBearerAuth()
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 

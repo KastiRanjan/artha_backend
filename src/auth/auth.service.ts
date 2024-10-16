@@ -203,7 +203,8 @@ export class AuthService {
     };
     return this.jwt.signAsync({
       ...opts,
-      isTwoFAAuthenticated
+      isTwoFAAuthenticated,
+      expiresIn: '24h'
     });
   }
 

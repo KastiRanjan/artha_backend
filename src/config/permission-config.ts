@@ -335,7 +335,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     },
     {
       name: 'Project Management',
-      resource: 'emailTemplates',
+      resource: 'projects',
       hasSubmodules: false,
       permissions: [
         {
@@ -386,15 +386,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       ]
     },
     {
-      name: 'Task group Management',
-      resource: 'emailTemplates',
+      name: 'Task  Management',
+      resource: 'tasks',
       hasSubmodules: false,
       permissions: [
         {
           name: 'View all taskGroup',
           route: [
             {
-              path: '/projects',
+              path: '/tasks',
               method: MethodList.GET
             }
           ]
@@ -403,7 +403,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           name: 'View project by id',
           route: [
             {
-              path: '/projects/:id',
+              path: '/tasks/:id',
               method: MethodList.GET
             }
           ]

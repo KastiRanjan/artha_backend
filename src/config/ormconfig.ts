@@ -1,15 +1,12 @@
 import { ConnectionOptions } from 'typeorm';
-import * as config from 'config';
 
-const dbConfig = config.get('db');
-console.log(process.env.DB_TYPE);
 const ormConfig: ConnectionOptions = {
   type: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  username: 'postgres',
-  password: 'admin',
-  database: 'artha',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT, 10) || 5432,
+  username: process.env.DB_USERNAME || 'postgres',
+  password: process.env.DB_PASSWORD || 'root',
+  database: process.env.DB_NAME || 'artha',
   // migrationsTransactionMode: 'each',
   entities: [__dirname + '/../**/*.entity.{js,ts}'],
   logging: false,

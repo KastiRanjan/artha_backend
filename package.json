@@ -1,8 +1,8 @@
 {
-  "name": "truthy-api",
+  "name": "artha-task-management-api",
   "version": "0.3.3",
-  "description": "Truthy API",
-  "author": "gobeam <roshanranabhat11@gmail.com>",
+  "description": "Artha API",
+  "author": "",
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",

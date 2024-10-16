@@ -22,6 +22,7 @@ import { UserBankDetailEntity } from 'src/users/entities/user.bankdetail.entity'
 import { UserDocumentEntity } from 'src/users/entities/user.document.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 
 /**
  * User Entity
@@ -119,11 +120,11 @@ export class UserEntity extends CustomBaseEntity {
   @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
   bank_detail: UserBankDetailEntity;
 
-  @ManyToMany(() => Task, (task) => task.assignees)
+  @ManyToMany(() => Worklog, (worklog) => worklog.assignees)
   @JoinTable({
-    name: 'user_tasks', // Custom join table name
+    name: 'worklog_users',
     joinColumn: {
-      name: 'taskId',
+      name: 'worklogId',
       referencedColumnName: 'id'
     },
     inverseJoinColumn: {
@@ -147,7 +148,7 @@ export class UserEntity extends CustomBaseEntity {
   })
   projects: Project[];
 
-  @OneToMany(() => Task, (task) => task.reporter)
+  @OneToMany(() => Worklog, (task) => task.reporter)
   reporterTasks: Task[];
 
   @BeforeInsert()

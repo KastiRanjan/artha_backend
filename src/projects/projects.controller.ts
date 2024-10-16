@@ -1,9 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards
+} from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
+import { PermissionGuard } from 'src/common/guard/permission.guard';
 
+@ApiTags('projects')
+@UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('projects')
+@ApiBearerAuth()
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
@@ -30,5 +45,9 @@ export class ProjectsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.projectsService.remove(+id);
+  }
+  @Get(':uid')
+  userProjects(@Param('uid') uid: string) {
+    return this.projectsService.remove(+uid);
   }
 }

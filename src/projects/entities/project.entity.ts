@@ -1,5 +1,7 @@
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Task } from 'src/tasks/entities/task.entity';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 import {
   Column,
   Entity,
@@ -9,10 +11,7 @@ import {
 } from 'typeorm';
 
 @Entity()
-export class Project {
-  @PrimaryGeneratedColumn()
-  id: number;
-
+export class Project extends CustomBaseEntity {
   @Column({ length: 100 })
   name: string;
 
@@ -45,9 +44,13 @@ export class Project {
   @ManyToMany(() => UserEntity, (user) => user.projects, { nullable: true })
   users: UserEntity[];
 
-  @OneToMany(() => Task, (task) => task.project, {
+  @ManyToMany(() => Task, (task) => task.projects, {
     onDelete: 'CASCADE',
     nullable: true
   })
   tasks: Task[];
+
+
+  @OneToMany(() => Worklog, (worklog) => worklog.projects)
+  worklogs: Worklog[];
 }

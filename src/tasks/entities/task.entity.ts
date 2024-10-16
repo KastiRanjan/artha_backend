@@ -1,46 +1,26 @@
+import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
+import { Project } from 'src/projects/entities/project.entity';
+import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 import {
   Column,
   Entity,
   JoinColumn,
+  JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
   Unique
 } from 'typeorm';
-import { UserEntity } from 'src/auth/entity/user.entity';
-import { Project } from 'src/projects/entities/project.entity';
-import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 
 @Entity()
 @Unique(['name'])
-export class Task {
-  @PrimaryGeneratedColumn()
-  id: number;
-
+export class Task extends CustomBaseEntity {
   @Column({ length: 100 })
   name: string;
 
   @Column('text', { nullable: true })
   description?: string;
-
-  @Column({ type: 'timestamp', nullable: true })
-  startTime?: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  endTime?: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  dueDate?: Date;
-
-  @ManyToMany(() => UserEntity, (user) => user.assignedTasks)
-  assignees: UserEntity[];
-
-  @ManyToOne(() => UserEntity, (user) => user.reporterTasks, {
-    nullable: false
-  })
-  @JoinColumn({ name: 'reporterId' })
-  reporter: UserEntity;
 
   @ManyToOne(() => TaskGroup, (taskGroup) => taskGroup.tasks, {
     onDelete: 'CASCADE',
@@ -48,12 +28,19 @@ export class Task {
   })
   group?: TaskGroup;
 
-  @ManyToOne(() => Project, (project) => project.tasks, {
-    onDelete: 'CASCADE',
-    nullable: true
+  @ManyToMany(() => Project, (project) => project.tasks)
+  @JoinTable({
+    name: 'project_task',
+    joinColumn: {
+      name: 'projectId',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'taskId',
+      referencedColumnName: 'id'
+    }
   })
-  @JoinColumn()
-  project: Project;
+  projects: Project;
 
   @ManyToOne(() => Task, (task) => task.subTasks, {
     onDelete: 'SET NULL',
@@ -64,4 +51,7 @@ export class Task {
 
   @OneToMany(() => Task, (task) => task.parentTask)
   subTasks?: Task[];
+
+  @OneToMany(() => Worklog, (worklog) => worklog.task)
+  worklogs: Worklog[];
 }
