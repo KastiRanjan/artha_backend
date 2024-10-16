@@ -1,3 +1,4 @@
+import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
@@ -22,24 +23,13 @@ export class Task extends CustomBaseEntity {
   @Column('text', { nullable: true })
   description?: string;
 
-  @ManyToOne(() => TaskGroup, (taskGroup) => taskGroup.tasks, {
-    onDelete: 'CASCADE',
-    nullable: true
-  })
-  group?: TaskGroup;
+  @Column({ type: 'timestamp', nullable: true })
+  dueDate?: Date;
 
-  @ManyToMany(() => Project, (project) => project.tasks)
-  @JoinTable({
-    name: 'project_task',
-    joinColumn: {
-      name: 'projectId',
-      referencedColumnName: 'id'
-    },
-    inverseJoinColumn: {
-      name: 'taskId',
-      referencedColumnName: 'id'
-    }
-  })
+  @ManyToMany(() => UserEntity, (user) => user.assignedTasks)
+  assignees: UserEntity[];
+
+  @ManyToOne(() => Project, (project) => project.tasks)
   projects: Project;
 
   @ManyToOne(() => Task, (task) => task.subTasks, {

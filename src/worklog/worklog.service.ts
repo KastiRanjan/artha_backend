@@ -6,6 +6,7 @@ import { Project } from 'src/projects/entities/project.entity';
 import { CreateWorklogDto } from './dto/create-worklog.dto';
 import { Worklog } from './entities/worklog.entity';
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
+import { Task } from 'src/tasks/entities/task.entity';
 
 @Injectable()
 export class WorklogService {
@@ -13,21 +14,36 @@ export class WorklogService {
     @InjectRepository(Worklog) private worklogRepository: Repository<Worklog>,
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
-    @InjectRepository(Project) private projectRepository: Repository<Project>
+    @InjectRepository(Project) private projectRepository: Repository<Project>,
+    @InjectRepository(Task) private taskRepository: Repository<Task>
   ) {}
 
-  async create(createWorklog: CreateWorklogDto) {
-    // const { users: userIds, ...worklogData } = createWorklog;
-    // // Fetch the user entities using the user IDs
-    // const users = await this.userRepository.findByIds(userIds);
-    // // Create a new worklog and assign the fetched users
-    // const worklog = this.worklogRepository.create({
-    //   ...worklogData,
-    //   users // Assign the user entities here
-    // });
-    // // Save the worklog with associated users
-    // return await this.worklogRepository.save(worklog);
+  async create(createWorklogDto: CreateWorklogDto) {
+    const { userId, taskId, ...worklogData } = createWorklogDto;
+  
+    // Fetch the associated entities
+    const user = await this.userRepository.findOne(userId);
+    const task = await this.taskRepository.findOne(taskId);
+  
+    // Validate that all required entities exist
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${taskId} not found`);
+    }
+  
+    // Create a new worklog instance
+    const worklog = this.worklogRepository.create({
+      ...worklogData,
+      user,
+      task
+    });
+  
+    // Save the new worklog to the database
+    return await this.worklogRepository.save(worklog);
   }
+    
 
   findAll() {
     return this.worklogRepository.find();
@@ -53,6 +69,5 @@ export class WorklogService {
   }
 
   remove(id: number) {
-    return `This action removes a #${id} task`;
-  }
+    return this.worklogRepository.delete(id);}
 }

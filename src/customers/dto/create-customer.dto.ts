@@ -1,54 +1,131 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Length
-} from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsEnum, IsDateString, Length } from 'class-validator';
+
+// Define enums for choices
+export enum Status {
+  ACTIVE = 'active',
+  SUSPENDED = 'suspended',
+  ARCHIVE = 'archive',
+}
+
+export enum LegalStatus {
+  PRIVATE_LIMITED = 'private_limited',
+  PUBLIC_LIMITED = 'public_limited',
+  PARTNERSHIP = 'partnership',
+  PROPRIETORSHIP = 'proprietorship',
+  NATURAL_PERSON = 'natural_person',
+  I_NGO = 'i_ngo',
+  COOPERATIVE = 'cooperative',
+  GOVERNMENT_SOE = 'government_soe',
+  OTHERS = 'others',
+}
+
+export enum BusinessSize {
+  MICRO = 'micro',
+  COTTAGE = 'cottage',
+  SMALL = 'small',
+  MEDIUM = 'medium',
+  LARGE = 'large',
+  NOT_APPLICABLE = 'not_applicable',
+}
+
+export enum IndustryNature {
+  BANKING_FINANCE = 'banking_finance',
+  CAPITAL_MARKET_BROKING = 'capital_market_broking',
+  INSURANCE = 'insurance',
+  ENERGY_MINING_MINERAL = 'energy_mining_mineral',
+  MANUFACTURING = 'manufacturing',
+  AGRICULTURE_FORESTRY = 'agriculture_forestry',
+  CONSTRUCTION_REAL_ESTATE = 'construction_real_estate',
+  TRAVEL_TOURISM = 'travel_tourism',
+  RESEARCH_DEVELOPMENT = 'research_development',
+  TRANSPORTATION_LOGISTICS_MANAGEMENT = 'transportation_logistics_management',
+  INFORMATION_TRANSMISSION_COMMUNICATION = 'information_transmission_communication',
+  AVIATION = 'aviation',
+  COMPUTER_ELECTRONICS = 'computer_electronics',
+  TRADING_OF_GOODS = 'trading_of_goods',
+  PERSONAL_SERVICE = 'personal_service',
+  BUSINESS_RELATED_SERVICE = 'business_related_service',
+  OTHERS = 'others',
+}
 
 export class CreateCustomerDto {
-  @IsNotEmpty()
   @IsString()
   @Length(1, 100)
-  firstName: string;
+  name: string;
 
-  @IsNotEmpty()
+  @IsString()
+  @Length(1, 15)
+  panNo: string;
+
+  @IsDateString()
+  registeredDate?: Date; // Optional, handled by server if not provided
+
+  @IsEnum(Status)
+  status: Status;
+
   @IsString()
   @Length(1, 100)
-  lastName: string;
+  country: string;
 
-  @IsNotEmpty()
-  @IsEmail()
-  @Length(1, 255)
-  email: string;
+  @IsString()
+  @Length(1, 100)
+  state: string;
+
+  @IsString()
+  @Length(1, 100)
+  district: string;
+
+  @IsString()
+  @Length(1, 100)
+  localJurisdiction: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 10)
+  wardNo?: string;
+
+  @IsString()
+  @Length(1, 100)
+  locality: string;
+
+  @IsEnum(LegalStatus)
+  legalStatus: LegalStatus;
+
+  @IsEnum(BusinessSize)
+  businessSize: BusinessSize;
+
+  @IsEnum(IndustryNature)
+  industryNature: IndustryNature;
 
   @IsOptional()
   @IsString()
   @Length(0, 15)
-  phone?: string;
+  telephoneNo?: string;
 
   @IsOptional()
   @IsString()
-  @Length(0, 255)
-  address?: string;
+  @Length(1, 15)
+  mobileNo?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @IsOptional()
+  @IsString()
+  webPortal?: string;
 
   @IsOptional()
   @IsString()
   @Length(0, 100)
-  city?: string;
+  loginUser?: string;
 
   @IsOptional()
   @IsString()
-  @Length(0, 50)
-  country?: string;
-
-  @IsOptional()
-  @IsString()
-  @Length(0, 10)
-  postalCode?: string;
-
-  @IsOptional()
-  @IsString()
-  @Length(0, 10)
-  organization?: string;
+  @Length(0, 100)
+  password?: string;
 }

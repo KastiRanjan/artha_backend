@@ -31,6 +31,8 @@ import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 import { WorklogModule } from './worklog/worklog.module';
+import { TaskGroupsModule } from './task-groups/task-groups.module';
+import { TaskTemplateModule } from './task-template/task-template.module';
 
 const appConfig = config.get('app');
 
@@ -74,7 +76,9 @@ const appConfig = config.get('app');
     CustomersModule,
     ProjectsModule,
     TasksModule,
-    WorklogModule
+    TaskGroupsModule,
+    WorklogModule,
+    TaskTemplateModule
   ],
   providers: [
     {

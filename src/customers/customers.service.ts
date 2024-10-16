@@ -9,8 +9,9 @@ import { Customer } from './entities/customer.entity';
 export class CustomersService {
   constructor(
     @InjectRepository(Customer)
-    private customerRepository: Repository<Customer>
+    private customerRepository: Repository<Customer>,
   ) {}
+
   create(createCustomerDto: CreateCustomerDto) {
     const customer = this.customerRepository.create(createCustomerDto);
     return this.customerRepository.save(customer);

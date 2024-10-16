@@ -120,11 +120,11 @@ export class UserEntity extends CustomBaseEntity {
   @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
   bank_detail: UserBankDetailEntity;
 
-  @ManyToMany(() => Worklog, (worklog) => worklog.assignees)
+  @ManyToMany(() => Task, (task) => task.assignees)
   @JoinTable({
-    name: 'worklog_users',
+    name: 'task_user',
     joinColumn: {
-      name: 'worklogId',
+      name: 'taskId',
       referencedColumnName: 'id'
     },
     inverseJoinColumn: {
@@ -148,8 +148,8 @@ export class UserEntity extends CustomBaseEntity {
   })
   projects: Project[];
 
-  @OneToMany(() => Worklog, (task) => task.reporter)
-  reporterTasks: Task[];
+  @OneToMany(() => Worklog, (worklog) => worklog.user)
+  worklogs: Worklog[];
 
   @BeforeInsert()
   async hashPasswordBeforeInsert() {

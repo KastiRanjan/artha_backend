@@ -18,10 +18,6 @@ export class CreateTaskDto {
 
   @IsOptional()
   @Type(() => Number)
-  groupId?: number;
-
-  @IsOptional()
-  @Type(() => Number)
   projectId?: number;
 
   @IsOptional()

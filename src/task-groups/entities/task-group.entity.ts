@@ -1,8 +1,10 @@
+import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import {
   Column,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn
 } from 'typeorm';
 
@@ -17,9 +19,9 @@ export class TaskGroup {
   @Column('text', { nullable: true })
   description?: string;
 
-  @ManyToOne(() => Task, (task) => task.group, {
+  @OneToMany(() => TaskTemplate, (task) => task.group, {
     onDelete: 'CASCADE',
     nullable: true
   })
-  tasks?: Task;
+  tasktemplate?: TaskTemplate[];
 }

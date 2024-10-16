@@ -15,20 +15,13 @@ export class Worklog extends CustomBaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   endTime?: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
-  dueDate?: Date;
 
-  @ManyToMany(() => UserEntity, (user) => user.assignedTasks)
-  assignees: UserEntity[];
-
-  @ManyToOne(() => UserEntity, (user) => user.reporterTasks, {
+  @ManyToOne(() => UserEntity, (user) => user.worklogs, {
     nullable: false
   })
-  @JoinColumn({ name: 'reporterId' })
-  reporter: UserEntity;
+  @JoinColumn()
+  user: UserEntity;
 
-  @ManyToOne(() => Project, (project) => project.worklogs)
-  projects: Project;
 
   @ManyToOne(() => Task, (task) => task.worklogs)
   task: Task;

@@ -21,24 +21,8 @@ export class CreateWorklogDto {
   endTime?: Date;
 
   @IsOptional()
-  @IsDateString()
-  dueDate?: Date;
-
-  @IsOptional()
   @Type(() => Number)
-  assignees?: number[]; // Array of user IDs
-
-  @IsOptional()
-  @Type(() => Number)
-  reporterId: number;
-
-  @IsNotEmpty()
-  @Type(() => Number)
-  groupId?: number;
-
-  @IsNotEmpty()
-  @Type(() => Number)
-  projectId: number;
+  userId: number;
 
   @IsNotEmpty()
   @Type(() => Number)
