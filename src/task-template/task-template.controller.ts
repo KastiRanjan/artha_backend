@@ -15,6 +15,7 @@ export class TaskTemplateController {
 
   @Post()
   create(@Body() createTaskTemplateDto: CreateTaskTemplateDto) {
+    console.log(createTaskTemplateDto); 
     return this.taskTemplateService.create(createTaskTemplateDto);
   }
 

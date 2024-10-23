@@ -8,6 +8,7 @@ import {
   JoinColumn,
   JoinTable,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   OneToOne
 } from 'typeorm';
@@ -43,7 +44,7 @@ export class UserEntity extends CustomBaseEntity {
   @Column()
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Exclude({
     toPlainOnly: true
   })
@@ -104,7 +105,7 @@ export class UserEntity extends CustomBaseEntity {
   })
   skipHashPassword = false;
 
-  @OneToOne(() => RoleEntity)
+  @ManyToOne(() => RoleEntity)
   @JoinColumn()
   role: RoleEntity;
 

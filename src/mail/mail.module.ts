@@ -14,19 +14,19 @@ const queueConfig = config.get('queue');
 @Module({
   imports: [
     EmailTemplateModule,
-    BullModule.registerQueueAsync({
-      name: config.get('mail.queueName'),
-      useFactory: () => ({
-        redis: {
-          host: process.env.REDIS_HOST || queueConfig.host,
-          port: process.env.REDIS_PORT || queueConfig.port,
-          password: process.env.REDIS_PASSWORD || queueConfig.password,
-          retryStrategy(times) {
-            return Math.min(times * 50, 2000);
-          }
-        }
-      })
-    }),
+    // BullModule.registerQueueAsync({
+    //   name: config.get('mail.queueName'),
+    //   useFactory: () => ({
+    //     redis: {
+    //       host: process.env.REDIS_HOST || queueConfig.host,
+    //       port: process.env.REDIS_PORT || queueConfig.port,
+    //       password: process.env.REDIS_PASSWORD || queueConfig.password,
+    //       retryStrategy(times) {
+    //         return Math.min(times * 50, 2000);
+    //       }
+    //     }
+    //   })
+    // }),
     MailerModule.forRootAsync({
       useFactory: () => ({
         transport: {
@@ -56,7 +56,7 @@ const queueConfig = config.get('queue');
     })
   ],
   controllers: [],
-  providers: [MailService, MailProcessor],
+  providers: [MailService],
   exports: [MailService]
 })
 export class MailModule {}

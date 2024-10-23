@@ -8,17 +8,21 @@ import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 
 @Injectable()
 export class TaskTemplateService {
-
-  constructor(@InjectRepository(TaskTemplate) private readonly taskTemplateRepository: Repository<TaskTemplate>,
-  @InjectRepository(TaskGroup) private readonly taskgroupRepository: Repository<TaskGroup>) {}
+  constructor(
+    @InjectRepository(TaskTemplate)
+    private readonly taskTemplateRepository: Repository<TaskTemplate>,
+    @InjectRepository(TaskGroup)
+    private readonly taskgroupRepository: Repository<TaskGroup>
+  ) {}
   async create(createTaskTemplateDto: CreateTaskTemplateDto) {
     const { name, description, groupId } = createTaskTemplateDto;
+    console.log(await this.taskgroupRepository.findOne(groupId));
 
     // Create a new task instance
     const task = this.taskTemplateRepository.create({
       name,
       description,
-      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null, // Assign task group
+      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null // Assign task group
     });
 
     // Save the task to the database
@@ -26,15 +30,11 @@ export class TaskTemplateService {
   }
 
   findAll() {
-   
-    return this.taskTemplateRepository.find();
-
+    return this.taskTemplateRepository.find({ relations: ['group'] });
   }
 
   findOne(id: number) {
-    
     return this.taskTemplateRepository.findOne(id);
-
   }
 
   async update(id: number, updateTaskTemplateDto: UpdateTaskTemplateDto) {
@@ -44,13 +44,12 @@ export class TaskTemplateService {
     const task = this.taskTemplateRepository.create({
       name,
       description,
-      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null, // Assign task group
+      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null // Assign task group
     });
-    return this.taskTemplateRepository.update(id,task);
+    return this.taskTemplateRepository.update(id, task);
   }
 
   remove(id: number) {
-    
     return this.taskTemplateRepository.delete(id);
   }
 }
