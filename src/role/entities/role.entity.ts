@@ -1,4 +1,12 @@
-import { Column, Entity, Index, JoinTable, ManyToMany, OneToMany, Unique } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  Unique
+} from 'typeorm';
 
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { PermissionEntity } from 'src/permission/entities/permission.entity';
@@ -39,5 +47,3 @@ export class RoleEntity extends CustomBaseEntity {
     }
   }
 }
-
-

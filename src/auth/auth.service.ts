@@ -177,6 +177,7 @@ export class AuthService {
       throw new UnauthorizedException(error, code);
     }
     const accessToken = await this.generateAccessToken(user);
+    console.log('accessToken', accessToken);
     let refreshToken = null;
     if (userLoginDto.remember) {
       refreshToken = await this.refreshTokenService.generateRefreshToken(
@@ -201,11 +202,13 @@ export class AuthService {
       ...BASE_OPTIONS,
       subject: String(user.id)
     };
-    return this.jwt.signAsync({
-      ...opts,
-      isTwoFAAuthenticated,
-      expiresIn: '24h'
-    });
+    return this.jwt.signAsync(
+      {
+        ...opts,
+        isTwoFAAuthenticated
+      },
+      { expiresIn: 60 * 60 * 24 }
+    );
   }
 
   /**
@@ -487,11 +490,11 @@ export class AuthService {
     let tokenCookies = [
       `Authentication=${accessToken}; HttpOnly; Path=/; ${
         !isSameSite ? 'SameSite=None; Secure;' : ''
-      } Max-Age=${jwtConfig.cookieExpiresIn}`
+      } Max-Age=${'24h'}`
     ];
     if (refreshToken) {
       const expiration = new Date();
-      expiration.setSeconds(expiration.getSeconds() + 100000000000);
+      expiration.setSeconds(expiration.getSeconds() + 50000);
       tokenCookies = tokenCookies.concat([
         `Refresh=${refreshToken}; HttpOnly; Path=/; ${
           !isSameSite ? 'SameSite=None; Secure;' : ''

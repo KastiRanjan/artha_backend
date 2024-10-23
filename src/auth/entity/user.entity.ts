@@ -44,7 +44,7 @@ export class UserEntity extends CustomBaseEntity {
   @Column()
   email: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   @Exclude({
     toPlainOnly: true
   })

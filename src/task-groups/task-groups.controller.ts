@@ -1,13 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards
+} from '@nestjs/common';
 import { TaskGroupsService } from './task-groups.service';
 import { UpdateTaskGroupDto } from './dto/update-task-group.dto';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CreateTaskGroupDto } from './dto/create-task-group.dto';
-@ApiTags('task-groups')
+@ApiTags('task-group')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
-@Controller('task-groups')
+@Controller('task-group')
 @ApiBearerAuth()
 export class TaskGroupsController {
   constructor(private readonly taskGroupsService: TaskGroupsService) {}
@@ -28,7 +37,10 @@ export class TaskGroupsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTaskGroupDto: UpdateTaskGroupDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateTaskGroupDto: UpdateTaskGroupDto
+  ) {
     return this.taskGroupsService.update(+id, updateTaskGroupDto);
   }
 
