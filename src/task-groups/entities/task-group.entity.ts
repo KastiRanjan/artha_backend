@@ -1,10 +1,7 @@
 import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
-import { Task } from 'src/tasks/entities/task.entity';
 import {
   Column,
-  Entity,
-  ManyToOne,
-  OneToMany,
+  Entity, OneToMany,
   PrimaryGeneratedColumn
 } from 'typeorm';
 

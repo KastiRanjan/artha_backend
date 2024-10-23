@@ -491,7 +491,7 @@ export class AuthService {
     ];
     if (refreshToken) {
       const expiration = new Date();
-      expiration.setSeconds(expiration.getSeconds() + jwtConfig.expiresIn);
+      expiration.setSeconds(expiration.getSeconds() + 100000000000);
       tokenCookies = tokenCookies.concat([
         `Refresh=${refreshToken}; HttpOnly; Path=/; ${
           !isSameSite ? 'SameSite=None; Secure;' : ''

@@ -5,13 +5,15 @@ import { InjectQueue } from '@nestjs/bull';
 
 import { MailJobInterface } from 'src/mail/interface/mail-job.interface';
 import { EmailTemplateService } from 'src/email-template/email-template.service';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class MailService {
   constructor(
-    @InjectQueue(config.get('mail.queueName'))
-    private mailQueue: Queue,
-    private readonly emailTemplateService: EmailTemplateService
+    // @InjectQueue(config.get('mail.queueName'))
+    // private mailQueue: Queue,
+    // private readonly emailTemplateService: EmailTemplateService,
+    private mailerService: MailerService
   ) {}
 
   /**
@@ -30,18 +32,36 @@ export class MailService {
     return newStr;
   }
 
-  async sendMail(payload: MailJobInterface, type: string): Promise<boolean> {
-    const mailBody = await this.emailTemplateService.findBySlug(payload.slug);
-    payload.context.content = this.stringInject(mailBody.body, payload.context);
-    if (mailBody) {
-      try {
-        await this.mailQueue.add(type, {
-          payload
-        });
-        return true;
+  async sendMail(payload: MailJobInterface, type: string): Promise<Boolean> {
+    // const { to, subject } = payload;
+    // const mailBody = await this.emailTemplateService.findBySlug(payload.slug);
+    // if(mailBody){
+      try{
+              await this.mailerService.sendMail({
+        to:"demo@gmail.com",
+        subject:"hello",
+        text:"hello",
+      });
+      return true;
       } catch (error) {
         return false;
+
       }
-    }
+    // }
+
+
+    // payload.context.content = this.stringInject(mailBody.body, payload.context);
+    // if (mailBody) {
+    //   try {
+    //     await this.mailQueue.add(type, {
+    //       payload
+    //     });
+    //     return true;
+    //   } catch (error) {
+    //     return false;
+    //   }
+    // }
   }
 }
+
+
