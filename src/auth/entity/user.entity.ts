@@ -19,11 +19,14 @@ import { UserStatusEnum } from 'src/auth/user-status.enum';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { RoleEntity } from 'src/role/entities/role.entity';
 import { UserProfileEntity } from 'src/users/entities/user.profile.entity';
+import { UserContractEntity } from 'src/users/entities/user.contractdocument.entity';
 import { UserBankDetailEntity } from 'src/users/entities/user.bankdetail.entity';
+import { UserTrainningEntity } from 'src/users/entities/user.trainingcertificate.entity';
 import { UserDocumentEntity } from 'src/users/entities/user.document.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
+
 
 /**
  * User Entity
@@ -117,6 +120,12 @@ export class UserEntity extends CustomBaseEntity {
 
   @OneToOne(() => UserDocumentEntity, (document) => document.user)
   document: UserDocumentEntity;
+
+  @OneToOne(() => UserContractEntity, (contract_detail) => contract_detail.user)
+  contract_detail: UserContractEntity;
+
+  @OneToOne(() => UserTrainningEntity, (trainning_detail) => trainning_detail.user)
+  trainning_detail: UserBankDetailEntity;
 
   @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
   bank_detail: UserBankDetailEntity;
