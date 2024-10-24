@@ -17,8 +17,15 @@ export class CreateTaskDto {
   description?: string;
 
   @IsOptional()
+  assineeId?: number[];
+
+  @IsOptional()
   @Type(() => Number)
   projectId?: number;
+
+  @IsOptional()
+  @Type(() => Date)
+  dueDate?: Date;
 
   @IsOptional()
   @Type(() => Number)

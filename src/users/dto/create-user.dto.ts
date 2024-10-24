@@ -17,6 +17,9 @@ export class CreateUsersDto {
   personal?: Record<string, any>;
 
   @IsOptional()
+  document?: Record<string, any>;
+
+  @IsOptional()
   education?: Record<string, any>;
 
   @IsOptional()

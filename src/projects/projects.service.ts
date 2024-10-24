@@ -32,7 +32,7 @@ export class ProjectsService {
   }
 
   findOne(id: number) {
-    return this.projectRepository.findOne(id, { relations: ['users'] });
+    return this.projectRepository.findOne(id, { relations: ['users','tasks'] });
   }
 
   async update(id: number, updateProjectDto: UpdateProjectDto) {

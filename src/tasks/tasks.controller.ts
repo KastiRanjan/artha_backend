@@ -41,6 +41,10 @@ export class TasksController {
   findOne(@Param('id') id: string) {
     return this.tasksService.findOne(+id);
   }
+  @Get(':id')
+  findOneByProjectId(@Param('id') id: string) {
+    return this.tasksService.findOneByProjectId(+id);
+  }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {

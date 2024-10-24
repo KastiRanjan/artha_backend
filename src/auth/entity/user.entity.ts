@@ -27,7 +27,6 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 
-
 /**
  * User Entity
  */
@@ -106,7 +105,7 @@ export class UserEntity extends CustomBaseEntity {
   @Exclude({
     toPlainOnly: true
   })
-  skipHashPassword =  false;
+  skipHashPassword = false;
 
   @ManyToOne(() => RoleEntity)
   @JoinColumn()
@@ -124,7 +123,10 @@ export class UserEntity extends CustomBaseEntity {
   @OneToOne(() => UserContractEntity, (contract_detail) => contract_detail.user)
   contract_detail: UserContractEntity;
 
-  @OneToOne(() => UserTrainningEntity, (trainning_detail) => trainning_detail.user)
+  @OneToOne(
+    () => UserTrainningEntity,
+    (trainning_detail) => trainning_detail.user
+  )
   trainning_detail: UserBankDetailEntity;
 
   @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)

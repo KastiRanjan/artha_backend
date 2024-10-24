@@ -1,20 +1,18 @@
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Project } from 'src/projects/entities/project.entity';
-import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
   Unique
 } from 'typeorm';
 
-@Entity()
+@Entity('tasks')
 @Unique(['name'])
 export class Task extends CustomBaseEntity {
   @Column({ length: 100 })
@@ -30,7 +28,7 @@ export class Task extends CustomBaseEntity {
   assignees: UserEntity[];
 
   @ManyToOne(() => Project, (project) => project.tasks)
-  projects: Project;
+  project: Project;
 
   @ManyToOne(() => Task, (task) => task.subTasks, {
     onDelete: 'SET NULL',

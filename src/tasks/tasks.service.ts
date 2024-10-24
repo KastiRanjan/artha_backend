@@ -27,9 +27,9 @@ export class TasksService {
     const task = this.taskRepository.create({
       name,
       description,
-      projects: projectId
+      project: projectId
         ? await this.projectRepository.findOne(projectId)
-        : null, // Assign project
+        : null,
       parentTask: parentTaskId
         ? await this.taskRepository.findOne({ where: { id: parentTaskId } })
         : null
@@ -55,6 +55,15 @@ export class TasksService {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
     return task;
+  }
+  async findOneByProjectId(id: number) {
+    // const task = await this.taskRepository.find({
+    //   where: { project: { id: id } }
+    // });
+    // if (!task) {
+    //   throw new NotFoundException(`Task with project ID ${id} not found`);
+    // }
+    // return task;
   }
 
   async update(id: number, updateTaskDto: UpdateTaskDto): Promise<Task> {

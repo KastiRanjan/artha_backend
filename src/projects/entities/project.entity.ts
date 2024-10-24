@@ -44,10 +44,9 @@ export class Project extends CustomBaseEntity {
   @ManyToMany(() => UserEntity, (user) => user.projects, { nullable: true })
   users: UserEntity[];
 
-  @OneToMany(() => Task, (task) => task.projects, {
+  @OneToMany(() => Task, (task) => task.project, {
     onDelete: 'CASCADE',
     nullable: true
   })
   tasks: Task[];
-
 }

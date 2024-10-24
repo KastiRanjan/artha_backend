@@ -10,6 +10,11 @@ import { UserRepository } from 'src/auth/user.repository';
 import { MailService } from 'src/mail/mail.service';
 import { RefreshTokenService } from 'src/refresh-token/refresh-token.service';
 import { RefreshTokenRepository } from 'src/refresh-token/refresh-token.repository';
+import { UserBankDetailEntity } from './entities/user.bankdetail.entity';
+import { UserContractEntity } from './entities/user.contractdocument.entity';
+import { UserTrainningEntity } from './entities/user.trainingcertificate.entity';
+import { UserDocumentEntity } from './entities/user.document.entity';
+import { UserEducationDetailEntity } from './entities/user.educationdetail.entity';
 
 @Module({
   imports: [
@@ -17,7 +22,12 @@ import { RefreshTokenRepository } from 'src/refresh-token/refresh-token.reposito
       UserEntity,
       UserProfileEntity,
       UserRepository,
-      RefreshTokenRepository
+      UserBankDetailEntity,
+      UserContractEntity,
+      UserTrainningEntity,
+      UserDocumentEntity,
+      UserEducationDetailEntity,
+      RefreshTokenRepository,
     ]),
     AuthModule
   ],
