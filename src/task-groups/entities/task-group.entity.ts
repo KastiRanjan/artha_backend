@@ -1,3 +1,4 @@
+import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 import {
   Column,
@@ -6,7 +7,7 @@ import {
 } from 'typeorm';
 
 @Entity()
-export class TaskGroup {
+export class TaskGroup extends CustomBaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 

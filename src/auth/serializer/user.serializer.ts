@@ -17,9 +17,10 @@ export const defaultUserGroupsForSerializing: string[] = ['timestamps'];
  * user serializer
  */
 export class UserSerializer extends ModelSerializer {
-  @Expose({
-    groups: [...ownerUserGroupsForSerializing, ...adminUserGroupsForSerializing]
-  })
+  // @Expose({
+  //   groups: [...ownerUserGroupsForSerializing, ...adminUserGroupsForSerializing]
+  // })
+  @ApiProperty()
   id: number;
 
   @ApiProperty()
@@ -31,13 +32,11 @@ export class UserSerializer extends ModelSerializer {
   @ApiProperty()
   name: string;
 
-
   @ApiProperty()
   @Expose({
     groups: ownerUserGroupsForSerializing
   })
   isTwoFAEnabled: boolean;
-
 
   @ApiProperty()
   @Transform(({ value }) => (value !== 'null' ? value : ''))

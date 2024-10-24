@@ -16,16 +16,28 @@ export class UserProfileEntity extends CustomBaseEntity {
   @Column({ length: 100 })
   location: string;
 
-  @Column({ type: 'enum', enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+    nullable: true
+  })
   bloodGroup: string;
 
-  @Column({ type: 'enum', enum: ['single', 'married', 'divorced', 'widowed'], nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ['single', 'married', 'divorced', 'widowed'],
+    nullable: true
+  })
   maritalStatus: string;
 
   @Column({ type: 'enum', enum: ['male', 'female'], nullable: true })
   gender: string;
 
-  @Column({ type: 'enum', enum: ['single_assessee', 'couple_assessees'], nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ['single_assessee', 'couple_assessees'],
+    nullable: true
+  })
   taxCalculation: string;
 
   @Column({ unique: true, length: 15 })
@@ -41,10 +53,10 @@ export class UserProfileEntity extends CustomBaseEntity {
   @Column({ length: 100 })
   permanentAddressDistrict: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   permanentAddressLocalJurisdiction: string;
 
-  @Column({ length: 10 })
+  @Column({ length: 10, nullable: true })
   permanentAddressWardNo: string;
 
   @Column({ length: 100 })
@@ -59,32 +71,32 @@ export class UserProfileEntity extends CustomBaseEntity {
   @Column({ length: 100 })
   temporaryAddressDistrict: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   temporaryAddressLocalJurisdiction: string;
 
-  @Column({ length: 10 })
+  @Column({ length: 10, nullable: true })
   temporaryAddressWardNo: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   temporaryAddressLocality: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   guardianName: string;
 
-  @Column({ length: 50 })
+  @Column({ length: 50, nullable: true })
   guardianRelation: string;
 
-  @Column({ length: 15 })
+  @Column({ length: 15, nullable: true })
   guardianContact: string;
 
   // Personal contact fields
-  @Column({ length: 15 })
+  @Column({ length: 15, nullable: true })
   contactNo: string;
 
   @Column({ length: 15, nullable: true })
   alternateContactNo: string;
 
-  @Column({ length: 254 })
+  @Column({ length: 254, nullable: true })
   personalEmail: string;
 
   // Leave fields

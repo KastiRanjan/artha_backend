@@ -9,8 +9,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 @Entity({
   name: 'user_education'
 })
-export class UserDocumentEntity extends CustomBaseEntity {
-
+export class UserEducationDetailEntity extends CustomBaseEntity {
   @Column({ length: 100 })
   universityCollege: string;
 

@@ -13,16 +13,17 @@ import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
 import { JwtTwoFactorStrategy } from 'src/common/strategy/jwt-two-factor.strategy';
 import { JwtStrategy } from 'src/common/strategy/jwt.strategy';
+import { UsersModule } from 'src/users/users.module';
 
 const throttleConfig = config.get('throttle.login');
 const jwtConfig = config.get('jwt');
-const LoginThrottleFactory = {
+export const LoginThrottleFactory = {
   provide: 'LOGIN_THROTTLE',
   useFactory: () => {
     return new RateLimiterMemory({
       keyPrefix: throttleConfig.prefix,
       points: throttleConfig.limit,
-      duration: 60 * 60 * 24 * 30, // Store number for 30 days since first fail
+      duration: 60 * 60 * 24 * 30,
       blockDuration: throttleConfig.blockDuration
     });
   }
@@ -62,4 +63,3 @@ const LoginThrottleFactory = {
   ]
 })
 export class AuthModule {}
-
