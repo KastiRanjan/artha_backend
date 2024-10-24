@@ -116,11 +116,18 @@ export class AuthService {
     }
     const registerProcess = !createUserDto.status;
     const user = await this.userRepository.store(createUserDto, token);
+
     const subject = registerProcess ? 'Account created' : 'Set Password';
     const link = registerProcess ? `verify/${token}` : `reset/${token}`;
     const slug = registerProcess ? 'activate-account' : 'new-user-set-password';
     const linkLabel = registerProcess ? 'Activate Account' : 'Set Password';
     await this.sendMailToUser(user, subject, link, slug, linkLabel);
+
+
+    //add other details after user created
+
+    
+
     return user;
   }
 

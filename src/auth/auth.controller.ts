@@ -177,7 +177,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtTwoFactorGuard, PermissionGuard)
-  @Post('/users')
+  @Post('/userss')
   create(
     @Body(ValidationPipe)
     createUserDto: CreateUserDto

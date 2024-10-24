@@ -34,6 +34,7 @@ import { WorklogModule } from './worklog/worklog.module';
 import { TaskGroupsModule } from './task-groups/task-groups.module';
 import { TaskTemplateModule } from './task-template/task-template.module';
 import { AttendenceModule } from './attendence/attendence.module';
+import { AuthService } from './auth/auth.service';
 
 const appConfig = config.get('app');
 
