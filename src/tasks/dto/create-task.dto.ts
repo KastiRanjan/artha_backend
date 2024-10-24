@@ -5,6 +5,7 @@ import {
   IsString,
   MaxLength
 } from 'class-validator';
+import { Timestamp } from 'typeorm';
 
 export class CreateTaskDto {
   @IsNotEmpty()
@@ -17,8 +18,15 @@ export class CreateTaskDto {
   description?: string;
 
   @IsOptional()
+  assineeId?: number[];
+
+  @IsOptional()
   @Type(() => Number)
   projectId?: number;
+
+  @IsOptional()
+  @Type(() => Date)
+  dueDate?: Date;
 
   @IsOptional()
   @Type(() => Number)

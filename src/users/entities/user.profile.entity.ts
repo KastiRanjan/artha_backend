@@ -10,10 +10,10 @@ import { UserEntity } from 'src/auth/entity/user.entity';
   name: 'user_profile'
 })
 export class UserProfileEntity extends CustomBaseEntity {
-  @Column({ type: 'enum', enum: ['operations', 'accounts', 'administration'] })
+  @Column({ type: 'enum', enum: ['operations', 'accounts', 'administration'], nullable: true })
   department: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   location: string;
 
   @Column({
@@ -40,17 +40,17 @@ export class UserProfileEntity extends CustomBaseEntity {
   })
   taxCalculation: string;
 
-  @Column({ unique: true, length: 15 })
+  @Column({ unique: true, length: 15, nullable: true })
   panNo: string;
 
   // Address fields
-  @Column({ length: 100 })
+  @Column({ length: 100 , nullable: true })
   permanentAddressCountry: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100 , nullable: true })
   permanentAddressState: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100 , nullable: true })
   permanentAddressDistrict: string;
 
   @Column({ length: 100, nullable: true })
@@ -59,16 +59,16 @@ export class UserProfileEntity extends CustomBaseEntity {
   @Column({ length: 10, nullable: true })
   permanentAddressWardNo: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   permanentAddressLocality: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   temporaryAddressCountry: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100 , nullable: true })
   temporaryAddressState: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100 , nullable: true })
   temporaryAddressDistrict: string;
 
   @Column({ length: 100, nullable: true })
