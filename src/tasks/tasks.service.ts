@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { ImportTaskDto } from './dto/import-task.dto';
 
 @Injectable()
 export class TasksService {
@@ -15,7 +16,8 @@ export class TasksService {
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     @InjectRepository(Project) private projectRepository: Repository<Project>,
-    @InjectRepository(TaskGroup) private taskGroupRepository: Repository<TaskGroup>,
+    @InjectRepository(TaskGroup)
+    private taskGroupRepository: Repository<TaskGroup>
   ) {}
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
@@ -25,24 +27,29 @@ export class TasksService {
     const task = this.taskRepository.create({
       name,
       description,
-      projects: projectId ? await this.projectRepository.findOne(projectId) : null, // Assign project
+      projects: projectId
+        ? await this.projectRepository.findOne(projectId)
+        : null, // Assign project
       parentTask: parentTaskId
         ? await this.taskRepository.findOne({ where: { id: parentTaskId } })
-        : null,
-    
+        : null
     });
 
     // Save the task to the database
     return await this.taskRepository.save(task);
   }
+  async addBulk(importTaskDto: ImportTaskDto): Promise<string> {
+    const tasks = importTaskDto.name.map((name) => this.create({ name }));
+    return '';
+  }
 
   findAll() {
-    return this.taskRepository.find({relations:['worklogs']});
+    return this.taskRepository.find({ relations: ['worklogs'] });
   }
 
   async findOne(id: number): Promise<Task> {
     const task = await this.taskRepository.findOne({
-      where: { id },
+      where: { id }
     });
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
@@ -57,7 +64,9 @@ export class TasksService {
     task.name = updateTaskDto.name ?? task.name;
     task.description = updateTaskDto.description ?? task.description;
     task.parentTask = updateTaskDto.parentTaskId
-      ? await this.taskRepository.findOne({ where: { id: updateTaskDto.parentTaskId } })
+      ? await this.taskRepository.findOne({
+          where: { id: updateTaskDto.parentTaskId }
+        })
       : task.parentTask;
 
     // Save updated task to the database
