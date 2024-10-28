@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ModelSerializer } from 'src/common/serializer/model.serializer';
 
 export class RefreshTokenSerializer extends ModelSerializer {
-  id: number;
+  id: string;
 
   @ApiProperty()
-  userId: number;
+  userId: string;
 
   @ApiProperty()
   ip: string;

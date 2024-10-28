@@ -80,7 +80,7 @@ export class EmailTemplateService
    * Find Email Template By Id
    * @param id
    */
-  findOne(id: number): Promise<EmailTemplate> {
+  findOne(id: string): Promise<EmailTemplate> {
     return this.repository.get(id);
   }
 
@@ -90,7 +90,7 @@ export class EmailTemplateService
    * @param updateEmailTemplateDto
    */
   async update(
-    id: number,
+    id: string,
     updateEmailTemplateDto: UpdateEmailTemplateDto
   ): Promise<EmailTemplate> {
     const template = await this.repository.get(id);
@@ -119,7 +119,7 @@ export class EmailTemplateService
    * Remove Email Template By id
    * @param id
    */
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const template = await this.findOne(id);
     if (template.isDefault) {
       throw new ForbiddenException(

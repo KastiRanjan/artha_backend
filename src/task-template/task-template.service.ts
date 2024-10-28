@@ -16,7 +16,6 @@ export class TaskTemplateService {
   ) {}
   async create(createTaskTemplateDto: CreateTaskTemplateDto) {
     const { name, description, groupId } = createTaskTemplateDto;
-    console.log(await this.taskgroupRepository.findOne(groupId));
 
     // Create a new task instance
     const task = this.taskTemplateRepository.create({
@@ -33,11 +32,11 @@ export class TaskTemplateService {
     return this.taskTemplateRepository.find({ relations: ['group'] });
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.taskTemplateRepository.findOne(id);
   }
 
-  async update(id: number, updateTaskTemplateDto: UpdateTaskTemplateDto) {
+  async update(id: string, updateTaskTemplateDto: UpdateTaskTemplateDto) {
     const { name, description, groupId } = updateTaskTemplateDto;
 
     // Create a new task instance
@@ -49,7 +48,7 @@ export class TaskTemplateService {
     return this.taskTemplateRepository.update(id, task);
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return this.taskTemplateRepository.delete(id);
   }
 }

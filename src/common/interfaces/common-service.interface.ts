@@ -7,7 +7,7 @@ import { Pagination } from 'src/paginate';
 export interface CommonServiceInterface<T> {
   create(filter: CommonDtoInterface): Promise<T>;
   findAll(filter: CommonDtoInterface): Promise<Pagination<T>>;
-  findOne(id: number): Promise<T>;
-  update(id: number, inputDto: CommonDtoInterface): Promise<T>;
-  remove(id: number): Promise<void>;
+  findOne(id: string): Promise<T>;
+  update(id: string, inputDto: CommonDtoInterface): Promise<T>;
+  remove(id: string): Promise<void>;
 }

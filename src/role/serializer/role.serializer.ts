@@ -8,7 +8,7 @@ export const adminUserGroupsForSerializing: string[] = ['admin'];
 export const basicFieldGroupsForSerializing: string[] = ['basic'];
 
 export class RoleSerializer extends ModelSerializer {
-  id: number;
+  id: string;
 
   @ApiProperty()
   name: string;

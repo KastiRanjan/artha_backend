@@ -9,7 +9,7 @@ export class Permission extends ModelSerializer {
   @Expose({
     groups: basicFieldGroupsForSerializing
   })
-  id: number;
+  id: string;
 
   @ApiProperty()
   resource: string;

@@ -20,18 +20,18 @@ export class AttendenceService {
     return await this.attendanceRepository.find(); // Should return all attendance records
   }
 
-async findOne(id: number): Promise<Attendance | null> {
+async findOne(id: string): Promise<Attendance | null> {
   const attendance = await this.attendanceRepository.findOne(id);
   if (!attendance) {
       throw new NotFoundException(`Attendance record with ID ${id} not found`);
   }
   return attendance;
 }
-  async update(id: number, updateAttendenceDto: UpdateAttendenceDto) {
+  async update(id: string, updateAttendenceDto: UpdateAttendenceDto) {
     await this.attendanceRepository.update(id, updateAttendenceDto); // Ensure update operation works
     return this.findOne(id); // Return updated attendance record
   }
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const result = await this.attendanceRepository.delete(id);
     if (result.affected === 0) {
         throw new NotFoundException(`Attendance record with ID ${id} not found`);

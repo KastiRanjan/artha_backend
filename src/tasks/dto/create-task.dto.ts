@@ -1,15 +1,9 @@
 import { Type } from 'class-transformer';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateTaskDto {
   @IsNotEmpty()
   @IsString()
-  @MaxLength(100)
   name: string;
 
   @IsOptional()
@@ -17,17 +11,21 @@ export class CreateTaskDto {
   description?: string;
 
   @IsOptional()
-  assineeId?: number[];
+  assineeId?: string[];
 
   @IsOptional()
-  @Type(() => Number)
-  projectId?: number;
+  @Type(() => String)
+  projectId?: string;
 
   @IsOptional()
   @Type(() => Date)
   dueDate?: Date;
 
   @IsOptional()
-  @Type(() => Number)
-  parentTaskId?: number;
+  @Type(() => Date)
+  group?: string;
+
+  @IsOptional()
+  @Type(() => String)
+  parentTaskId?: string;
 }

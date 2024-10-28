@@ -10,17 +10,26 @@ import { UserEntity } from 'src/auth/entity/user.entity';
   name: 'user_document'
 })
 export class UserDocumentEntity extends CustomBaseEntity {
-
-  @Column({ type: 'enum', enum: ['citizenship', 'passport', 'driving_license', 'pan_no', 'membership', 'others'] })
+  @Column({
+    type: 'enum',
+    enum: [
+      'citizenship',
+      'passport',
+      'driving_license',
+      'pan_no',
+      'membership',
+      'others'
+    ]
+  })
   documentType: string;
 
-  @Column({ length: 50 })
+  @Column({ length: 50, nullable: true })
   identificationNo: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   dateOfIssue: Date;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   placeOfIssue: string;
 
   @Column({ type: 'varchar', nullable: true })

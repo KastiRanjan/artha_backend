@@ -5,7 +5,7 @@ interface PermissionConfigInterface {
 }
 
 interface rolePayload {
-  id: number;
+  id: string;
   name: string;
   description: string;
 }
@@ -14,6 +14,7 @@ export enum MethodList {
   GET = 'get',
   POST = 'post',
   PUT = 'put',
+  PATCH = 'patch',
   DELETE = 'delete',
   ANY = 'any',
   OPTIONS = 'options'
@@ -52,12 +53,12 @@ export interface PermissionPayload {
 export const PermissionConfiguration: PermissionConfigInterface = {
   roles: [
     {
-      id: 1,
+      id: '3a8f7d5f-95c4-4a9e-af3e-39f5b72b3f6c',
       name: 'superuser',
       description: 'superuser of the system'
     },
     {
-      id: 2,
+      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
       name: 'normal',
       description: 'normal user of the system'
     }
@@ -370,7 +371,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/projects/:id',
-              method: MethodList.PUT
+              method: MethodList.PATCH
             }
           ]
         },
@@ -386,7 +387,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       ]
     },
     {
-      name: 'Task  Management',
+      name: 'Task Management',
       resource: 'tasks',
       hasSubmodules: false,
       permissions: [
@@ -400,38 +401,124 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
-          name: 'View project by id',
+          name: 'Add task to project',
           route: [
             {
-              path: '/tasks/:id',
-              method: MethodList.GET
-            }
-          ]
-        },
-        {
-          name: 'Store new project',
-          route: [
-            {
-              path: '/projects',
+              path: '/tasks',
               method: MethodList.POST
             }
           ]
         },
         {
-          name: 'Update project by id',
+          name: 'Edit task o project',
           route: [
             {
-              path: '/projects/:id',
-              method: MethodList.PUT
+              path: '/tasks/:id',
+              method: MethodList.PATCH
             }
           ]
         },
         {
-          name: 'Delete project by id',
+          name: 'Get Project task',
           route: [
             {
-              path: '/projects/:id',
-              method: MethodList.DELETE
+              path: '/tasks/project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task to project bulk',
+          route: [
+            {
+              path: '/tasks/add-bulk',
+              method: MethodList.POST
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Template Management',
+      resource: 'task-template',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task template',
+          route: [
+            {
+              path: '/task-template',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Edit task template',
+          route: [
+            {
+              path: '/task-template/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Add task template',
+          route: [
+            {
+              path: '/task-template',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Get task template',
+          route: [
+            {
+              path: '/task-template/:id',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Group Management',
+      resource: 'task-group',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task group',
+          route: [
+            {
+              path: '/task-group',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task group',
+          route: [
+            {
+              path: '/task-group',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task group',
+          route: [
+            {
+              path: '/task-group/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task group by id',
+          route: [
+            {
+              path: '/task-group/:id',
+              method: MethodList.GET
             }
           ]
         }

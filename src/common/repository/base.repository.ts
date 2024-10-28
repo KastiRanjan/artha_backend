@@ -28,7 +28,7 @@ export class BaseRepository<
    * @param transformOptions
    */
   async get(
-    id: number,
+    id: string,
     relations: string[] = [],
     transformOptions = {}
   ): Promise<K | null> {

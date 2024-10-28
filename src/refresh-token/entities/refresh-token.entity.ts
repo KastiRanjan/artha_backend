@@ -11,10 +11,10 @@ import {
 })
 export class RefreshToken extends BaseEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id: string;
 
   @Column()
-  userId: number;
+  userId: string;
 
   @Column()
   ip: string;

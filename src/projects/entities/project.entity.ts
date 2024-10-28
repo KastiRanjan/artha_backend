@@ -1,13 +1,11 @@
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Task } from 'src/tasks/entities/task.entity';
-import { Worklog } from 'src/worklog/entities/worklog.entity';
 import {
   Column,
   Entity,
   ManyToMany,
-  OneToMany,
-  PrimaryGeneratedColumn
+  OneToMany
 } from 'typeorm';
 
 @Entity()

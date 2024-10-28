@@ -53,7 +53,7 @@ export class PermissionsController {
     @Param('id')
     id: string
   ): Promise<Permission> {
-    return this.permissionsService.findOne(+id);
+    return this.permissionsService.findOne(id);
   }
 
   @Put(':id')
@@ -63,7 +63,7 @@ export class PermissionsController {
     @Body()
     updatePermissionDto: UpdatePermissionDto
   ): Promise<Permission> {
-    return this.permissionsService.update(+id, updatePermissionDto);
+    return this.permissionsService.update(id, updatePermissionDto);
   }
 
   @Delete(':id')
@@ -72,7 +72,7 @@ export class PermissionsController {
     @Param('id')
     id: string
   ): Promise<void> {
-    return this.permissionsService.remove(+id);
+    return this.permissionsService.remove(id);
   }
 
   @Post('/sync')

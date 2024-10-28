@@ -15,7 +15,6 @@ export class TaskTemplateController {
 
   @Post()
   create(@Body() createTaskTemplateDto: CreateTaskTemplateDto) {
-    console.log(createTaskTemplateDto); 
     return this.taskTemplateService.create(createTaskTemplateDto);
   }
 
@@ -26,16 +25,16 @@ export class TaskTemplateController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.taskTemplateService.findOne(+id);
+    return this.taskTemplateService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskTemplateDto: UpdateTaskTemplateDto) {
-    return this.taskTemplateService.update(+id, updateTaskTemplateDto);
+    return this.taskTemplateService.update(id, updateTaskTemplateDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.taskTemplateService.remove(+id);
+    return this.taskTemplateService.remove(id);
   }
 }

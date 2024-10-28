@@ -35,16 +35,16 @@ export class WorklogController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.worklogService.findOne(+id);
+    return this.worklogService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskDto: UpdateWorklogDto) {
-    return this.worklogService.update(+id, updateTaskDto);
+    return this.worklogService.update(id, updateTaskDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.worklogService.remove(+id);
+    return this.worklogService.remove(id);
   }
 }

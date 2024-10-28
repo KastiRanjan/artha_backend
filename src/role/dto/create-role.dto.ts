@@ -1,6 +1,5 @@
 import {
   IsNotEmpty,
-  IsNumber,
   IsString,
   MaxLength,
   MinLength,
@@ -30,12 +29,9 @@ export class CreateRoleDto {
   description: string;
 
   @ValidateIf((object, value) => value)
-  @IsNumber(
-    {},
-    {
-      each: true,
-      message: 'should be array of numbers'
-    }
-  )
-  permissions: number[];
+  @IsString({
+    each: true,
+    message: 'should be array of string'
+  })
+  permissions: string[];
 }

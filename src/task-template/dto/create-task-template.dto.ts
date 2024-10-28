@@ -12,6 +12,6 @@ export class CreateTaskTemplateDto {
   description?: string;
 
   @IsNotEmpty()
-  @Type(() => Number)
-  groupId?: number;
+  @Type(() => String)
+  groupId?: string;
 }

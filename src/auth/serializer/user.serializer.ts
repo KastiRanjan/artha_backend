@@ -21,7 +21,7 @@ export class UserSerializer extends ModelSerializer {
   //   groups: [...ownerUserGroupsForSerializing, ...adminUserGroupsForSerializing]
   // })
   @ApiProperty()
-  id: number;
+  id: string;
 
   @ApiProperty()
   username: string;
@@ -58,7 +58,7 @@ export class UserSerializer extends ModelSerializer {
   @Exclude({
     toClassOnly: true
   })
-  roleId: number;
+  roleId: string;
 
   @Exclude({
     toClassOnly: true

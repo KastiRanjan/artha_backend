@@ -6,13 +6,13 @@ import { ModelSerializer } from 'src/common/serializer/model.serializer';
 import { NotFoundException } from 'src/exception/not-found.exception';
 
 class MockEntity {
-  id: number;
+  id: string;
   test: string;
   description: string;
 }
 
 class MockSerializer extends ModelSerializer {
-  id: number;
+  id: string;
   test: string;
   @Expose({
     groups: ['tester']
@@ -35,7 +35,7 @@ describe('test base repository', () => {
   beforeEach(async () => {
     baseRepository = new BaseRepository<MockEntity, MockSerializer>();
     entity = new MockEntity();
-    entity.id = 1;
+    entity.id = '1';
     entity.test = 'testing';
     entity.description = 'description testing';
   });

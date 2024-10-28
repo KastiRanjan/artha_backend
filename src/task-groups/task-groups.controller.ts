@@ -33,7 +33,7 @@ export class TaskGroupsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.taskGroupsService.findOne(+id);
+    return this.taskGroupsService.findOne(id);
   }
 
   @Patch(':id')
@@ -41,11 +41,11 @@ export class TaskGroupsController {
     @Param('id') id: string,
     @Body() updateTaskGroupDto: UpdateTaskGroupDto
   ) {
-    return this.taskGroupsService.update(+id, updateTaskGroupDto);
+    return this.taskGroupsService.update(id, updateTaskGroupDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.taskGroupsService.remove(+id);
+    return this.taskGroupsService.remove(id);
   }
 }

@@ -34,7 +34,6 @@ export class UsersService {
   ) {}
 
   async create(createUsersDto: CreateUsersDto) {
-    console.log(createUsersDto);
     const { email, name, role } = createUsersDto;
 
     const savedUser = await this.authService.create({
@@ -43,7 +42,6 @@ export class UsersService {
       username: name,
       roleId: role
     });
-    console.log(savedUser);
 
     const personal = await this.profileRepository.create({
       ...createUsersDto.personal,
@@ -78,7 +76,7 @@ export class UsersService {
     const document = await this.documentRepository.create({
       ...createUsersDto.document,
       user: savedUser
-    })
+    });
     await this.documentRepository.save(document);
     return savedUser;
   }
@@ -87,15 +85,15 @@ export class UsersService {
     return `This action returns all users`;
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return `This action returns a #${id} user`;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
+  update(id: string, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return `This action removes a #${id} user`;
   }
 }

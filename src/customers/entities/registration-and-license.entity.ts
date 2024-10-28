@@ -1,10 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { Customer } from './customer.entity';
 
 @Entity()
-export class RegistrationAndLicense {
-    @PrimaryGeneratedColumn()
-    id: number;
+export class RegistrationAndLicense extends CustomBaseEntity {
 
     @ManyToOne(() => Customer, customer => customer.registrationAndLicenses)
     customer: Customer;

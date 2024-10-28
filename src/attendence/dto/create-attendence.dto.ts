@@ -2,7 +2,7 @@ import { IsEnum, IsLatitude, IsLongitude, IsNotEmpty, IsNumber, IsOptional } fro
 
 export class CreateAttendanceDto {
   @IsNumber()
-  userId: number;
+  userId: string;
 
   @IsEnum(['check-in', 'check-out'])
   action: 'check-in' | 'check-out';

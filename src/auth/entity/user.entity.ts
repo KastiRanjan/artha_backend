@@ -112,7 +112,10 @@ export class UserEntity extends CustomBaseEntity {
   role: RoleEntity;
 
   @Column()
-  roleId: number;
+  roleId: string;
+
+  @OneToMany(() => Task, (task) => task.manager)
+  tasks: Task[];
 
   @OneToOne(() => UserProfileEntity, (profile) => profile.user)
   profile: UserProfileEntity;

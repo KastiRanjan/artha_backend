@@ -11,7 +11,7 @@
     "prettier:check": "prettier --check ./**/*.{ts,js,json,*rc}",
     "prettier:write": "prettier --write ./**/*.{ts,js,json,*rc}",
     "start": "nest start",
-    "start:dev": " nest start --watch",
+    "dev": " nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "coverage": "jest --coverage",

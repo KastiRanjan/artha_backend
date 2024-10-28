@@ -27,7 +27,7 @@ export class TasksController {
   create(@Body() createTaskDto: CreateTaskDto) {
     return this.tasksService.create(createTaskDto);
   }
-  @Post()
+  @Post('/add-bulk')
   addBulk(@Body() importTaskDto: ImportTaskDto) {
     return this.tasksService.addBulk(importTaskDto);
   }
@@ -39,20 +39,20 @@ export class TasksController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.tasksService.findOne(+id);
+    return this.tasksService.findOne(id);
   }
-  @Get(':id')
+  @Get('project/:id')
   findOneByProjectId(@Param('id') id: string) {
-    return this.tasksService.findOneByProjectId(+id);
+    return this.tasksService.findOneByProjectId(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {
-    return this.tasksService.update(+id, updateTaskDto);
+    return this.tasksService.update(id, updateTaskDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.tasksService.remove(+id);
+    return this.tasksService.remove(id);
   }
 }

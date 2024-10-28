@@ -53,7 +53,7 @@ export class RolesController {
     @Param('id')
     id: string
   ): Promise<RoleSerializer> {
-    return this.rolesService.findOne(+id);
+    return this.rolesService.findOne(id);
   }
 
   @Put(':id')
@@ -63,7 +63,7 @@ export class RolesController {
     @Body()
     updateRoleDto: UpdateRoleDto
   ): Promise<RoleSerializer> {
-    return this.rolesService.update(+id, updateRoleDto);
+    return this.rolesService.update(id, updateRoleDto);
   }
 
   @Delete(':id')
@@ -72,6 +72,6 @@ export class RolesController {
     @Param('id')
     id: string
   ): Promise<void> {
-    return this.rolesService.remove(+id);
+    return this.rolesService.remove(id);
   }
 }

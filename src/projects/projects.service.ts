@@ -26,53 +26,55 @@ export class ProjectsService {
   }
 
   findAll() {
-    return this.projectRepository.find({
-      relations: ['users','tasks']
+    return this.projectRepository.find();
+  }
+
+  findOne(id: string) {
+    return this.projectRepository.findOne(id, {
+      relations: ['users', 'tasks']
     });
   }
 
-  findOne(id: number) {
-    return this.projectRepository.findOne(id, { relations: ['users','tasks'] });
-  }
-
-  async update(id: number, updateProjectDto: UpdateProjectDto) {
+  async update(id: string, updateProjectDto: UpdateProjectDto) {
     // Find the project by its ID
-    const project = await this.projectRepository.findOne(id, { relations: ['users'] });
-    
+    const project = await this.projectRepository.findOne(id, {
+      relations: ['users']
+    });
+
     // If the project is not found, you can throw an error or handle it accordingly
     if (!project) {
       throw new Error(`Project with ID ${id} not found`);
     }
-  
+
     // Update project properties with the new values
     Object.assign(project, updateProjectDto);
-  
+
     // If there are user updates, handle them
     if (updateProjectDto.users) {
       const users = await this.userRepository.findByIds(updateProjectDto.users);
       project.users = users; // Update users if provided
     }
-  
+
     // Save the updated project back to the repository
     return await this.projectRepository.save(project);
   }
-  async remove(id: number) {
+
+  async remove(id: string) {
     // Find the project by its ID
     const project = await this.projectRepository.findOne(id);
-    
+
     // If the project is not found, you can throw an error or handle it accordingly
     if (!project) {
       throw new Error(`Project with ID ${id} not found`);
     }
-  
+
     // Remove the project
     await this.projectRepository.remove(project);
-  
+
     // Optionally, return a success message or the removed project
     return { message: `Project with ID ${id} removed successfully` };
   }
-  findByUserId(id: number) {
-    console.log("hello")
+  findByUserId(id: string) {
     return this.projectRepository.find({
       where: {
         users: {

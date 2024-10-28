@@ -40,7 +40,7 @@ export class RefreshTokenRepository extends BaseRepository<
    * find token by id
    * @param id
    */
-  public async findTokenById(id: number): Promise<RefreshToken | null> {
+  public async findTokenById(id: string): Promise<RefreshToken | null> {
     return this.findOne({
       where: {
         id

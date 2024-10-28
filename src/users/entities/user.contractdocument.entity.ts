@@ -7,7 +7,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
   name: 'user_contract'
 })
 export class UserContractEntity extends CustomBaseEntity {
-  @Column({ length: 100 })
+  @Column({ length: 100,nullable: true })
   filename: string;
 
   @Column({ type: 'varchar', nullable: true })

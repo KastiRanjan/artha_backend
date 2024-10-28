@@ -1,6 +1,7 @@
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import {
   Column,
@@ -12,10 +13,10 @@ import {
   Unique
 } from 'typeorm';
 
-@Entity('tasks')
+@Entity()
 @Unique(['name'])
 export class Task extends CustomBaseEntity {
-  @Column({ length: 100 })
+  @Column({})
   name: string;
 
   @Column('text', { nullable: true })
@@ -23,6 +24,17 @@ export class Task extends CustomBaseEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   dueDate?: Date;
+
+  @Column({
+    type: 'enum',
+    enum: ['open', 'in_progress', 'done'],
+    default: 'open',
+    nullable: true
+  })
+  status?: 'open' | 'in_progress' | 'done';
+
+  @ManyToOne(() => UserEntity, (user) => user.tasks)
+  manager: UserEntity;
 
   @ManyToMany(() => UserEntity, (user) => user.assignedTasks)
   assignees: UserEntity[];
@@ -42,4 +54,10 @@ export class Task extends CustomBaseEntity {
 
   @OneToMany(() => Worklog, (worklog) => worklog.task)
   worklogs: Worklog[];
+
+  @ManyToOne(() => TaskGroup, (taskGroup) => taskGroup.task, {
+    onDelete: 'CASCADE',
+    nullable: true
+  })
+  group?: TaskGroup;
 }

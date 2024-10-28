@@ -10,7 +10,7 @@ const ormConfig: ConnectionOptions = {
   // migrationsTransactionMode: 'each',
   entities: [__dirname + '/../**/*.entity.{js,ts}'],
   logging: false,
-  synchronize: true,
+  // synchronize: true,
   migrationsRun: process.env.NODE_ENV === 'test',
   dropSchema: process.env.NODE_ENV === 'test',
   migrationsTableName: 'migrations',

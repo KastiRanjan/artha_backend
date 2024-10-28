@@ -49,7 +49,7 @@ export class EmailTemplateController {
     @Param('id')
     id: string
   ): Promise<EmailTemplate> {
-    return this.emailTemplateService.findOne(+id);
+    return this.emailTemplateService.findOne(id);
   }
 
   @Put(':id')
@@ -59,7 +59,7 @@ export class EmailTemplateController {
     @Body()
     updateEmailTemplateDto: UpdateEmailTemplateDto
   ): Promise<EmailTemplate> {
-    return this.emailTemplateService.update(+id, updateEmailTemplateDto);
+    return this.emailTemplateService.update(id, updateEmailTemplateDto);
   }
 
   @Delete(':id')
@@ -68,6 +68,6 @@ export class EmailTemplateController {
     @Param('id')
     id: string
   ): Promise<void> {
-    return this.emailTemplateService.remove(+id);
+    return this.emailTemplateService.remove(id);
   }
 }

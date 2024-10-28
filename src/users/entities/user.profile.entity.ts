@@ -10,7 +10,11 @@ import { UserEntity } from 'src/auth/entity/user.entity';
   name: 'user_profile'
 })
 export class UserProfileEntity extends CustomBaseEntity {
-  @Column({ type: 'enum', enum: ['operations', 'accounts', 'administration'], nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ['operations', 'accounts', 'administration'],
+    nullable: true
+  })
   department: string;
 
   @Column({ length: 100, nullable: true })
@@ -44,13 +48,13 @@ export class UserProfileEntity extends CustomBaseEntity {
   panNo: string;
 
   // Address fields
-  @Column({ length: 100 , nullable: true })
+  @Column({ length: 100, nullable: true })
   permanentAddressCountry: string;
 
-  @Column({ length: 100 , nullable: true })
+  @Column({ length: 100, nullable: true })
   permanentAddressState: string;
 
-  @Column({ length: 100 , nullable: true })
+  @Column({ length: 100, nullable: true })
   permanentAddressDistrict: string;
 
   @Column({ length: 100, nullable: true })
@@ -65,10 +69,10 @@ export class UserProfileEntity extends CustomBaseEntity {
   @Column({ length: 100, nullable: true })
   temporaryAddressCountry: string;
 
-  @Column({ length: 100 , nullable: true })
+  @Column({ length: 100, nullable: true })
   temporaryAddressState: string;
 
-  @Column({ length: 100 , nullable: true })
+  @Column({ length: 100, nullable: true })
   temporaryAddressDistrict: string;
 
   @Column({ length: 100, nullable: true })

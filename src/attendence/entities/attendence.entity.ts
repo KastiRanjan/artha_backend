@@ -1,13 +1,13 @@
+import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity()
-export class Attendance {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class Attendance extends CustomBaseEntity {
+
 
   @Index() // Adds an index for performance on queries
   @Column()
-  userId: number;
+  userId: string;
 
   @Column({ type: 'enum', enum: ['check-in', 'check-out'] }) // Example ENUM for action
   action: 'check-in' | 'check-out';

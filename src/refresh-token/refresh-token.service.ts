@@ -188,7 +188,7 @@ export class RefreshTokenService {
    * @param userId
    */
   async getRefreshTokenByUserId(
-    userId: number,
+    userId: string,
     filter: RefreshPaginateFilterDto
   ): Promise<Pagination<RefreshTokenSerializer>> {
     const paginationInfo: PaginationInfoInterface =
@@ -224,8 +224,8 @@ export class RefreshTokenService {
    * @param userId
    */
   async revokeRefreshTokenById(
-    id: number,
-    userId: number
+    id: string,
+    userId: string
   ): Promise<RefreshToken> {
     const token = await this.repository.findTokenById(id);
     if (!token) {

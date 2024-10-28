@@ -10,14 +10,13 @@ import { UserEntity } from 'src/auth/entity/user.entity';
   name: 'user_bank_detail'
 })
 export class UserBankDetailEntity extends CustomBaseEntity {
-
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   bankName: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   bankBranch: string;
 
-  @Column({ length: 20 })
+  @Column({ length: 20, nullable: true })
   accountNo: string;
 
   @Column({ type: 'varchar', nullable: true })

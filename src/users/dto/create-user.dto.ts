@@ -10,8 +10,8 @@ export class CreateUsersDto {
   @IsString()
   status: string;
 
-  @IsInt()
-  role: number;
+  @IsString()
+  role: string;
 
   @IsOptional()
   personal?: Record<string, any>;

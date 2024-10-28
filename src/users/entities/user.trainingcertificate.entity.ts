@@ -12,13 +12,13 @@ export class UserTrainningEntity extends CustomBaseEntity {
  @ManyToOne(() => UserEntity, (user) => user.trainning_detail)
   user: UserEntity;
 
-  @Column({ length: 100 })
+  @Column({ length: 100,nullable: true })
   institute: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100,nullable: true })
   designationOfCourse: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int',nullable: true })
   year: number;
 
   @Column({ type: 'varchar', nullable: true })

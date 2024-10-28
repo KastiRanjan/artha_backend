@@ -1,5 +1,6 @@
 import {
   BaseEntity,
+  Column,
   CreateDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn
@@ -9,8 +10,14 @@ import {
  * custom base entity
  */
 export abstract class CustomBaseEntity extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ nullable: true })
+  createdBy: string;
+
+  @Column({ nullable: true })
+  updatedBy: string;
 
   @CreateDateColumn({
     type: 'timestamp',

@@ -32,22 +32,34 @@ export class TasksService {
         : null,
       parentTask: parentTaskId
         ? await this.taskRepository.findOne({ where: { id: parentTaskId } })
-        : null
+        : null,
+      assignees: createTaskDto.assineeId
+        ? await this.userRepository.findByIds(createTaskDto.assineeId)
+        : []
     });
-
     // Save the task to the database
     return await this.taskRepository.save(task);
   }
-  async addBulk(importTaskDto: ImportTaskDto): Promise<string> {
-    const tasks = importTaskDto.name.map((name) => this.create({ name }));
-    return '';
+  async addBulk(importTaskDto: ImportTaskDto): Promise<any> {
+    const savedTasks = importTaskDto.tasks.map((task) =>
+      this.create({
+        name: task.name,
+        description: task.description,
+
+        projectId: importTaskDto.project
+      })
+    );
+    return {
+      project: importTaskDto.project,
+      message: 'Successfully added task to project'
+    };
   }
 
   findAll() {
     return this.taskRepository.find({ relations: ['worklogs'] });
   }
 
-  async findOne(id: number): Promise<Task> {
+  async findOne(id: string): Promise<Task> {
     const task = await this.taskRepository.findOne({
       where: { id }
     });
@@ -56,17 +68,18 @@ export class TasksService {
     }
     return task;
   }
-  async findOneByProjectId(id: number) {
-    // const task = await this.taskRepository.find({
-    //   where: { project: { id: id } }
-    // });
-    // if (!task) {
-    //   throw new NotFoundException(`Task with project ID ${id} not found`);
-    // }
-    // return task;
+  async findOneByProjectId(id: string) {
+    const task = await this.taskRepository.find({
+      where: { project: { id: id } },
+      relations: ['assignees', 'group','subTasks']
+    });
+    if (!task) {
+      throw new NotFoundException(`Task with project ID ${id} not found`);
+    }
+    return task;
   }
 
-  async update(id: number, updateTaskDto: UpdateTaskDto): Promise<Task> {
+  async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id); // Ensures task exists
 
     // Update properties if provided
@@ -77,12 +90,15 @@ export class TasksService {
           where: { id: updateTaskDto.parentTaskId }
         })
       : task.parentTask;
+    task.assignees = updateTaskDto.assineeId
+      ? await this.userRepository.findByIds(updateTaskDto.assineeId)
+      : [];
 
     // Save updated task to the database
     return await this.taskRepository.save(task);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const task = await this.findOne(id); // Ensures task exists
     await this.taskRepository.remove(task); // Remove the task
   }

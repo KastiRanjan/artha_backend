@@ -1,11 +1,10 @@
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsNotEmpty,
   IsOptional,
-  IsString,
-  MaxLength
+  IsString
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class CreateWorklogDto {
   @IsOptional()
@@ -21,10 +20,10 @@ export class CreateWorklogDto {
   endTime?: Date;
 
   @IsOptional()
-  @Type(() => Number)
-  userId: number;
+  @Type(() => String)
+  userId: string;
 
   @IsNotEmpty()
-  @Type(() => Number)
-  taskId: number;
+  @Type(() => String)
+  taskId: string;
 }

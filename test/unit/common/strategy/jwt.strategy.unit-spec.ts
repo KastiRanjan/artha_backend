@@ -41,12 +41,9 @@ describe('Test JWT strategy', () => {
       };
       userRepository.findOne.mockResolvedValue(user);
       const result = await jwtStrategy.validate(payload);
-      expect(userRepository.findOne).toHaveBeenCalledWith(
-        Number(payload.subject),
-        {
-          relations: ['role', 'role.permission']
-        }
-      );
+      expect(userRepository.findOne).toHaveBeenCalledWith(payload.subject, {
+        relations: ['role', 'role.permission']
+      });
       expect(result).toEqual(user);
     });
 

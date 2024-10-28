@@ -53,5 +53,5 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsArray()
-  users?: number[];  // Assuming user ids are passed
+  users?: string[];  // Assuming user ids are passed
 }

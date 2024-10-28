@@ -49,7 +49,7 @@ export class WorklogService {
     return this.worklogRepository.find();
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const worklog = await this.worklogRepository.findOne({
       where: { id }
     });
@@ -59,7 +59,7 @@ export class WorklogService {
     return worklog;
   }
 
-  async update(id: number, updateWorklogDto: UpdateWorklogDto) {
+  async update(id: string, updateWorklogDto: UpdateWorklogDto) {
     const worklog = await this.findOne(id);
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
@@ -68,6 +68,6 @@ export class WorklogService {
     return this.worklogRepository.save(worklog);
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return this.worklogRepository.delete(id);}
 }

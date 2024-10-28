@@ -109,7 +109,7 @@ export class AuthService {
   ): Promise<UserSerializer> {
     const token = await this.generateUniqueToken(12);
     if (!createUserDto.status) {
-      createUserDto.roleId = 2;
+      createUserDto.roleId = '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7';
       const currentDateTime = new Date();
       currentDateTime.setHours(currentDateTime.getHours() + 1);
       createUserDto.tokenValidityDate = currentDateTime;
@@ -123,10 +123,7 @@ export class AuthService {
     const linkLabel = registerProcess ? 'Activate Account' : 'Set Password';
     await this.sendMailToUser(user, subject, link, slug, linkLabel);
 
-
     //add other details after user created
-
-    
 
     return user;
   }
@@ -184,7 +181,7 @@ export class AuthService {
       throw new UnauthorizedException(error, code);
     }
     const accessToken = await this.generateAccessToken(user);
-    console.log('accessToken', accessToken);
+
     let refreshToken = null;
     if (userLoginDto.remember) {
       refreshToken = await this.refreshTokenService.generateRefreshToken(
@@ -252,7 +249,7 @@ export class AuthService {
    * Get user By Id
    * @param id
    */
-  async findById(id: number): Promise<UserSerializer> {
+  async findById(id: string): Promise<UserSerializer> {
     return this.userRepository.get(id, ['role'], {
       groups: [
         ...adminUserGroupsForSerializing,
@@ -288,7 +285,7 @@ export class AuthService {
    * @param updateUserDto
    */
   async update(
-    id: number,
+    id: string,
     updateUserDto: DeepPartial<UserEntity>
   ): Promise<UserSerializer> {
     const user = await this.userRepository.get(id, [], {
@@ -555,7 +552,7 @@ export class AuthService {
    * @param filter
    **/
   activeRefreshTokenList(
-    userId: number,
+    userId: string,
     filter: RefreshPaginateFilterDto
   ): Promise<Pagination<RefreshTokenSerializer>> {
     return this.refreshTokenService.getRefreshTokenByUserId(userId, filter);
@@ -566,7 +563,7 @@ export class AuthService {
    * @param id
    * @param userId
    **/
-  revokeTokenById(id: number, userId: number): Promise<RefreshToken> {
+  revokeTokenById(id: string, userId: string): Promise<RefreshToken> {
     return this.refreshTokenService.revokeRefreshTokenById(id, userId);
   }
 
@@ -575,7 +572,7 @@ export class AuthService {
    * @param secret
    * @param userId
    **/
-  async setTwoFactorAuthenticationSecret(secret: string, userId: number) {
+  async setTwoFactorAuthenticationSecret(secret: string, userId: string) {
     // add one minute throttle to generate next two factor token
     const twoFAThrottleTime = new Date();
     twoFAThrottleTime.setSeconds(twoFAThrottleTime.getSeconds() + 60);

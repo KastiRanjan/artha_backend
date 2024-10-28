@@ -1,4 +1,4 @@
 export interface RefreshTokenInterface {
-  jwtid: number;
-  subject: number;
+  jwtid: string;
+  subject: string;
 }

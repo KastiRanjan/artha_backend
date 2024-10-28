@@ -87,7 +87,7 @@ export class PermissionsService
    * Get Permission by id
    * @param id
    */
-  async findOne(id: number): Promise<Permission> {
+  async findOne(id: string): Promise<Permission> {
     return this.repository.get(id, [], {
       groups: [...basicFieldGroupsForSerializing]
     });
@@ -99,7 +99,7 @@ export class PermissionsService
    * @param updatePermissionDto
    */
   async update(
-    id: number,
+    id: string,
     updatePermissionDto: UpdatePermissionDto
   ): Promise<Permission> {
     const permission = await this.repository.get(id);
@@ -125,7 +125,7 @@ export class PermissionsService
    * Remove permission by id
    * @param id
    */
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.findOne(id);
     await this.repository.delete({ id });
   }
@@ -134,7 +134,7 @@ export class PermissionsService
    * Get Permission array by provided array of id
    * @param ids
    */
-  async whereInIds(ids: number[]): Promise<PermissionEntity[]> {
+  async whereInIds(ids: string[]): Promise<PermissionEntity[]> {
     return this.repository
       .createQueryBuilder('permission')
       .whereInIds(ids)

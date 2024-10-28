@@ -77,7 +77,7 @@ export class RolesService implements CommonServiceInterface<RoleSerializer> {
    * find role by id
    * @param id
    */
-  async findOne(id: number): Promise<RoleSerializer> {
+  async findOne(id: string): Promise<RoleSerializer> {
     return this.repository.get(id, ['permission'], {
       groups: [
         ...adminUserGroupsForSerializing,
@@ -92,7 +92,7 @@ export class RolesService implements CommonServiceInterface<RoleSerializer> {
    * @param updateRoleDto
    */
   async update(
-    id: number,
+    id: string,
     updateRoleDto: UpdateRoleDto
   ): Promise<RoleSerializer> {
     const role = await this.repository.findOne(id);
@@ -123,7 +123,7 @@ export class RolesService implements CommonServiceInterface<RoleSerializer> {
    * remove role by id
    * @param id
    */
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.findOne(id);
     await this.repository.delete({ id });
   }

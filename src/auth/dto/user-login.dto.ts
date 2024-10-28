@@ -12,5 +12,5 @@ export class UserLoginDto {
   password: string;
 
   @IsBoolean()
-  remember: boolean;
+  remember?: boolean;
 }
