@@ -27,7 +27,7 @@ import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 @Controller('permissions')
 @ApiBearerAuth()
 export class PermissionsController {
-  constructor(private readonly permissionsService: PermissionsService) {}
+  constructor(private readonly permissionsService: PermissionsService) { }
 
   @Post()
   create(

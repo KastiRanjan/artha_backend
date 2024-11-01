@@ -474,7 +474,7 @@ export class AuthService {
   getCookieForLogOut(): string[] {
     return [
       `Authentication=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
+        !isSameSite ? 'SameSite=None; Secure;' : '' 
       }`,
       `Refresh=; HttpOnly; Path=/; Max-Age=0; ${
         !isSameSite ? 'SameSite=None; Secure;' : ''
