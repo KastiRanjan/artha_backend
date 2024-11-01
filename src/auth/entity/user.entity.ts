@@ -26,6 +26,7 @@ import { UserDocumentEntity } from 'src/users/entities/user.document.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
+import { Notification } from 'src/notification/entities/notification.entity';
 
 /**
  * User Entity
@@ -55,6 +56,9 @@ export class UserEntity extends CustomBaseEntity {
   @Index()
   @Column()
   name: string;
+
+  @Column({ nullable: true })
+  phoneNumber: string;
 
   @Column({ nullable: true })
   avatar: string;
@@ -135,6 +139,20 @@ export class UserEntity extends CustomBaseEntity {
   @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
   bank_detail: UserBankDetailEntity;
 
+  @ManyToMany(() => Notification, notification => notification.users)
+  @JoinTable({
+    name: 'user_notification',
+    joinColumn: {
+      name: 'notificationId',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'userId',
+      referencedColumnName: 'id'
+    }
+  })
+  notifications: Notification[];
+
   @ManyToMany(() => Task, (task) => task.assignees)
   @JoinTable({
     name: 'task_user',
@@ -148,6 +166,9 @@ export class UserEntity extends CustomBaseEntity {
     }
   })
   assignedTasks: Task[];
+
+  @OneToOne(() => Project, (project) => project.projectLead)
+  project: Project;
 
   @ManyToMany(() => Project, (project) => project.users)
   @JoinTable({
