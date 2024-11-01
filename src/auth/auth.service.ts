@@ -206,6 +206,7 @@ export class AuthService {
       ...BASE_OPTIONS,
       subject: String(user.id)
     };
+    console.log(opts);
     return this.jwt.signAsync(
       {
         ...opts,

@@ -54,4 +54,7 @@ export class CreateProjectDto {
   @IsOptional()
   @IsArray()
   users?: string[];  // Assuming user ids are passed
+
+  @IsOptional()
+  projectLead?: string;
 }

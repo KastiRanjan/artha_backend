@@ -36,6 +36,10 @@ export class UsersService {
   async create(createUsersDto: CreateUsersDto) {
     const { email, name, role } = createUsersDto;
 
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user) {
+      throw new Error('User already exists');
+    }
     const savedUser = await this.authService.create({
       email,
       name,

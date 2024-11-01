@@ -38,6 +38,11 @@ export class WorklogController {
     return this.worklogService.findOne(id);
   }
 
+  @Get('task/:id')
+  findByTaskId(@Param('id') id: string) {
+    return this.worklogService.findByTaskId(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskDto: UpdateWorklogDto) {
     return this.worklogService.update(id, updateTaskDto);

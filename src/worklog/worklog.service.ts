@@ -12,8 +12,7 @@ import { Task } from 'src/tasks/entities/task.entity';
 export class WorklogService {
   constructor(
     @InjectRepository(Worklog) private worklogRepository: Repository<Worklog>,
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(Task) private taskRepository: Repository<Task>
   ) {}
@@ -37,6 +36,7 @@ export class WorklogService {
     const worklog = this.worklogRepository.create({
       ...worklogData,
       user,
+      createdBy: user.id,
       task
     });
   
@@ -55,6 +55,21 @@ export class WorklogService {
     });
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
+    }
+    return worklog;
+  }
+
+  
+  async findByTaskId(id: string) {
+    const worklog = await this.worklogRepository.find({
+      where: { task: { id } },
+      relations: ['user'],
+      order: {
+        createdAt: 'DESC'
+      },
+    });
+    if (!worklog) {
+      throw new NotFoundException(`Worklog with task ID ${id} not found`);
     }
     return worklog;
   }

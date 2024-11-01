@@ -5,6 +5,7 @@ import {
   Column,
   Entity,
   ManyToMany,
+  ManyToOne,
   OneToMany
 } from 'typeorm';
 
@@ -47,4 +48,10 @@ export class Project extends CustomBaseEntity {
     nullable: true
   })
   tasks: Task[];
+
+  @ManyToOne(() => UserEntity, (user) => user.projects, {
+    onDelete: 'SET NULL',
+    nullable: true
+  })
+  projectLead: UserEntity;
 }

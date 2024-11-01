@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import e = require('express');
 
 export class CreateTaskDto {
   @IsNotEmpty()
@@ -25,6 +26,9 @@ export class CreateTaskDto {
   @Type(() => Date)
   group?: string;
 
+  @IsOptional()
+  status?: 'open' | 'in_progress' | 'done'; 
+  
   @IsOptional()
   @Type(() => String)
   parentTaskId?: string;

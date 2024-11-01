@@ -13,20 +13,23 @@ export class ProjectsService {
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>
   ) {}
   async create(createProjectDto: CreateProjectDto) {
-    const { users: userIds, ...projectData } = createProjectDto;
+    const { users: userIds,projectLead, ...projectData } = createProjectDto;
     // Fetch the user entities using the user IDs
     const users = await this.userRepository.findByIds(userIds);
+    const user = await this.userRepository.findOne({id: projectLead});
     // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
-      users // Assign the user entities here
+      users, 
+      projectLead:user,
     });
     // Save the project with associated users
     return await this.projectRepository.save(project);
   }
 
   findAll() {
-    return this.projectRepository.find();
+    return this.projectRepository.find({
+      relations: ['projectLead']});
   }
 
   findOne(id: string) {
