@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUsersDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from 'src/auth/entity/user.entity';
@@ -93,8 +93,35 @@ export class UsersService {
     return `This action returns a #${id} user`;
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOne(id);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+     // Update user profile
+     if (updateUserDto.personal) {
+      const profile = await this.profileRepository.findOne({ where: { user: user.id } });
+      Object.assign(profile, updateUserDto.personal);
+      await this.profileRepository.save(profile);
+    }
+
+    // Update bank details
+    if (updateUserDto.bank) {
+      const bankDetails = await this.bankRepository.findOne({ where: { user: user.id } });
+      Object.assign(bankDetails, updateUserDto.bank);
+      await this.bankRepository.save(bankDetails);
+    }
+
+    // if (files) {
+    //   if (files.bankdetail) {
+    //     const profilePicturePath = await this.fileUploadService.uploadFile(files.profilePicture);
+    //     const profile = await this.profileRepository.findOne({ where: { user: user.id } });
+    //     profile.profilePicture = profilePicturePath;
+    //     await this.profileRepository.save(profile);
+    //   }
+
+    // }
   }
 
   remove(id: string) {

@@ -5,31 +5,36 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/project.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project) private projectRepository: Repository<Project>,
-    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>
-  ) {}
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    private readonly notificationService: NotificationService,
+  ) { }
   async create(createProjectDto: CreateProjectDto) {
-    const { users: userIds,projectLead, ...projectData } = createProjectDto;
+    const { users: userIds, projectLead, ...projectData } = createProjectDto;
     // Fetch the user entities using the user IDs
     const users = await this.userRepository.findByIds(userIds);
-    const user = await this.userRepository.findOne({id: projectLead});
+    const lead = await this.userRepository.findOne(projectLead);
     // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
-      users, 
-      projectLead:user,
+      users, // Assign the user entities here
+      projectLead: lead || null
     });
+
+    this.notificationService.create({ message: 'Project created successfully', users: userIds });
     // Save the project with associated users
     return await this.projectRepository.save(project);
   }
 
   findAll() {
     return this.projectRepository.find({
-      relations: ['projectLead']});
+      relations: ['projectLead']
+    });
   }
 
   findOne(id: string) {
@@ -55,7 +60,10 @@ export class ProjectsService {
     // If there are user updates, handle them
     if (updateProjectDto.users) {
       const users = await this.userRepository.findByIds(updateProjectDto.users);
+      const lead = await this.userRepository.findOne(updateProjectDto.projectLead);
+      project.projectLead = lead || null
       project.users = users; // Update users if provided
+
     }
 
     // Save the updated project back to the repository

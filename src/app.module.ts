@@ -35,6 +35,7 @@ import { TaskGroupsModule } from './task-groups/task-groups.module';
 import { TaskTemplateModule } from './task-template/task-template.module';
 import { AttendenceModule } from './attendence/attendence.module';
 import { AuthService } from './auth/auth.service';
+import { NotificationModule } from './notification/notification.module';
 
 const appConfig = config.get('app');
 
@@ -81,7 +82,8 @@ const appConfig = config.get('app');
     TaskGroupsModule,
     WorklogModule,
     TaskTemplateModule,
-    AttendenceModule
+    AttendenceModule,
+    NotificationModule
   ],
   providers: [
     {
