@@ -47,42 +47,39 @@ export class UsersService {
       roleId: role
     });
 
-    const personal = await this.profileRepository.create({
-      ...createUsersDto.personal,
-      user: savedUser
-    });
-    await this.profileRepository.save(personal);
-
-    const education = await this.educationRepository.create({
-      ...createUsersDto.education,
-      user: savedUser
-    });
-    await this.educationRepository.save(education);
-
-    const bank = await this.bankRepository.create({
-      ...createUsersDto.bank,
-      user: savedUser
-    });
-    await this.bankRepository.save(bank);
-
-    const contract = await this.contractRepository.create({
-      ...createUsersDto.contract,
-      user: savedUser
-    });
-    await this.contractRepository.save(contract);
-
-    const training = await this.trainingRepository.create({
-      ...createUsersDto.training,
-      user: savedUser
-    });
-    await this.trainingRepository.save(training);
-
-    const document = await this.documentRepository.create({
-      ...createUsersDto.document,
-      user: savedUser
-    });
-    await this.documentRepository.save(document);
     return savedUser;
+  }
+
+  async createDetail(id, option, createUsersDto: any, file) {
+    const user = await this.userRepository.findOne(id);
+    console.log(file);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    let savedData;
+
+    if (option === 'bank') {
+      savedData = await this.bankRepository.save(
+        this.bankRepository.create({
+          ...createUsersDto,
+          userId: id,
+          documentFile: file.filename
+        })
+      );
+    }
+    if (option === 'education') {
+      savedData = await this.educationRepository.save(
+        this.bankRepository.create({
+          ...createUsersDto,
+          userId: id,
+          documentFile: file.filename
+         })
+      );
+    }
+
+    return savedData;
   }
 
   findAll() {
@@ -98,30 +95,6 @@ export class UsersService {
     if (!user) {
       throw new BadRequestException('User not found');
     }
-
-     // Update user profile
-     if (updateUserDto.personal) {
-      const profile = await this.profileRepository.findOne({ where: { user: user.id } });
-      Object.assign(profile, updateUserDto.personal);
-      await this.profileRepository.save(profile);
-    }
-
-    // Update bank details
-    if (updateUserDto.bank) {
-      const bankDetails = await this.bankRepository.findOne({ where: { user: user.id } });
-      Object.assign(bankDetails, updateUserDto.bank);
-      await this.bankRepository.save(bankDetails);
-    }
-
-    // if (files) {
-    //   if (files.bankdetail) {
-    //     const profilePicturePath = await this.fileUploadService.uploadFile(files.profilePicture);
-    //     const profile = await this.profileRepository.findOne({ where: { user: user.id } });
-    //     profile.profilePicture = profilePicturePath;
-    //     await this.profileRepository.save(profile);
-    //   }
-
-    // }
   }
 
   remove(id: string) {
