@@ -267,7 +267,7 @@ export class AuthService {
   ): Promise<Pagination<UserSerializer>> {
     return this.userRepository.paginate(
       userSearchFilterDto,
-      ['role'],
+      ['role', 'bank_detail'],
       ['username', 'email', 'name', 'contact', 'address'],
       {
         groups: [
@@ -474,7 +474,7 @@ export class AuthService {
   getCookieForLogOut(): string[] {
     return [
       `Authentication=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : '' 
+        !isSameSite ? 'SameSite=None; Secure;' : ''
       }`,
       `Refresh=; HttpOnly; Path=/; Max-Age=0; ${
         !isSameSite ? 'SameSite=None; Secure;' : ''
