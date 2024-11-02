@@ -1,3 +1,4 @@
+
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -186,10 +187,6 @@ export class UserEntity extends CustomBaseEntity {
 
   @OneToMany(() => Worklog, (worklog) => worklog.user)
   worklogs: Worklog[];
-
-
-  @OneToMany(() => Project, (project) => project.projectLead)
-  project: Project[];
 
   @BeforeInsert()
   async hashPasswordBeforeInsert() {
