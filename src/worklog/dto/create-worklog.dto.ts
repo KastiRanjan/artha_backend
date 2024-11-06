@@ -25,6 +25,10 @@ export class CreateWorklogDto {
   @Type(() => String)
   userId: string;
 
+  @IsOptional()
+  @Type(() => String)
+  approvedBy: string;
+
   @IsNotEmpty()
   @Type(() => String)
   taskId: string;

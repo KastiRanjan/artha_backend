@@ -2,8 +2,10 @@ import { IsEnum, IsLatitude, IsLongitude, IsNotEmpty, IsNumber, IsOptional, IsSt
 
 export class CreateAttendanceDto {
   @IsNotEmpty()
+  @IsOptional()
   date: string;
 
+  @IsOptional()
   @IsString()
   clockIn?: string;
 
@@ -12,9 +14,9 @@ export class CreateAttendanceDto {
 
   @IsOptional() //
   @IsLatitude()
-  latitude?: number;
+  latitude?: string;
 
   @IsOptional()
   @IsLongitude()
-  longitude?: number;
+  longitude?: string;
 }

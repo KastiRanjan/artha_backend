@@ -19,8 +19,8 @@ export class Attendance extends CustomBaseEntity {
   clockOut: string;
 
   @Column({ nullable: true })
-  latitude?: number;
+  latitude?: string;
 
   @Column({ nullable: true })
-  longitude?: number;
+  longitude?: string;
 }

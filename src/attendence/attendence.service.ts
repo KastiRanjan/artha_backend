@@ -18,13 +18,17 @@ export class AttendenceService {
       ...createAttendanceDto,
       userId:user.id ,
     }
-    const attendance = this.attendanceRepository.create(datatosave);
+    const exisitingAttendance = await this.attendanceRepository.findOne({ where: { userId: user.id, date: moment().format('YYYY-MM-DD').toString() }});
+    if (exisitingAttendance) {
+      return await this.attendanceRepository.save({ ...exisitingAttendance, clockOut: createAttendanceDto.clockOut, userId:user.id, latitude: createAttendanceDto.latitude, longitude: createAttendanceDto.longitude });
+    }
+    const attendance = await this.attendanceRepository.create(datatosave);
     
     return this.attendanceRepository.save(attendance);
   }
 
-  async findAll() {
-    return await this.attendanceRepository.find(); // Should return all attendance records
+  async findAll(user: UserEntity): Promise<Attendance[]> {
+    return await this.attendanceRepository.find({ where: { userId: user.id } });
   }
 
 async findOne(id: string): Promise<Attendance | null> {
@@ -46,7 +50,7 @@ async getMyAttendence(user: UserEntity): Promise<Attendance[]> {
 
 
   async update(id: string, updateAttendenceDto: UpdateAttendenceDto) {
-    await this.attendanceRepository.update(id, updateAttendenceDto); // Ensure update operation works
+    await this.attendanceRepository.update(id, {clockOut:updateAttendenceDto.clockOut}); // Ensure update operation works
     return this.findOne(id); // Return updated attendance record
   }
   async remove(id: string): Promise<void> {

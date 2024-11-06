@@ -104,6 +104,8 @@ export class AuthController {
     @Query('token')
     token: string
   ): Promise<void> {
+    console.log(token);
+
     return this.authService.activateAccount(token);
   }
 

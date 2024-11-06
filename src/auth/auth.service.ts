@@ -63,6 +63,7 @@ export class AuthService {
   constructor(
     @InjectRepository(UserRepository)
     private readonly userRepository: UserRepository,
+    private readonly usersRepository: UserEntity,
     private readonly jwt: JwtService,
     private readonly mailService: MailService,
     private readonly refreshTokenService: RefreshTokenService,
@@ -331,7 +332,10 @@ export class AuthService {
    * @param token
    */
   async activateAccount(token: string): Promise<void> {
-    const user = await this.userRepository.findOne({ token });
+    console.log(typeof token);
+    
+    const user = await this.usersRepository.findOne({ token: token });
+    console.log(user);
     if (!user) {
       throw new NotFoundException();
     }
@@ -346,6 +350,7 @@ export class AuthService {
     user.skipHashPassword = true;
     await user.save();
   }
+  
 
   /**
    * forget password and send reset code by email
