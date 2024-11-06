@@ -16,7 +16,6 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-
 async function bootstrap() {
   const serverConfig = config.get('server');
   const port = process.env.PORT || serverConfig.port;
