@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Query } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,20 +26,22 @@ export class ProjectsService {
       projectLead: lead || null
     });
 
-    this.notificationService.create({ message: 'Project created successfully', users: userIds });
+    this.notificationService.create({ message: `Project ${project.name} created`, users: userIds });
     // Save the project with associated users
     return await this.projectRepository.save(project);
   }
 
-  findAll() {
+  findAll(status: 'active' | 'suspended' | 'archived' | 'signed_off') {
+    console.log
     return this.projectRepository.find({
+      where: { status },
       relations: ['projectLead']
     });
   }
 
   findOne(id: string) {
     return this.projectRepository.findOne(id, {
-      relations: ['users', 'tasks']
+      relations: ['users', 'tasks', 'projectLead']
     });
   }
 
@@ -65,6 +67,8 @@ export class ProjectsService {
       project.users = users; // Update users if provided
 
     }
+    await this.notificationService.create({ message: `Project ${project.name} updated`, users: updateProjectDto.users });
+
 
     // Save the updated project back to the repository
     return await this.projectRepository.save(project);

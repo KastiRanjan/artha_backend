@@ -56,7 +56,7 @@ export class TasksService {
   }
 
   findAll() {
-    return this.taskRepository.find({ relations: ['worklogs'] });
+    return this.taskRepository.find({ relations: ['worklogs','project','assignees','group','subTasks'] });
   }
 
   async findOne(id: string): Promise<Task> {
@@ -71,7 +71,7 @@ export class TasksService {
   async findOneByProjectId(id: string) {
     const task = await this.taskRepository.find({
       where: { project: { id: id } },
-      relations: ['assignees', 'group','subTasks']
+      relations: ['assignees', 'group','subTasks','project']
     });
     if (!task) {
       throw new NotFoundException(`Task with project ID ${id} not found`);

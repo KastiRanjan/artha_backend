@@ -4,7 +4,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('notification')
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) { }
 
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {
