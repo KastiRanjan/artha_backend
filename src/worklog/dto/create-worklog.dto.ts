@@ -1,9 +1,11 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsNotEmpty,
   IsOptional,
-  IsString
+  IsString,
+  ValidateNested
 } from 'class-validator';
 
 export class CreateWorklogDto {
@@ -26,4 +28,12 @@ export class CreateWorklogDto {
   @IsNotEmpty()
   @Type(() => String)
   taskId: string;
+}
+
+
+export class CreateWorklogListDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateWorklogDto) // Transform each item in the array to CreateWorklogDto
+  worklogs: CreateWorklogDto[];
 }

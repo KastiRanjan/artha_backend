@@ -13,7 +13,7 @@ import { UpdateWorklogDto } from './dto/update-worklog.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
-import { CreateWorklogDto } from './dto/create-worklog.dto';
+import { CreateWorklogDto, CreateWorklogListDto } from './dto/create-worklog.dto';
 import { WorklogService } from './worklog.service';
 
 @ApiTags('worklog')
@@ -24,7 +24,7 @@ export class WorklogController {
   constructor(private readonly worklogService: WorklogService) {}
 
   @Post()
-  create(@Body() createWorklogDto: CreateWorklogDto) {
+  create(@Body() createWorklogDto: any) {
     return this.worklogService.create(createWorklogDto);
   }
 
