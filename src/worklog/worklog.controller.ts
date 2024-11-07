@@ -15,17 +15,21 @@ import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { CreateWorklogDto, CreateWorklogListDto } from './dto/create-worklog.dto';
 import { WorklogService } from './worklog.service';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @ApiTags('worklog')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('worklogs')
 @ApiBearerAuth()
 export class WorklogController {
-  constructor(private readonly worklogService: WorklogService) {}
+  constructor(private readonly worklogService: WorklogService) { }
 
   @Post()
-  create(@Body() createWorklogDto: any) {
-    return this.worklogService.create(createWorklogDto);
+
+  create(@GetUser()
+  user: UserEntity, @Body() createWorklogDto: any) {
+    return this.worklogService.create(createWorklogDto,user);
   }
 
   @Get()

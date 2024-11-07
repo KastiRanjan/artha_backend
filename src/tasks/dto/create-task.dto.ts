@@ -27,6 +27,9 @@ export class CreateTaskDto {
   group?: string;
 
   @IsOptional()
+  tcode?: string;
+
+  @IsOptional()
   status?: 'open' | 'in_progress' | 'done'; 
   
   @IsOptional()

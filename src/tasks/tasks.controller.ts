@@ -21,7 +21,7 @@ import { ImportTaskDto } from './dto/import-task.dto';
 @Controller('tasks')
 @ApiBearerAuth()
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(private readonly tasksService: TasksService) { }
 
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
@@ -44,6 +44,10 @@ export class TasksController {
   @Get('project/:id')
   findOneByProjectId(@Param('id') id: string) {
     return this.tasksService.findOneByProjectId(id);
+  }
+  @Get(':tid/project/:pid')
+  findOneByProjectIdAndTaskId(@Param('pid') projectId: string, @Param('tid') taskId: string) {
+    return this.tasksService.findOneByProjectIdAndTaskId(projectId, taskId);
   }
 
   @Patch(':id')

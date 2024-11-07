@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
@@ -7,6 +7,8 @@ import { CreateWorklogDto, CreateWorklogListDto } from './dto/create-worklog.dto
 import { Worklog } from './entities/worklog.entity';
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
 import { Task } from 'src/tasks/entities/task.entity';
+import { NotificationService } from 'src/notification/notification.service';
+import moment = require('moment');
 
 @Injectable()
 export class WorklogService {
@@ -14,49 +16,72 @@ export class WorklogService {
     @InjectRepository(Worklog) private worklogRepository: Repository<Worklog>,
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     @InjectRepository(Project) private projectRepository: Repository<Project>,
-    @InjectRepository(Task) private taskRepository: Repository<Task>
-  ) {}
+    @InjectRepository(Task) private taskRepository: Repository<Task>,
+    private readonly notificationService: NotificationService,
 
-  async create(createWorklogDto: any) {
+  ) { }
+
+  async create(createWorklogDto: any, user: UserEntity) {
     const worklogs = [];
-    console.log(createWorklogDto);
-  
+
     for (const worklogDto of createWorklogDto) {
-      const { userId, taskId, ...worklogData } = worklogDto;
-  
+      const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
+
       // Fetch the associated entities
-      const user = await this.userRepository.findOne(userId);
       const task = await this.taskRepository.findOne(taskId);
-  
-      // Validate that all required entities exist
-      if (!user) {
-        throw new NotFoundException(`User with ID ${userId} not found`);
-      }
+      const project = await this.projectRepository.findOne({ id: projectId }, { relations: ['projectLead'] });
+
       if (!task) {
         throw new NotFoundException(`Task with ID ${taskId} not found`);
       }
-  
+      if (!project) {
+        throw new NotFoundException(`Project with ID ${projectId} not found`);
+      }
+
+
+      const startDate = moment.utc(startTime).toDate();  // Convert to UTC date object
+      const endDate = moment.utc(endTime).toDate();      // Convert to UTC date object
+      // Check for overlapping worklogs
+      const overlappingWorklog = await this.worklogRepository.findOne({
+        where: {
+          user: user.id,
+          startTime: LessThanOrEqual(endDate),  // Overlap if new startTime is before existing endTime
+          endTime: MoreThanOrEqual(startDate),
+        },
+      });
+
+      if (overlappingWorklog) {
+        throw new BadRequestException('Overlapping worklog found');
+      }
+
       // Create a new worklog instance
       const worklog = this.worklogRepository.create({
         ...worklogData,
         user,
         createdBy: user.id,
         task,
+        startTime,
+        endTime,
       });
-  
-      worklogs.push(worklog);
-    }
-  
-    // Save all worklogs to the database at once
-    return await this.worklogRepository.save(worklogs);
 
-    return ''
+      worklogs.push(worklog);
+      await this.notificationService.create({ message: `Worklog added for approval`, users: [project.projectLead.id] });
+    }
+
+    // Save all worklogs to the database at once
+    const savedWorklogs = await this.worklogRepository.save(worklogs);
+    return savedWorklogs;
   }
-  
-    
+
+
 
   findAll() {
-    return this.worklogRepository.find();
+    return this.worklogRepository.find({
+      relations: ['user', 'task', 'task.project'],
+      order: {
+        createdAt: 'DESC'
+      }
+    });
   }
 
   async findOne(id: string) {
@@ -69,7 +94,7 @@ export class WorklogService {
     return worklog;
   }
 
-  
+
   async findByTaskId(id: string) {
     const worklog = await this.worklogRepository.find({
       relations: ['user'],
@@ -93,5 +118,6 @@ export class WorklogService {
   }
 
   remove(id: string) {
-    return this.worklogRepository.delete(id);}
+    return this.worklogRepository.delete(id);
+  }
 }

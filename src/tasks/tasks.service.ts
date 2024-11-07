@@ -18,7 +18,16 @@ export class TasksService {
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(TaskGroup)
     private taskGroupRepository: Repository<TaskGroup>
-  ) {}
+  ) { }
+
+  private async generateTaskCode(projectId: string): Promise<string> {
+    const latestTask = await this.taskRepository.findOne({
+      where: { project: { id: projectId } },
+      order: { tcode: 'DESC' }
+    });
+    const newCode = !latestTask ? 1 : parseInt(latestTask.tcode) + 1;
+    return newCode.toString();
+  }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
     const { name, description, projectId, parentTaskId } = createTaskDto;
@@ -26,6 +35,7 @@ export class TasksService {
     // Create a new task instance
     const task = this.taskRepository.create({
       name,
+      tcode: await this.generateTaskCode(projectId),
       description,
       project: projectId
         ? await this.projectRepository.findOne(projectId)
@@ -41,22 +51,26 @@ export class TasksService {
     return await this.taskRepository.save(task);
   }
   async addBulk(importTaskDto: ImportTaskDto): Promise<any> {
-    const savedTasks = importTaskDto.tasks.map((task) =>
-      this.create({
-        name: task.name,
-        description: task.description,
-
-        projectId: importTaskDto.project
+    const savedTasks = await Promise.all(
+      importTaskDto.tasks.map(async (task) => {
+        const newTask = this.taskRepository.create({
+          name: task.name,
+          tcode: await this.generateTaskCode(importTaskDto.project),
+          description: task.description,
+          project: await this.projectRepository.findOne(importTaskDto.project),
+        });
+        return this.taskRepository.save(newTask);
       })
     );
     return {
       project: importTaskDto.project,
-      message: 'Successfully added task to project'
+      tasks: savedTasks,
+      message: 'Successfully added tasks to project',
     };
   }
 
   findAll() {
-    return this.taskRepository.find({ relations: ['worklogs','project','assignees','group','subTasks'] });
+    return this.taskRepository.find({ relations: ['worklogs', 'project', 'assignees', 'group', 'subTasks'] });
   }
 
   async findOne(id: string): Promise<Task> {
@@ -71,10 +85,22 @@ export class TasksService {
   async findOneByProjectId(id: string) {
     const task = await this.taskRepository.find({
       where: { project: { id: id } },
-      relations: ['assignees', 'group','subTasks','project']
+      relations: ['assignees', 'group', 'subTasks', 'project']
     });
     if (!task) {
       throw new NotFoundException(`Task with project ID ${id} not found`);
+    }
+    return task;
+  }
+  async findOneByProjectIdAndTaskId(projectId: string, taskId: string) {
+    const task = await this.taskRepository.findOne({
+      where: { project: { id: projectId }, id: taskId },
+      relations: ['assignees', 'group', 'subTasks', 'project']
+    });
+    if (!task) {
+      throw new NotFoundException(
+        `Task with project ID ${projectId} and task ID ${taskId} not found`
+      );
     }
     return task;
   }
@@ -88,8 +114,8 @@ export class TasksService {
     task.description = updateTaskDto.description ?? task.description;
     task.parentTask = updateTaskDto.parentTaskId
       ? await this.taskRepository.findOne({
-          where: { id: updateTaskDto.parentTaskId }
-        })
+        where: { id: updateTaskDto.parentTaskId }
+      })
       : task.parentTask;
     task.assignees = updateTaskDto.assineeId
       ? await this.userRepository.findByIds(updateTaskDto.assineeId)

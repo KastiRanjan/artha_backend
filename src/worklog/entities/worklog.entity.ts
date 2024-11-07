@@ -15,9 +15,10 @@ export class Worklog extends CustomBaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   endTime?: Date;
 
-  @Column({type: 'enum',
-  enum: ['open', 'rejected', 'approved', 'pending'],
-  default: 'open',
+  @Column({
+    type: 'enum',
+    enum: ['open', 'rejected', 'approved', 'pending'],
+    default: 'open',
   })
   status?: string;
 
@@ -29,6 +30,10 @@ export class Worklog extends CustomBaseEntity {
   })
   @JoinColumn()
   user: UserEntity;
+
+
+  @ManyToOne(() => Project, (project) => project.worklogs)
+  project: Project;
 
 
   @ManyToOne(() => Task, (task) => task.worklogs)

@@ -19,6 +19,9 @@ export class Task extends CustomBaseEntity {
   @Column({})
   name: string;
 
+  @Column({ nullable: true })
+  tcode: string;
+
   @Column('text', { nullable: true })
   description?: string;
 

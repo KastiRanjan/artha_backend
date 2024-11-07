@@ -32,10 +32,9 @@ export class ProjectsService {
   }
 
   findAll(status: 'active' | 'suspended' | 'archived' | 'signed_off') {
-    console.log
     return this.projectRepository.find({
       where: { status },
-      relations: ['projectLead']
+      relations: ['projectLead', 'tasks']
     });
   }
 
