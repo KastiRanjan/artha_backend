@@ -15,6 +15,14 @@ export class Worklog extends CustomBaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   endTime?: Date;
 
+  @Column({type: 'enum',
+  enum: ['open', 'rejected', 'approved', 'pending'],
+  default: 'open',
+  })
+  status?: string;
+
+  @Column({ nullable: true })
+  approvedBy?: string;
 
   @ManyToOne(() => UserEntity, (user) => user.worklogs, {
     nullable: false

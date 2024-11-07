@@ -1,20 +1,22 @@
-import { IsEnum, IsLatitude, IsLongitude, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsLatitude, IsLongitude, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateAttendanceDto {
-  @IsNumber()
-  userId: string;
-
-  @IsEnum(['check-in', 'check-out'])
-  action: 'check-in' | 'check-out';
-
   @IsNotEmpty()
-  timestamp: Date;
+  @IsOptional()
+  date: string;
 
-  @IsOptional() // Optional if latitude/longitude are not always required
+  @IsOptional()
+  @IsString()
+  clockIn?: string;
+
+  @IsOptional()
+  clockOut?: string;
+
+  @IsOptional() //
   @IsLatitude()
-  latitude?: number;
+  latitude?: string;
 
   @IsOptional()
   @IsLongitude()
-  longitude?: number;
+  longitude?: string;
 }

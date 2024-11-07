@@ -19,7 +19,8 @@ export class UserDocumentEntity extends CustomBaseEntity {
       'pan_no',
       'membership',
       'others'
-    ]
+    ],
+    nullable: true
   })
   documentType: string;
 

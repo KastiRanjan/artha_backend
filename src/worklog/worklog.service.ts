@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
-import { CreateWorklogDto } from './dto/create-worklog.dto';
+import { CreateWorklogDto, CreateWorklogListDto } from './dto/create-worklog.dto';
 import { Worklog } from './entities/worklog.entity';
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
 import { Task } from 'src/tasks/entities/task.entity';
@@ -12,37 +12,47 @@ import { Task } from 'src/tasks/entities/task.entity';
 export class WorklogService {
   constructor(
     @InjectRepository(Worklog) private worklogRepository: Repository<Worklog>,
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(Task) private taskRepository: Repository<Task>
   ) {}
 
-  async create(createWorklogDto: CreateWorklogDto) {
-    const { userId, taskId, ...worklogData } = createWorklogDto;
+  async create(createWorklogDto: any) {
+    const worklogs = [];
+    console.log(createWorklogDto);
   
-    // Fetch the associated entities
-    const user = await this.userRepository.findOne(userId);
-    const task = await this.taskRepository.findOne(taskId);
+    for (const worklogDto of createWorklogDto) {
+      const { userId, taskId, ...worklogData } = worklogDto;
   
-    // Validate that all required entities exist
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      // Fetch the associated entities
+      const user = await this.userRepository.findOne(userId);
+      const task = await this.taskRepository.findOne(taskId);
+  
+      // Validate that all required entities exist
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+      if (!task) {
+        throw new NotFoundException(`Task with ID ${taskId} not found`);
+      }
+  
+      // Create a new worklog instance
+      const worklog = this.worklogRepository.create({
+        ...worklogData,
+        user,
+        createdBy: user.id,
+        task,
+      });
+  
+      worklogs.push(worklog);
     }
-    if (!task) {
-      throw new NotFoundException(`Task with ID ${taskId} not found`);
-    }
   
-    // Create a new worklog instance
-    const worklog = this.worklogRepository.create({
-      ...worklogData,
-      user,
-      task
-    });
-  
-    // Save the new worklog to the database
-    return await this.worklogRepository.save(worklog);
+    // Save all worklogs to the database at once
+    return await this.worklogRepository.save(worklogs);
+
+    return ''
   }
+  
     
 
   findAll() {
@@ -55,6 +65,20 @@ export class WorklogService {
     });
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
+    }
+    return worklog;
+  }
+
+  
+  async findByTaskId(id: string) {
+    const worklog = await this.worklogRepository.find({
+      relations: ['user'],
+      order: {
+        createdAt: 'DESC'
+      },
+    });
+    if (!worklog) {
+      throw new NotFoundException(`Worklog with task ID ${id} not found`);
     }
     return worklog;
   }

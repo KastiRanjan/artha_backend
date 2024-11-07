@@ -63,6 +63,7 @@ export class AuthService {
   constructor(
     @InjectRepository(UserRepository)
     private readonly userRepository: UserRepository,
+    private readonly usersRepository: UserEntity,
     private readonly jwt: JwtService,
     private readonly mailService: MailService,
     private readonly refreshTokenService: RefreshTokenService,
@@ -206,6 +207,7 @@ export class AuthService {
       ...BASE_OPTIONS,
       subject: String(user.id)
     };
+    console.log(opts);
     return this.jwt.signAsync(
       {
         ...opts,
@@ -267,7 +269,7 @@ export class AuthService {
   ): Promise<Pagination<UserSerializer>> {
     return this.userRepository.paginate(
       userSearchFilterDto,
-      ['role'],
+      ['role', 'bank_detail'],
       ['username', 'email', 'name', 'contact', 'address'],
       {
         groups: [
@@ -330,7 +332,10 @@ export class AuthService {
    * @param token
    */
   async activateAccount(token: string): Promise<void> {
-    const user = await this.userRepository.findOne({ token });
+    console.log(typeof token);
+    
+    const user = await this.usersRepository.findOne({ token: token });
+    console.log(user);
     if (!user) {
       throw new NotFoundException();
     }
@@ -345,6 +350,7 @@ export class AuthService {
     user.skipHashPassword = true;
     await user.save();
   }
+  
 
   /**
    * forget password and send reset code by email
@@ -474,7 +480,7 @@ export class AuthService {
   getCookieForLogOut(): string[] {
     return [
       `Authentication=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : '' 
+        !isSameSite ? 'SameSite=None; Secure;' : ''
       }`,
       `Refresh=; HttpOnly; Path=/; Max-Age=0; ${
         !isSameSite ? 'SameSite=None; Secure;' : ''

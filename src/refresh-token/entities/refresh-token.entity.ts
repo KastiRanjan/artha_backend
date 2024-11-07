@@ -10,7 +10,7 @@ import {
   name: 'refresh_token'
 })
 export class RefreshToken extends BaseEntity {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()

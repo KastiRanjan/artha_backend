@@ -9,15 +9,18 @@ export class Attendance extends CustomBaseEntity {
   @Column()
   userId: string;
 
-  @Column({ type: 'enum', enum: ['check-in', 'check-out'] }) // Example ENUM for action
-  action: 'check-in' | 'check-out';
-
-  @Column()
-  timestamp: Date;
-
-  @Column({ nullable: true }) // If latitude/longitude might not always be present
-  latitude?: number;
+  @Column({ nullable: true })
+  date: string;
 
   @Column({ nullable: true })
-  longitude?: number;
+  clockIn: string;
+
+  @Column({ nullable: true })
+  clockOut: string;
+
+  @Column({ nullable: true })
+  latitude?: string;
+
+  @Column({ nullable: true })
+  longitude?: string;
 }

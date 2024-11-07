@@ -15,6 +15,8 @@ import { UserContractEntity } from './entities/user.contractdocument.entity';
 import { UserTrainningEntity } from './entities/user.trainingcertificate.entity';
 import { UserDocumentEntity } from './entities/user.document.entity';
 import { UserEducationDetailEntity } from './entities/user.educationdetail.entity';
+import { MailModule } from 'src/mail/mail.module';
+import { EmailTemplateModule } from 'src/email-template/email-template.module';
 
 @Module({
   imports: [
@@ -27,9 +29,11 @@ import { UserEducationDetailEntity } from './entities/user.educationdetail.entit
       UserTrainningEntity,
       UserDocumentEntity,
       UserEducationDetailEntity,
-      RefreshTokenRepository,
+      RefreshTokenRepository
     ]),
-    AuthModule
+    AuthModule,
+    MailModule,
+    EmailTemplateModule
   ],
   controllers: [UsersController],
   providers: [

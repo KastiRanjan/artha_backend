@@ -6,6 +6,7 @@ import {
   Entity,
   JoinColumn,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   OneToOne
 } from 'typeorm';
@@ -44,13 +45,16 @@ export class Project extends CustomBaseEntity {
   @ManyToMany(() => UserEntity, (user) => user.projects, { nullable: true })
   users: UserEntity[];
 
-  @OneToOne(() => UserEntity, (user) => user.project)
-  @JoinColumn({ name: 'projectLead' })
-  projectLead: UserEntity;
 
   @OneToMany(() => Task, (task) => task.project, {
     onDelete: 'CASCADE',
     nullable: true
   })
   tasks: Task[];
+
+  @ManyToOne(() => UserEntity, (user) => user.projects, {
+    onDelete: 'SET NULL',
+    nullable: true
+  })
+  projectLead: UserEntity;
 }
