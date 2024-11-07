@@ -23,7 +23,7 @@ async function bootstrap() {
   app.use(helmet());
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   const apiConfig = config.get('app');
-  if (process.env.NODE_ENV === 'development') {
+  // if (process.env.NODE_ENV === 'development') {
     app.enableCors({
       origin: true,
       credentials: true
@@ -42,12 +42,12 @@ async function bootstrap() {
     };
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('api-docs', app, document, customOptions);
-  } else {
-    const whitelist = [apiConfig.get<string>('frontendUrl')];
-    app.enableCors({
-      origin: true,
-      credentials: true
-    });
+  // } else {
+  //   const whitelist = [apiConfig.get<string>('frontendUrl')];
+  //   app.enableCors({
+  //     origin: true,
+  //     credentials: true
+  //   });
     // app.enableCors({
     //   origin: function (origin, callback) {
     //     if (!origin || whitelist.indexOf(origin) !== -1) {
@@ -58,7 +58,7 @@ async function bootstrap() {
     //   },
     //   credentials: true
     // });
-  }
+  // }
   useContainer(app.select(AppModule), {
     fallbackOnErrors: true
   });
