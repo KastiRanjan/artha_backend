@@ -45,15 +45,19 @@ async function bootstrap() {
   } else {
     const whitelist = [apiConfig.get<string>('frontendUrl')];
     app.enableCors({
-      origin: function (origin, callback) {
-        if (!origin || whitelist.indexOf(origin) !== -1) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
+      origin: true,
       credentials: true
     });
+    // app.enableCors({
+    //   origin: function (origin, callback) {
+    //     if (!origin || whitelist.indexOf(origin) !== -1) {
+    //       callback(null, true);
+    //     } else {
+    //       callback(new Error('Not allowed by CORS'));
+    //     }
+    //   },
+    //   credentials: true
+    // });
   }
   useContainer(app.select(AppModule), {
     fallbackOnErrors: true
