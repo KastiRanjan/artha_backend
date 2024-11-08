@@ -17,47 +17,48 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function bootstrap() {
-  const serverConfig = config.get('server');
-  const port = process.env.PORT || serverConfig.port;
+  // const serverConfig = config.get('server');
+  const port = process.env.PORT ;
   const app = await NestFactory.create(AppModule);
+
   app.use(helmet());
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  const apiConfig = config.get('app');
+  // const apiConfig = config.get('app');
   // if (process.env.NODE_ENV === 'development') {
-    app.enableCors({
-      origin: true,
-      credentials: true
-    });
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle(apiConfig.name)
-      .setDescription(apiConfig.description)
-      .setVersion(apiConfig.version)
-      .addBearerAuth()
-      .build();
-    const customOptions: SwaggerCustomOptions = {
-      swaggerOptions: {
-        persistAuthorization: true
-      },
-      customSiteTitle: apiConfig.description
-    };
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api-docs', app, document, customOptions);
+  app.enableCors({
+    origin: true,
+    credentials: true
+  });
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Artha API')
+    .setDescription('The Artha API description')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const customOptions: SwaggerCustomOptions = {
+    swaggerOptions: {
+      persistAuthorization: true
+    },
+    customSiteTitle: 'Artha API'
+  };
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api-docs', app, document, customOptions);
   // } else {
   //   const whitelist = [apiConfig.get<string>('frontendUrl')];
   //   app.enableCors({
   //     origin: true,
   //     credentials: true
   //   });
-    // app.enableCors({
-    //   origin: function (origin, callback) {
-    //     if (!origin || whitelist.indexOf(origin) !== -1) {
-    //       callback(null, true);
-    //     } else {
-    //       callback(new Error('Not allowed by CORS'));
-    //     }
-    //   },
-    //   credentials: true
-    // });
+  // app.enableCors({
+  //   origin: function (origin, callback) {
+  //     if (!origin || whitelist.indexOf(origin) !== -1) {
+  //       callback(null, true);
+  //     } else {
+  //       callback(new Error('Not allowed by CORS'));
+  //     }
+  //   },
+  //   credentials: true
+  // });
   // }
   useContainer(app.select(AppModule), {
     fallbackOnErrors: true

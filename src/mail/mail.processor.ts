@@ -12,7 +12,8 @@ import { Job } from 'bull';
 
 import { MailJobInterface } from 'src/mail/interface/mail-job.interface';
 
-@Processor(config.get('mail.queueName'))
+@Processor('artha-mail')
+// @Processor(config.get('mail.queueName'))
 export class MailProcessor {
   private readonly logger = new Logger(this.constructor.name);
 
@@ -52,7 +53,17 @@ export class MailProcessor {
     }>
   ): Promise<any> {
     this.logger.log(`Sending email to '${job.data.payload.to}'`);
-    const mailConfig = config.get('mail');
+    const mailConfig = {
+      host: 'smtp.mailtrap.io',
+      port: 2525,
+      user: 'f4a511d60957e6',
+      pass: '7522797b96cef0',
+      from: 'truthycms',
+      fromMail: 'truthycms@gmail.com',
+      preview: true,
+      secure: false,
+      ignoreTLS: true
+    }
     try {
       const options: Record<string, any> = {
         to: job.data.payload.to,

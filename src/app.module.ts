@@ -37,7 +37,7 @@ import { AttendenceModule } from './attendence/attendence.module';
 import { AuthService } from './auth/auth.service';
 import { NotificationModule } from './notification/notification.module';
 
-const appConfig = config.get('app');
+// const appConfig = config.get('app');
 
 @Module({
   imports: [
@@ -47,7 +47,7 @@ const appConfig = config.get('app');
     }),
     I18nModule.forRootAsync({
       useFactory: () => ({
-        fallbackLanguage: appConfig.fallbackLanguage,
+        fallbackLanguage: 'en',
         parserOptions: {
           path: path.join(__dirname, '/i18n/'),
           watch: true

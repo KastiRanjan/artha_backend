@@ -9,7 +9,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomHttpException } from 'src/exception/custom-http.exception';
 
-const TwofaConfig = config.get('twofa');
+// const TwofaConfig = config.get('twofa');
 
 @Injectable()
 export class TwofaService {
@@ -29,7 +29,7 @@ export class TwofaService {
     const secret = authenticator.generateSecret();
     const otpauthUrl = authenticator.keyuri(
       user.email,
-      TwofaConfig.authenticationAppNAme,
+      'Artha',
       secret
     );
     await this.usersService.setTwoFactorAuthenticationSecret(secret, user.id);

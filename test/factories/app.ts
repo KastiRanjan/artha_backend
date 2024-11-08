@@ -9,13 +9,22 @@ import * as config from 'config';
 
 import { AppModule } from 'src/app.module';
 
-const dbConfig = config.get('db');
+// const dbConfig = config.get('db');
+const dbConfig = {
+  host: "localhost",
+  type: "postgres",
+  database: "artha",
+  port: 5432,
+  username: "postgres",
+  password: "root",
+  synchronize: false
+};
 
 export class AppFactory {
   private constructor(
     private readonly appInstance: INestApplication,
     private readonly redis: Redis.Redis
-  ) {}
+  ) { }
 
   get instance() {
     return this.appInstance;
@@ -80,7 +89,7 @@ export class AppFactory {
 
   static async dropTables() {
     const connection = await createConnection({
-      type: dbConfig.type || 'postgres',
+      type: dbConfig.type || "postgres",
       host: process.env.DB_HOST || dbConfig.host,
       port: parseInt(process.env.DB_PORT) || dbConfig.port,
       database: process.env.DB_DATABASE_NAME || dbConfig.database,

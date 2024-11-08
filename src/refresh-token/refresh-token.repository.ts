@@ -6,7 +6,7 @@ import { UserSerializer } from 'src/auth/serializer/user.serializer';
 import { BaseRepository } from 'src/common/repository/base.repository';
 import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-token.serializer';
 
-const tokenConfig = config.get('jwt');
+// const tokenConfig = config.get('jwt');
 @EntityRepository(RefreshToken)
 export class RefreshTokenRepository extends BaseRepository<
   RefreshToken,
@@ -30,7 +30,7 @@ export class RefreshTokenRepository extends BaseRepository<
     token.os = tokenPayload.os;
     const expiration = new Date();
     expiration.setSeconds(
-      expiration.getSeconds() + tokenConfig.refreshExpiresIn
+      expiration.getSeconds() + 60 * 60 * 24
     );
     token.expires = expiration;
     return token.save();

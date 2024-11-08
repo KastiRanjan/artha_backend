@@ -15,16 +15,16 @@ import { JwtTwoFactorStrategy } from 'src/common/strategy/jwt-two-factor.strateg
 import { JwtStrategy } from 'src/common/strategy/jwt.strategy';
 import { UsersModule } from 'src/users/users.module';
 
-const throttleConfig = config.get('throttle.login');
-const jwtConfig = config.get('jwt');
+// const throttleConfig = config.get('throttle.login');
+// const jwtConfig = config.get('jwt');
 export const LoginThrottleFactory = {
   provide: 'LOGIN_THROTTLE',
   useFactory: () => {
     return new RateLimiterMemory({
-      keyPrefix: throttleConfig.prefix,
-      points: throttleConfig.limit,
+      keyPrefix: 'login_fail_throttle',
+      points: 5,
       duration: 60 * 60 * 24 * 30,
-      blockDuration: throttleConfig.blockDuration
+      blockDuration: 3000
     });
   }
 };
@@ -33,9 +33,9 @@ export const LoginThrottleFactory = {
   imports: [
     JwtModule.registerAsync({
       useFactory: () => ({
-        secret: process.env.JWT_SECRET || jwtConfig.secret,
+        secret: process.env.JWT_SECRET || 'secret',
         signOptions: {
-          expiresIn: process.env.JWT_EXPIRES_IN || jwtConfig.expiresIn
+          expiresIn: process.env.JWT_EXPIRES_IN || 60 * 60 * 24
         }
       })
     }),

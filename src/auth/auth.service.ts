@@ -44,19 +44,19 @@ import { ValidationPayloadInterface } from 'src/common/interfaces/validation-err
 import { RefreshPaginateFilterDto } from 'src/refresh-token/dto/refresh-paginate-filter.dto';
 import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-token.serializer';
 
-const throttleConfig = config.get('throttle.login');
-const jwtConfig = config.get('jwt');
-const appConfig = config.get('app');
-// const isSameSite = process.env.IS_SAME_SITE || appConfig.sameSite;
+// const throttleConfig = config.get('throttle.login');
+// const jwtConfig = config.get('jwt');
+// const appConfig = config.get('app');
+const isSameSite = process.env.IS_SAME_SITE || false;
 // for heroku
-const isSameSite =
-  appConfig.sameSite !== null
-    ? appConfig.sameSite
-    : process.env.IS_SAME_SITE === 'true';
-const BASE_OPTIONS: SignOptions = {
-  issuer: appConfig.appUrl,
-  audience: appConfig.frontendUrl
-};
+// const isSameSite =
+//   appConfig.sameSite !== null
+//     ? appConfig.sameSite
+//     : process.env.IS_SAME_SITE === 'true';
+// const BASE_OPTIONS: SignOptions = {
+//   issuer: appConfig.appUrl,
+//   audience: appConfig.frontendUrl
+// };
 
 @Injectable()
 export class AuthService {
@@ -85,14 +85,14 @@ export class AuthService {
     slug: string,
     linkLabel: string
   ) {
-    const appConfig = config.get('app');
+    // const appConfig = config.get('app');
     const mailData: MailJobInterface = {
       to: user.email,
       subject,
       slug,
       context: {
         email: user.email,
-        link: `<a href="${appConfig.frontendUrl}/${url}">${linkLabel} →</a>`,
+        link: `<a href="${'frontendUrl'}/${url}">${linkLabel} →</a>`,
         username: user.username,
         subject
       }
@@ -152,7 +152,7 @@ export class AuthService {
     // Check if user is already blocked
     if (
       resUsernameAndIP !== null &&
-      resUsernameAndIP.consumedPoints > throttleConfig.limit
+      resUsernameAndIP.consumedPoints > 100
     ) {
       retrySecs = Math.round(resUsernameAndIP.msBeforeNext / 1000) || 1;
     }
@@ -203,7 +203,8 @@ export class AuthService {
     isTwoFAAuthenticated = false
   ): Promise<string> {
     const opts: SignOptions = {
-      ...BASE_OPTIONS,
+      issuer: 'http://localhost:3000',
+      audience: 'http://localhost:3000',
       subject: String(user.id)
     };
     console.log(opts);
@@ -507,10 +508,10 @@ export class AuthService {
       tokenCookies = tokenCookies.concat([
         `Refresh=${refreshToken}; HttpOnly; Path=/; ${
           !isSameSite ? 'SameSite=None; Secure;' : ''
-        } Max-Age=${jwtConfig.cookieExpiresIn}`,
+        } Max-Age=${60 * 60 * 24}`,
         `ExpiresIn=${expiration}; Path=/; ${
           !isSameSite ? 'SameSite=None; Secure;' : ''
-        } Max-Age=${jwtConfig.cookieExpiresIn}`
+        } Max-Age=${60 * 60 * 24}`,
       ]);
     }
     return tokenCookies;

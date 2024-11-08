@@ -26,7 +26,7 @@ export class JwtTwoFactorStrategy extends PassportStrategy(
           return request?.cookies?.Authentication;
         }
       ]),
-      secretOrKey: process.env.JWT_SECRET || config.get('jwt.secret')
+      secretOrKey: process.env.JWT_SECRET || 'secret'
     });
   }
 

@@ -20,12 +20,12 @@ import { PaginationInfoInterface } from 'src/paginate/pagination-info.interface'
 import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-token.serializer';
 import { Pagination } from 'src/paginate';
 
-const appConfig = config.get('app');
-const tokenConfig = config.get('jwt');
-const BASE_OPTIONS: SignOptions = {
-  issuer: appConfig.appUrl,
-  audience: appConfig.frontendUrl
-};
+// const appConfig = config.get('app');
+// const tokenConfig = config.get('jwt');
+// const BASE_OPTIONS: SignOptions = {
+//   issuer: appConfig.appUrl,
+//   audience: appConfig.frontendUrl
+// };
 
 @Injectable()
 export class RefreshTokenService {
@@ -48,7 +48,8 @@ export class RefreshTokenService {
   ): Promise<string> {
     const token = await this.repository.createRefreshToken(user, refreshToken);
     const opts: SignOptions = {
-      ...BASE_OPTIONS,
+      issuer:'http://localhost:3000',
+      audience:'http://localhost:3000',
       subject: String(user.id),
       jwtid: String(token.id)
     };
@@ -56,7 +57,7 @@ export class RefreshTokenService {
     return this.jwt.signAsync(
       { ...opts },
       {
-        expiresIn: tokenConfig.refreshExpiresIn
+        expiresIn: 60 * 60 * 24
       }
     );
   }

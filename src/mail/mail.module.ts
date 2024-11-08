@@ -10,8 +10,20 @@ import { MailProcessor } from 'src/mail/mail.processor';
 import { EmailTemplateModule } from 'src/email-template/email-template.module';
 import { EmailTemplateService } from 'src/email-template/email-template.service';
 
-const mailConfig = config.get('mail');
-const queueConfig = config.get('queue');
+// const mailConfig = config.get('mail');
+const mailConfig = {
+  host: 'smtp.mailtrap.io',
+  port: 2525,
+  user: 'f4a511d60957e6',
+  pass: '7522797b96cef0',
+  from: 'truthycms',
+  fromMail: 'truthycms@gmail.com',
+  preview: true,
+  secure: false,
+  ignoreTLS: true,
+  queueName: 'truthy-mail',
+}
+// const queueConfig = config.get('queue');
 
 @Module({
   imports: [
@@ -48,4 +60,4 @@ const queueConfig = config.get('queue');
   providers: [MailService],
   exports: [MailService]
 })
-export class MailModule {}
+export class MailModule { }
