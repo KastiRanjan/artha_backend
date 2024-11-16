@@ -1,24 +1,19 @@
 {
     "version": 2,
     "builds": [
-        {
-            "src": "dist/main.js",
-            "use": "@vercel/node"
+      {
+        "src": "package.json",
+        "use": "@vercel/node",
+        "config": {
+          "maxLambdaSize": "50mb"
         }
+      }
     ],
     "routes": [
-        {
-            "src": "/[^.]+",
-            "dest": "dist/main.js",
-            "methods": [
-                "GET",
-                "POST",
-                "PUT",
-                "PATCH",
-                "DELETE",
-                "HEAD",
-                "OPTIONS"
-            ]
-        }
+      {
+        "src": "/(.*)",
+        "dest": "/dist/$1"
+      }
     ]
-}
+  }
+  

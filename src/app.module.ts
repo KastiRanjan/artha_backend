@@ -65,7 +65,8 @@ import { NotificationModule } from './notification/notification.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
-      exclude: ['/api*']
+      // exclude: ['/api*']
+      // serveRoot:'/public÷'
     }),
     AuthModule,
     RolesModule,

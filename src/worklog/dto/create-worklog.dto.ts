@@ -29,9 +29,13 @@ export class CreateWorklogDto {
   @Type(() => String)
   approvedBy: string;
 
+  @IsOptional()
+  status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested';
+
   @IsNotEmpty()
   @Type(() => String)
   taskId: string;
+
 }
 
 
@@ -40,4 +44,8 @@ export class CreateWorklogListDto {
   @ValidateNested({ each: true })
   @Type(() => CreateWorklogDto) // Transform each item in the array to CreateWorklogDto
   worklogs: CreateWorklogDto[];
+
+  @IsNotEmpty()
+  @Type(() => Boolean)
+  approvalRequest: boolean;
 }

@@ -25,6 +25,7 @@ export class TasksController {
 
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
+    console.log('asdad');
     return this.tasksService.create(createTaskDto);
   }
   @Post('/add-bulk')

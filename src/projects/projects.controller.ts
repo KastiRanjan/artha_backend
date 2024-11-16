@@ -15,13 +15,15 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @ApiTags('projects')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('projects')
 @ApiBearerAuth()
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(private readonly projectsService: ProjectsService) { }
 
   @Post()
   create(@Body() createProjectDto: CreateProjectDto) {
@@ -29,8 +31,9 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll(@Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off') {
-    return this.projectsService.findAll(status);
+  findAll(@GetUser()
+  user: UserEntity, @Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off') {
+    return this.projectsService.findAll(status,user);
   }
 
   @Get(':id')

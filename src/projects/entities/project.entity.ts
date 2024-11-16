@@ -21,7 +21,7 @@ export class Project extends CustomBaseEntity {
   description: string;
 
   @Column({ length: 20 })
-  status: 'active' | 'suspended' | 'archived' | 'signed_off' = 'active';
+  status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed';
 
   @Column({ length: 30 })
   natureOfWork:
@@ -43,12 +43,12 @@ export class Project extends CustomBaseEntity {
   @Column({ type: 'date' })
   endingDate: Date;
 
-  @ManyToMany(() => UserEntity, (user) => user.projects, { nullable: true })
+  @ManyToMany(() => UserEntity, (user) => user.projects, { nullable: true, onDelete: 'SET NULL' })
   users: UserEntity[];
 
 
   @OneToMany(() => Task, (task) => task.project, {
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
     nullable: true
   })
   tasks: Task[];

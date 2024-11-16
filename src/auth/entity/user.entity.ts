@@ -28,6 +28,7 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
+import { UserEducationDetailEntity } from 'src/users/entities/user.educationdetail.entity';
 
 /**
  * User Entity
@@ -125,20 +126,23 @@ export class UserEntity extends CustomBaseEntity {
   @OneToOne(() => UserProfileEntity, (profile) => profile.user)
   profile: UserProfileEntity;
 
-  @OneToOne(() => UserDocumentEntity, (document) => document.user)
-  document: UserDocumentEntity;
+  @OneToMany(() => UserDocumentEntity, (document) => document.user)
+  document: UserDocumentEntity[];
 
-  @OneToOne(() => UserContractEntity, (contract_detail) => contract_detail.user)
-  contract_detail: UserContractEntity;
+  @OneToMany(() => UserEducationDetailEntity, (document) => document.user)
+  education_detail: UserEducationDetailEntity[];
 
-  @OneToOne(
+  @OneToMany(() => UserContractEntity, (contract_detail) => contract_detail.user)
+  contract_detail: UserContractEntity[];
+
+  @OneToMany(
     () => UserTrainningEntity,
     (trainning_detail) => trainning_detail.user
   )
-  trainning_detail: UserBankDetailEntity;
+  trainning_detail: UserBankDetailEntity[];
 
-  @OneToOne(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
-  bank_detail: UserBankDetailEntity;
+  @OneToMany(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
+  bank_detail: UserBankDetailEntity[];
 
   @ManyToMany(() => Notification, notification => notification.users)
   @JoinTable({
@@ -168,18 +172,21 @@ export class UserEntity extends CustomBaseEntity {
   })
   assignedTasks: Task[];
 
-  @OneToOne(() => Project, (project) => project.projectLead)
+  @OneToOne(() => Project, (project) => project.projectLead, {
+    nullable: true,
+    onDelete: 'SET NULL'
+  })
   project: Project;
 
   @ManyToMany(() => Project, (project) => project.users)
   @JoinTable({
     name: 'user_project',
     joinColumn: {
-      name: 'projectId',
+      name: 'userId',
       referencedColumnName: 'id'
     },
     inverseJoinColumn: {
-      name: 'userId',
+      name: 'projectId',
       referencedColumnName: 'id'
     }
   })

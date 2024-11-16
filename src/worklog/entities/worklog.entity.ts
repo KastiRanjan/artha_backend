@@ -17,7 +17,7 @@ export class Worklog extends CustomBaseEntity {
 
   @Column({
     type: 'enum',
-    enum: ['open', 'rejected', 'approved', 'pending'],
+    enum: ['open', 'rejected', 'approved', 'pending', 'requested'],
     default: 'open',
   })
   status?: string;

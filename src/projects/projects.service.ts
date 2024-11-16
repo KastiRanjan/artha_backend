@@ -4,8 +4,10 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/project.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { NotificationService } from 'src/notification/notification.service';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 @Injectable()
 export class ProjectsService {
@@ -20,22 +22,41 @@ export class ProjectsService {
     const users = await this.userRepository.findByIds(userIds);
     const lead = await this.userRepository.findOne(projectLead);
     // Create a new project and assign the fetched users
-    const project = this.projectRepository.create({
+    const project = await this.projectRepository.create({
       ...projectData,
       users, // Assign the user entities here
       projectLead: lead || null
     });
 
-    this.notificationService.create({ message: `Project ${project.name} created`, users: userIds });
+    const savedProject = await this.projectRepository.save(project);
+
+    await this.notificationService.create({ message: `Project ${savedProject.name} created`, users: userIds, link: `${process.env.frontendUrl}/projects/${savedProject.id}` });
     // Save the project with associated users
-    return await this.projectRepository.save(project);
+    return savedProject
   }
 
-  findAll(status: 'active' | 'suspended' | 'archived' | 'signed_off') {
-    return this.projectRepository.find({
-      where: { status },
-      relations: ['projectLead', 'tasks']
-    });
+  async findAll(status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed', user: UserEntity) {
+    let projects = null
+
+    if (user.role.name === 'superuser') {
+      projects = await this.projectRepository.find({
+        where: {
+          status: status
+        },
+        relations: ['users', 'tasks', 'projectLead'],
+      });
+    }
+    else {
+      const users = await this.userRepository.findOne({
+        relations: ['projects', 'projects.projectLead', 'projects.users'],
+        where: {
+          id: user.id
+        },
+      });
+      projects = users.projects
+    }
+
+    return projects
   }
 
   findOne(id: string) {
@@ -66,11 +87,12 @@ export class ProjectsService {
       project.users = users; // Update users if provided
 
     }
-    await this.notificationService.create({ message: `Project ${project.name} updated`, users: updateProjectDto.users });
-
 
     // Save the updated project back to the repository
-    return await this.projectRepository.save(project);
+    const updatedProject = await this.projectRepository.save(project);
+
+    await this.notificationService.create({ message: `Project ${updatedProject.name} updated`, users: updateProjectDto.users, link: `${process.env.frontendUrl}/projects/${updatedProject.id}` });
+    return updatedProject
   }
 
   async remove(id: string) {

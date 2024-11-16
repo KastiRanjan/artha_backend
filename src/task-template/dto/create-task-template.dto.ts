@@ -14,4 +14,12 @@ export class CreateTaskTemplateDto {
   @IsNotEmpty()
   @Type(() => String)
   groupId?: string;
+
+  @IsOptional()
+  @Type(() => String)
+  parentTaskId?: string;
+
+  @IsOptional()
+  @IsString()
+  taskType?: 'story' | 'task';
 }

@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Notification } from './entities/notification.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { Repository } from 'typeorm';
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import { Notification } from './entities/notification.entity';
 
 @Injectable()
 export class NotificationService {
@@ -26,7 +25,7 @@ export class NotificationService {
   }
 
   findAll() {
-    return this.notificationRepository.find();
+    return this.notificationRepository.find({ where: { isRead: false }, order: { createdAt: 'DESC' } });
   }
 
   async findOne(id: string) {
@@ -34,6 +33,7 @@ export class NotificationService {
   }
 
   async markNotificationAsReadupdate(id: string) {
+    console.log(id)
     const notification = await this.notificationRepository.findOne({ where: { id: id } });
     if (notification) {
       notification.isRead = true;

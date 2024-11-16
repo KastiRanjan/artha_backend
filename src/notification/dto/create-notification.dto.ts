@@ -7,4 +7,6 @@ export class CreateNotificationDto {
 
     message: string;
 
+    link?: string;
+
 }

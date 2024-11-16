@@ -6,7 +6,8 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards
+  UseGuards,
+  Query
 } from '@nestjs/common';
 
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
@@ -29,12 +30,16 @@ export class WorklogController {
 
   create(@GetUser()
   user: UserEntity, @Body() createWorklogDto: any) {
-    return this.worklogService.create(createWorklogDto,user);
+    return this.worklogService.create(createWorklogDto, user);
   }
 
   @Get()
-  findAll() {
-    return this.worklogService.findAll();
+  findAll(
+    @GetUser()
+    user: UserEntity,
+    @Query('status') status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+  ) {
+    return this.worklogService.findAll(user, status);
   }
 
   @Get(':id')

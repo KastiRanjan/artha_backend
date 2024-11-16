@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { useContainer } from 'class-validator';
-import * as config from 'config';
 import helmet from 'helmet';
 import {
   DocumentBuilder,
@@ -18,10 +17,10 @@ dotenv.config();
 
 async function bootstrap() {
   // const serverConfig = config.get('server');
-  const port = process.env.PORT ;
+  const port = process.env.PORT || 7777;
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: false, }));
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   // const apiConfig = config.get('app');
   // if (process.env.NODE_ENV === 'development') {
@@ -42,7 +41,10 @@ async function bootstrap() {
     customSiteTitle: 'Artha API'
   };
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api-docs', app, document, customOptions);
+  SwaggerModule.setup('api-docs', app, document, {
+    ...customOptions,
+    customCss: "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css"
+  });
   // } else {
   //   const whitelist = [apiConfig.get<string>('frontendUrl')];
   //   app.enableCors({

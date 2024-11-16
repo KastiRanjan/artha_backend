@@ -8,6 +8,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { ImportTaskDto } from './dto/import-task.dto';
+import { isEmpty } from 'lodash';
 
 @Injectable()
 export class TasksService {
@@ -30,13 +31,13 @@ export class TasksService {
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { name, description, projectId, parentTaskId } = createTaskDto;
-
+    const { name, description, projectId, parentTaskId, groupId } = createTaskDto;
     // Create a new task instance
-    const task = this.taskRepository.create({
+    const task = await this.taskRepository.create({
       name,
       tcode: await this.generateTaskCode(projectId),
       description,
+      group: await this.taskGroupRepository.findOne(groupId),
       project: projectId
         ? await this.projectRepository.findOne(projectId)
         : null,
@@ -50,23 +51,85 @@ export class TasksService {
     // Save the task to the database
     return await this.taskRepository.save(task);
   }
-  async addBulk(importTaskDto: ImportTaskDto): Promise<any> {
+  async addBulk(importTaskDto: any): Promise<any> {
+    const { project, tasks } = importTaskDto
+    const projectEntity = await this.projectRepository.findOne(project);
+
     const savedTasks = await Promise.all(
-      importTaskDto.tasks.map(async (task) => {
-        const newTask = this.taskRepository.create({
-          name: task.name,
-          tcode: await this.generateTaskCode(importTaskDto.project),
-          description: task.description,
-          project: await this.projectRepository.findOne(importTaskDto.project),
+      tasks.map(async (task) => {
+        const taskGroup = await this.taskGroupRepository.findOne({
+          where: {
+            id: task,
+          },
+          relations: ['tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks'],
         });
-        return this.taskRepository.save(newTask);
+
+        if (!taskGroup) {
+          throw new NotFoundException(`Task Group with ID ${task.id} not found`);
+        }
+        if (taskGroup && taskGroup.tasktemplate) {
+          taskGroup.tasktemplate = taskGroup.tasktemplate.filter(template => template.parentTask === null);
+        }
+        console.log(taskGroup);
+
+        const newTasks = await Promise.all(
+          taskGroup.tasktemplate.map(async (template) => {
+            const newTask = await this.taskRepository.save(
+              this.taskRepository.create({
+                name: template.name,
+                tcode: await this.generateTaskCode(project),
+                description: template.description,
+                taskType: template.taskType,
+                project: projectEntity,
+                parentTask: template.parentTask,
+                group: taskGroup,
+              })
+            );
+            if (!isEmpty(template.subTasks)) {
+              template.subTasks.map(async (subTaskTemplate) => {
+                const subTasks = await this.taskRepository.create({
+                  name: subTaskTemplate.name,
+                  tcode: await this.generateTaskCode(project),
+                  description: subTaskTemplate.description,
+                  taskType: subTaskTemplate.taskType,
+                  project: projectEntity,
+                  parentTask: newTask,
+                  group: taskGroup,
+                })
+                await this.taskRepository.save(subTasks);
+              }
+              );
+            }
+            return newTask;
+          })
+        );
+
+        return newTasks;
       })
     );
+
     return {
-      project: importTaskDto.project,
+      project,
       tasks: savedTasks,
       message: 'Successfully added tasks to project',
     };
+
+    // const savedTasks = await Promise.all(
+    //   importTaskDto.tasks.map(async (task) => {
+    //     const newTask = this.taskRepository.create({
+    //       name: task.name,
+    //       tcode: await this.generateTaskCode(importTaskDto.project),
+    //       description: task.description,
+    //       project: await this.projectRepository.findOne(importTaskDto.project),
+    //     });
+    //     return this.taskRepository.save(newTask);
+    //   })
+    // );
+    // return {
+    //   project: importTaskDto.project,
+    //   tasks: savedTasks,
+    //   message: 'Successfully added tasks to project',
+    // };
   }
 
   findAll() {

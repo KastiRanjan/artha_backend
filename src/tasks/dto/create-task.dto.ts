@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import e = require('express');
 
 export class CreateTaskDto {
@@ -30,9 +30,16 @@ export class CreateTaskDto {
   tcode?: string;
 
   @IsOptional()
-  status?: 'open' | 'in_progress' | 'done'; 
-  
+  status?: 'open' | 'in_progress' | 'done';
+
+  @IsOptional()
+  priority?: 'critical' | 'high' | 'medium' | 'low';
+
   @IsOptional()
   @Type(() => String)
   parentTaskId?: string;
+  
+  @IsOptional()
+  @Type(() => String)
+  groupId?: string;
 }

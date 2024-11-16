@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateTaskTemplateDto } from './dto/create-task-template.dto';
 import { UpdateTaskTemplateDto } from './dto/update-task-template.dto';
 import { Repository } from 'typeorm';
@@ -13,15 +13,17 @@ export class TaskTemplateService {
     private readonly taskTemplateRepository: Repository<TaskTemplate>,
     @InjectRepository(TaskGroup)
     private readonly taskgroupRepository: Repository<TaskGroup>
-  ) {}
+  ) { }
   async create(createTaskTemplateDto: CreateTaskTemplateDto) {
-    const { name, description, groupId } = createTaskTemplateDto;
+    const { name, description, groupId, parentTaskId, taskType } = createTaskTemplateDto;
 
     // Create a new task instance
     const task = this.taskTemplateRepository.create({
       name,
       description,
-      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null // Assign task group
+      taskType,
+      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null, // Assign task group
+      parentTask: parentTaskId ? await this.taskTemplateRepository.findOne({ id: parentTaskId }) : null
     });
 
     // Save the task to the database
@@ -29,7 +31,7 @@ export class TaskTemplateService {
   }
 
   findAll() {
-    return this.taskTemplateRepository.find({ relations: ['group'] });
+    return this.taskTemplateRepository.find({ relations: ['group', 'parentTask','subTasks'] });
   }
 
   findOne(id: string) {
@@ -37,13 +39,15 @@ export class TaskTemplateService {
   }
 
   async update(id: string, updateTaskTemplateDto: UpdateTaskTemplateDto) {
-    const { name, description, groupId } = updateTaskTemplateDto;
+    const { name, description, groupId, taskType, parentTaskId } = updateTaskTemplateDto;
 
     // Create a new task instance
     const task = this.taskTemplateRepository.create({
       name,
       description,
-      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null // Assign task group
+      group: groupId ? await this.taskgroupRepository.findOne(groupId) : null, // Assign task group
+      taskType: taskType,
+      parentTask: parentTaskId ? await this.taskTemplateRepository.findOne({ id: parentTaskId }) : null
     });
     return this.taskTemplateRepository.update(id, task);
   }

@@ -14,9 +14,8 @@ import {
 } from 'typeorm';
 
 @Entity()
-@Unique(['name'])
 export class Task extends CustomBaseEntity {
-  @Column({})
+  @Column()
   name: string;
 
   @Column({ nullable: true })
@@ -35,6 +34,23 @@ export class Task extends CustomBaseEntity {
     nullable: true
   })
   status?: 'open' | 'in_progress' | 'done';
+
+  @Column({
+    type: 'enum',
+    enum: ['critical', 'high', 'medium', 'low'],
+    default: 'low',
+    nullable: true
+  })
+  priority?: 'critical' | 'high' | 'medium' | 'low';
+
+  @Column({
+    type: 'enum',
+    enum: ['story', 'task'],
+    default: 'task',
+    nullable: true
+  })
+  taskType?: 'story' | 'task';
+
 
   @ManyToOne(() => UserEntity, (user) => user.tasks)
   manager: UserEntity;

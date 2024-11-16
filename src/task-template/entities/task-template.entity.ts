@@ -1,8 +1,9 @@
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { Task } from 'src/tasks/entities/task.entity';
 import {
-    Column,
-    Entity, ManyToOne, Unique
+  Column,
+  Entity, JoinColumn, ManyToOne, OneToMany, Unique
 } from 'typeorm';
 
 @Entity()
@@ -19,5 +20,23 @@ export class TaskTemplate extends CustomBaseEntity {
     nullable: true
   })
   group?: TaskGroup;
+
+  @ManyToOne(() => TaskTemplate, (task) => task.subTasks, {
+    onDelete: 'SET NULL',
+    nullable: true
+  })
+  @JoinColumn({ name: 'parentTaskId' })
+  parentTask?: TaskTemplate;
+
+  @OneToMany(() => TaskTemplate, (task) => task.parentTask)
+  subTasks?: TaskTemplate[];
+
+  @Column({
+    type: 'enum',
+    enum: ['story', 'task'],
+    default: 'task',
+    nullable: true
+  })
+  taskType?: 'story' | 'task';
 
 }

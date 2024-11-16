@@ -62,10 +62,13 @@ export class WorklogService {
         task,
         startTime,
         endTime,
+        status: createWorklogDto.approvalRequest ? 'requested' : 'open',
       });
-
       worklogs.push(worklog);
-      await this.notificationService.create({ message: `Worklog added for approval`, users: [project.projectLead.id] });
+
+      if (createWorklogDto.approvalRequest) {
+        await this.notificationService.create({ message: `Worklog added for approval`, users: [project.projectLead.id] });
+      }
     }
 
     // Save all worklogs to the database at once
@@ -75,9 +78,10 @@ export class WorklogService {
 
 
 
-  findAll() {
-    return this.worklogRepository.find({
+  async findAll(user: UserEntity, status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+    return await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
+      where: { user, status },
       order: {
         createdAt: 'DESC'
       }

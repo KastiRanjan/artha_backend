@@ -13,7 +13,7 @@ export class TaskGroupsService {
     private taskGroupRepository: Repository<TaskGroup>,
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>
-  ) {}
+  ) { }
 
   async create(createTaskGroupDto: CreateTaskGroupDto): Promise<TaskGroup> {
     const { ...taskGroupData } = createTaskGroupDto;
@@ -24,16 +24,21 @@ export class TaskGroupsService {
   }
 
   findAll() {
-    return this.taskGroupRepository.find({
-      relations: ['tasktemplate']
-    });
+    return this.taskGroupRepository.find();
   }
 
 
   async findOne(id: string): Promise<TaskGroup> {
-    const taskGroup = await this.taskGroupRepository.findOne(id, {
-      relations: ['tasktemplate']
+    const taskGroup = await this.taskGroupRepository.findOne({
+      where: {
+        id,
+      },
+      relations: ['tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks'],
     });
+
+    if (taskGroup && taskGroup.tasktemplate) {
+      taskGroup.tasktemplate = taskGroup.tasktemplate.filter(template => template.parentTask === null);
+    }
     if (!taskGroup) {
       throw new NotFoundException(`TaskGroup with ID ${id} not found`);
     }

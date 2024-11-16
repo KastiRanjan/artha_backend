@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, ManyToMany } from 'typeorm';
-import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
+import { Column, CreateDateColumn, Entity, ManyToMany, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 export class Notification extends CustomBaseEntity {

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpStatus,
   Inject,
   Injectable,
@@ -43,6 +44,9 @@ import { UserRepository } from 'src/auth/user.repository';
 import { ValidationPayloadInterface } from 'src/common/interfaces/validation-error.interface';
 import { RefreshPaginateFilterDto } from 'src/refresh-token/dto/refresh-paginate-filter.dto';
 import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-token.serializer';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 // const throttleConfig = config.get('throttle.login');
 // const jwtConfig = config.get('jwt');
@@ -68,7 +72,7 @@ export class AuthService {
     private readonly refreshTokenService: RefreshTokenService,
     @Inject('LOGIN_THROTTLE')
     private readonly rateLimiter: RateLimiterStoreAbstract
-  ) {}
+  ) { }
 
   /**
    * send mail
@@ -92,11 +96,12 @@ export class AuthService {
       slug,
       context: {
         email: user.email,
-        link: `<a href="${'frontendUrl'}/${url}">${linkLabel} →</a>`,
+        link: `<a href="${process.env.frontendUrl}/${url}">${linkLabel} →</a>`,
         username: user.username,
         subject
       }
     };
+    console.log('mailData', `<a href="${process.env.frontendUrl}/${url}">${linkLabel} →</a>`);
     await this.mailService.sendMail(mailData, 'system-mail');
   }
 
@@ -110,10 +115,17 @@ export class AuthService {
     const token = await this.generateUniqueToken(12);
     if (!createUserDto.status) {
       createUserDto.roleId = '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7';
-      const currentDateTime = new Date();
-      currentDateTime.setHours(currentDateTime.getHours() + 1);
-      createUserDto.tokenValidityDate = currentDateTime;
     }
+    createUserDto.tokenValidityDate = new Date(Date.now() + 1000 * 60 * 60);
+    const isEmailAlreadyExist = await this.userRepository.findOne({
+      where: { email: createUserDto.email },
+      select: ['id']
+    });
+
+    if (isEmailAlreadyExist) {
+      throw new BadRequestException('Email already exist');
+    }
+
     const registerProcess = !createUserDto.status;
     const user = await this.userRepository.store(createUserDto, token);
 
@@ -252,7 +264,7 @@ export class AuthService {
    * @param id
    */
   async findById(id: string): Promise<UserSerializer> {
-    return this.userRepository.get(id, ['role'], {
+    return this.userRepository.get(id, ['role', 'bank_detail', 'profile', 'education_detail', 'trainning_detail', 'document'], {
       groups: [
         ...adminUserGroupsForSerializing,
         ...ownerUserGroupsForSerializing
@@ -333,7 +345,7 @@ export class AuthService {
    */
   async activateAccount(token: string): Promise<void> {
     console.log(typeof token);
-    
+
     const user = await this.userRepository.findOne({ token: token });
     console.log(user);
     if (!user) {
@@ -350,7 +362,7 @@ export class AuthService {
     user.skipHashPassword = true;
     await user.save();
   }
-  
+
 
   /**
    * forget password and send reset code by email
@@ -479,14 +491,11 @@ export class AuthService {
    */
   getCookieForLogOut(): string[] {
     return [
-      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
+      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${!isSameSite ? 'SameSite=None; Secure;' : ''
       }`,
-      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
+      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${!isSameSite ? 'SameSite=None; Secure;' : ''
       }`,
-      `ExpiresIn=; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
+      `ExpiresIn=; Path=/; Max-Age=0; ${!isSameSite ? 'SameSite=None; Secure;' : ''
       }`
     ];
   }
@@ -498,19 +507,16 @@ export class AuthService {
    */
   buildResponsePayload(accessToken: string, refreshToken?: string): string[] {
     let tokenCookies = [
-      `Authentication=${accessToken}; HttpOnly; Path=/; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
+      `Authentication=${accessToken}; HttpOnly; Path=/; ${!isSameSite ? 'SameSite=None; Secure;' : ' '
       } Max-Age=${'24h'}`
     ];
     if (refreshToken) {
       const expiration = new Date();
       expiration.setSeconds(expiration.getSeconds() + 50000);
       tokenCookies = tokenCookies.concat([
-        `Refresh=${refreshToken}; HttpOnly; Path=/; ${
-          !isSameSite ? 'SameSite=None; Secure;' : ''
+        `Refresh=${refreshToken}; HttpOnly; Path=/; ${!isSameSite ? 'SameSite=None; Secure;' : ''
         } Max-Age=${60 * 60 * 24}`,
-        `ExpiresIn=${expiration}; Path=/; ${
-          !isSameSite ? 'SameSite=None; Secure;' : ''
+        `ExpiresIn=${expiration}; Path=/; ${!isSameSite ? 'SameSite=None; Secure;' : ''
         } Max-Age=${60 * 60 * 24}`,
       ]);
     }

@@ -31,14 +31,14 @@ export class UsersService {
     private trainingRepository: Repository<UserTrainningEntity>,
 
     private readonly authService: AuthService
-  ) {}
+  ) { }
 
   async create(createUsersDto: CreateUsersDto) {
     const { email, name, role } = createUsersDto;
 
     const user = await this.userRepository.findOne({ where: { email } });
     if (user) {
-      throw new Error('User already exists');
+      throw new BadRequestException('User already exists');
     }
     const savedUser = await this.authService.create({
       email,
@@ -52,7 +52,6 @@ export class UsersService {
 
   async createDetail(id, option, createUsersDto: any, file) {
     const user = await this.userRepository.findOne(id);
-    console.log(file);
 
     if (!user) {
       throw new BadRequestException('User not found');
@@ -60,25 +59,31 @@ export class UsersService {
 
     let savedData;
 
-    if (option === 'bank') {
-      savedData = await this.bankRepository.save(
-        this.bankRepository.create({
-          ...createUsersDto,
-          userId: id,
-          documentFile: file.filename
-        })
-      );
+    const dataToUpdate = {
+      ...createUsersDto,
+      userId: id,
+      documentFile: file?.filename
     }
-    if (option === 'education') {
-      savedData = await this.educationRepository.save(
-        this.bankRepository.create({
-          ...createUsersDto,
-          userId: id,
-          documentFile: file.filename
-         })
-      );
+    let repository = {
+      bank: this.bankRepository,
+      profile: this.profileRepository,
+      contract: this.contractRepository,
+      document: this.documentRepository,
+      training: this.trainingRepository,
+      education: this.educationRepository
     }
 
+    const repo = repository[option];
+    if (!repo) {
+      throw new BadRequestException(`Repository for ${repository[option]} not found`);
+    }
+
+    savedData = await repo.preload(dataToUpdate);
+    if (!savedData.id) {
+      savedData = await repo.save(savedData);
+    } else {
+      await repo.update(savedData.id, savedData);
+    }
     return savedData;
   }
 

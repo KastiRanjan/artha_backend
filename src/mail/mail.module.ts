@@ -14,8 +14,8 @@ import { EmailTemplateService } from 'src/email-template/email-template.service'
 const mailConfig = {
   host: 'smtp.mailtrap.io',
   port: 2525,
-  user: 'f4a511d60957e6',
-  pass: '7522797b96cef0',
+  user: process.env.MAIL_USER || '92a3a402cff43b',
+  pass:  process.env.MAIL_PASS || '7b68114288934b',
   from: 'truthycms',
   fromMail: 'truthycms@gmail.com',
   preview: true,

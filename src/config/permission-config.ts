@@ -59,7 +59,22 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     },
     {
       id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
-      name: 'normal',
+      name: 'Administrator',
+      description: 'normal user of the system'
+    },
+    {
+      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
+      name: 'Project Manager',
+      description: 'normal user of the system'
+    },
+    {
+      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
+      name: 'Audit Senior',
+      description: 'normal user of the system'
+    },
+    {
+      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
+      name: 'Audit Junior',
       description: 'normal user of the system'
     }
   ],
@@ -478,6 +493,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.GET
             }
           ]
+        },
+        {
+          name: 'Delete task template',
+          route: [
+            {
+              path: '/task-template/:id',
+              method: MethodList.DELETE
+            }
+          ]
         }
       ]
     },
@@ -521,7 +545,93 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.GET
             }
           ]
+        },
+        {
+          name: 'Delete task group by id',
+          route: [
+            {
+              path: '/task-group/:id',
+              method: MethodList.DELETE
+            }
+          ]
         }
+      ]
+    },
+    {
+      name: 'Worklog Management',
+      resource: 'worklogs',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all workloglist',
+          route: [
+            {
+              path: '/worklogs',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get My workloglist',
+          route: [
+            {
+              path: '/worklogs/:uid',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add Worklog',
+          route: [
+            {
+              path: '/worklogs',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit Worklog',
+          route: [
+            {
+              path: '/worklogs/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+      ]
+    },
+    {
+      name: 'Attandence Management',
+      resource: 'attendance',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all AllAttendance',
+          route: [
+            {
+              path: '/worklogs',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add Attendance',
+          route: [
+            {
+              path: '/attendance',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit Attendance',
+          route: [
+            {
+              path: '/attendance/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
       ]
     }
   ]
