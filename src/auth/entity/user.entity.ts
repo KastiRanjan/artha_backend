@@ -174,7 +174,6 @@ export class UserEntity extends CustomBaseEntity {
 
   @OneToOne(() => Project, (project) => project.projectLead, {
     nullable: true,
-    onDelete: 'SET NULL'
   })
   project: Project;
 

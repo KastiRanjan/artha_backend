@@ -44,6 +44,9 @@ export class ProjectsService {
           status: status
         },
         relations: ['users', 'tasks', 'projectLead'],
+        order: {
+          updatedAt: 'DESC'
+        }
       });
     }
     else {

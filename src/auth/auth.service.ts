@@ -281,8 +281,8 @@ export class AuthService {
   ): Promise<Pagination<UserSerializer>> {
     return this.userRepository.paginate(
       userSearchFilterDto,
-      ['role', 'bank_detail'],
-      ['username', 'email', 'name', 'contact', 'address'],
+      ['role'],
+      ['username', 'email', 'name', 'phoneNumber'],
       {
         groups: [
           ...adminUserGroupsForSerializing,

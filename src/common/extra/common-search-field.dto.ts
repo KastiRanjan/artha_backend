@@ -27,4 +27,9 @@ export class CommonSearchFieldDto {
     message: 'min-{"ln":1,"count":1}'
   })
   page: number;
+
+
+  @ApiPropertyOptional()
+  @ValidateIf((object, value) => value)
+  status: string;
 }
