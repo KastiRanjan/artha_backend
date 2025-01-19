@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import * as config from 'config';
 import { WinstonModule } from 'nest-winston';
 import {
   CookieResolver,
@@ -26,16 +25,15 @@ import { PermissionsModule } from 'src/permission/permissions.module';
 import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
 import { RolesModule } from 'src/role/roles.module';
 import { TwofaModule } from 'src/twofa/twofa.module';
+import { AttendenceModule } from './attendence/attendence.module';
 import { CustomersModule } from './customers/customers.module';
+import { NotificationModule } from './notification/notification.module';
 import { ProjectsModule } from './projects/projects.module';
+import { TaskGroupsModule } from './task-groups/task-groups.module';
+import { TaskTemplateModule } from './task-template/task-template.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 import { WorklogModule } from './worklog/worklog.module';
-import { TaskGroupsModule } from './task-groups/task-groups.module';
-import { TaskTemplateModule } from './task-template/task-template.module';
-import { AttendenceModule } from './attendence/attendence.module';
-import { AuthService } from './auth/auth.service';
-import { NotificationModule } from './notification/notification.module';
 
 // const appConfig = config.get('app');
 
@@ -64,7 +62,7 @@ import { NotificationModule } from './notification/notification.module';
       ]
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(__dirname, '..', 'public')
       // exclude: ['/api*']
       // serveRoot:'/public÷'
     }),

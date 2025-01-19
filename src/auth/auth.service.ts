@@ -72,7 +72,7 @@ export class AuthService {
     private readonly refreshTokenService: RefreshTokenService,
     @Inject('LOGIN_THROTTLE')
     private readonly rateLimiter: RateLimiterStoreAbstract
-  ) { }
+  ) {}
 
   /**
    * send mail
@@ -101,7 +101,6 @@ export class AuthService {
         subject
       }
     };
-    console.log('mailData', `<a href="${process.env.frontendUrl}/${url}">${linkLabel} →</a>`);
     await this.mailService.sendMail(mailData, 'system-mail');
   }
 
@@ -162,10 +161,7 @@ export class AuthService {
     const resUsernameAndIP = await this.rateLimiter.get(usernameIPkey);
     let retrySecs = 0;
     // Check if user is already blocked
-    if (
-      resUsernameAndIP !== null &&
-      resUsernameAndIP.consumedPoints > 100
-    ) {
+    if (resUsernameAndIP !== null && resUsernameAndIP.consumedPoints > 100) {
       retrySecs = Math.round(resUsernameAndIP.msBeforeNext / 1000) || 1;
     }
     if (retrySecs > 0) {
@@ -219,7 +215,6 @@ export class AuthService {
       audience: 'http://localhost:3000',
       subject: String(user.id)
     };
-    console.log(opts);
     return this.jwt.signAsync(
       {
         ...opts,
@@ -264,12 +259,23 @@ export class AuthService {
    * @param id
    */
   async findById(id: string): Promise<UserSerializer> {
-    return this.userRepository.get(id, ['role', 'bank_detail', 'profile', 'education_detail', 'trainning_detail', 'document'], {
-      groups: [
-        ...adminUserGroupsForSerializing,
-        ...ownerUserGroupsForSerializing
-      ]
-    });
+    return this.userRepository.get(
+      id,
+      [
+        'role',
+        'bank_detail',
+        'profile',
+        'education_detail',
+        'trainning_detail',
+        'document'
+      ],
+      {
+        groups: [
+          ...adminUserGroupsForSerializing,
+          ...ownerUserGroupsForSerializing
+        ]
+      }
+    );
   }
 
   /**
@@ -344,10 +350,7 @@ export class AuthService {
    * @param token
    */
   async activateAccount(token: string): Promise<void> {
-    console.log(typeof token);
-
     const user = await this.userRepository.findOne({ token: token });
-    console.log(user);
     if (!user) {
       throw new NotFoundException();
     }
@@ -362,7 +365,6 @@ export class AuthService {
     user.skipHashPassword = true;
     await user.save();
   }
-
 
   /**
    * forget password and send reset code by email
@@ -491,11 +493,14 @@ export class AuthService {
    */
   getCookieForLogOut(): string[] {
     return [
-      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${!isSameSite ? 'SameSite=None; Secure;' : ''
+      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${
+        !isSameSite ? 'SameSite=None; Secure;' : ''
       }`,
-      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${!isSameSite ? 'SameSite=None; Secure;' : ''
+      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${
+        !isSameSite ? 'SameSite=None; Secure;' : ''
       }`,
-      `ExpiresIn=; Path=/; Max-Age=0; ${!isSameSite ? 'SameSite=None; Secure;' : ''
+      `ExpiresIn=; Path=/; Max-Age=0; ${
+        !isSameSite ? 'SameSite=None; Secure;' : ''
       }`
     ];
   }
@@ -507,17 +512,20 @@ export class AuthService {
    */
   buildResponsePayload(accessToken: string, refreshToken?: string): string[] {
     let tokenCookies = [
-      `Authentication=${accessToken}; HttpOnly; Path=/; ${!isSameSite ? 'SameSite=None; Secure;' : ' '
+      `Authentication=${accessToken}; HttpOnly; Path=/; ${
+        !isSameSite ? 'SameSite=None; Secure;' : ' '
       } Max-Age=${'24h'}`
     ];
     if (refreshToken) {
       const expiration = new Date();
       expiration.setSeconds(expiration.getSeconds() + 50000);
       tokenCookies = tokenCookies.concat([
-        `Refresh=${refreshToken}; HttpOnly; Path=/; ${!isSameSite ? 'SameSite=None; Secure;' : ''
+        `Refresh=${refreshToken}; HttpOnly; Path=/; ${
+          !isSameSite ? 'SameSite=None; Secure;' : ''
         } Max-Age=${60 * 60 * 24}`,
-        `ExpiresIn=${expiration}; Path=/; ${!isSameSite ? 'SameSite=None; Secure;' : ''
-        } Max-Age=${60 * 60 * 24}`,
+        `ExpiresIn=${expiration}; Path=/; ${
+          !isSameSite ? 'SameSite=None; Secure;' : ''
+        } Max-Age=${60 * 60 * 24}`
       ]);
     }
     return tokenCookies;

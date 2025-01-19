@@ -9,4 +9,3 @@ const getNumberOfDistinctArrayValues = (arr) => {
   return uniqueArray.length;
 };
 
-console.log(getNumberOfDistinctArrayValues([]));
