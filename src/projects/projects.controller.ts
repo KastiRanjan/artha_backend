@@ -23,7 +23,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 @Controller('projects')
 @ApiBearerAuth()
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) { }
+  constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
   create(@Body() createProjectDto: CreateProjectDto) {
@@ -31,9 +31,12 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll(@GetUser()
-  user: UserEntity, @Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off') {
-    return this.projectsService.findAll(status,user);
+  findAll(
+    @GetUser()
+    user: UserEntity,
+    @Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off'
+  ) {
+    return this.projectsService.findAll(status, user);
   }
 
   @Get(':id')
@@ -52,7 +55,6 @@ export class ProjectsController {
   }
   @Get('users/:uid')
   userProjects(@Param('uid') uid: string) {
-    console.log('testing');
     return this.projectsService.findByUserId(uid);
   }
 }

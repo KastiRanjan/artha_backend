@@ -8,13 +8,14 @@ import { Notification } from './entities/notification.entity';
 @Injectable()
 export class NotificationService {
   constructor(
-    @InjectRepository(Notification) private notificationRepository: Repository<Notification>,
-    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
-  ) { }
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>
+  ) {}
   async create(createNotificationDto: CreateNotificationDto) {
-
-    const users = await this.userRepository.findByIds(createNotificationDto.users);
-
+    const users = await this.userRepository.findByIds(
+      createNotificationDto.users
+    );
 
     const notification = await this.notificationRepository.create({
       ...createNotificationDto,
@@ -25,16 +26,23 @@ export class NotificationService {
   }
 
   findAll() {
-    return this.notificationRepository.find({ where: { isRead: false }, order: { createdAt: 'DESC' } });
+    return this.notificationRepository.find({
+      where: { isRead: false },
+      order: { createdAt: 'DESC' }
+    });
   }
 
   async findOne(id: string) {
-    return await this.notificationRepository.find({ where: { userId: id }, order: { createdAt: 'DESC' } });
+    return await this.notificationRepository.find({
+      where: { userId: id },
+      order: { createdAt: 'DESC' }
+    });
   }
 
   async markNotificationAsReadupdate(id: string) {
-    console.log(id)
-    const notification = await this.notificationRepository.findOne({ where: { id: id } });
+    const notification = await this.notificationRepository.findOne({
+      where: { id: id }
+    });
     if (notification) {
       notification.isRead = true;
       await this.notificationRepository.save(notification);

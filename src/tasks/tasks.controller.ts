@@ -21,11 +21,10 @@ import { ImportTaskDto } from './dto/import-task.dto';
 @Controller('tasks')
 @ApiBearerAuth()
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) { }
+  constructor(private readonly tasksService: TasksService) {}
 
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
-    console.log('asdad');
     return this.tasksService.create(createTaskDto);
   }
   @Post('/add-bulk')
@@ -47,7 +46,10 @@ export class TasksController {
     return this.tasksService.findOneByProjectId(id);
   }
   @Get(':tid/project/:pid')
-  findOneByProjectIdAndTaskId(@Param('pid') projectId: string, @Param('tid') taskId: string) {
+  findOneByProjectIdAndTaskId(
+    @Param('pid') projectId: string,
+    @Param('tid') taskId: string
+  ) {
     return this.tasksService.findOneByProjectIdAndTaskId(projectId, taskId);
   }
 

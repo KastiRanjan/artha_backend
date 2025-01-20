@@ -20,7 +20,7 @@ async function bootstrap() {
   const port = process.env.PORT || 7777;
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet({ crossOriginResourcePolicy: false, }));
+  app.use(helmet({ crossOriginResourcePolicy: false }));
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   // const apiConfig = config.get('app');
   // if (process.env.NODE_ENV === 'development') {
@@ -43,7 +43,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api-docs', app, document, {
     ...customOptions,
-    customCss: "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css"
+    customCss:
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css'
   });
   // } else {
   //   const whitelist = [apiConfig.get<string>('frontendUrl')];
