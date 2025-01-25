@@ -1,10 +1,17 @@
-import { IsString, IsEmail, IsOptional, IsEnum, IsDateString, Length } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  Length
+} from 'class-validator';
 
 // Define enums for choices
 export enum Status {
   ACTIVE = 'active',
   SUSPENDED = 'suspended',
-  ARCHIVE = 'archive',
+  ARCHIVE = 'archive'
 }
 
 export enum LegalStatus {
@@ -16,7 +23,7 @@ export enum LegalStatus {
   I_NGO = 'i_ngo',
   COOPERATIVE = 'cooperative',
   GOVERNMENT_SOE = 'government_soe',
-  OTHERS = 'others',
+  OTHERS = 'others'
 }
 
 export enum BusinessSize {
@@ -25,7 +32,7 @@ export enum BusinessSize {
   SMALL = 'small',
   MEDIUM = 'medium',
   LARGE = 'large',
-  NOT_APPLICABLE = 'not_applicable',
+  NOT_APPLICABLE = 'not_applicable'
 }
 
 export enum IndustryNature {
@@ -45,7 +52,7 @@ export enum IndustryNature {
   TRADING_OF_GOODS = 'trading_of_goods',
   PERSONAL_SERVICE = 'personal_service',
   BUSINESS_RELATED_SERVICE = 'business_related_service',
-  OTHERS = 'others',
+  OTHERS = 'others'
 }
 
 export class CreateCustomerDto {

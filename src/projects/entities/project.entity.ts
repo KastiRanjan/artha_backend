@@ -1,16 +1,9 @@
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
+import { Customer } from 'src/customers/entities/customer.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToMany,
-  ManyToOne,
-  OneToMany,
-  OneToOne
-} from 'typeorm';
+import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity()
 export class Project extends CustomBaseEntity {
@@ -43,9 +36,11 @@ export class Project extends CustomBaseEntity {
   @Column({ type: 'date' })
   endingDate: Date;
 
-  @ManyToMany(() => UserEntity, (user) => user.projects, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToMany(() => UserEntity, (user) => user.projects, {
+    nullable: true,
+    onDelete: 'SET NULL'
+  })
   users: UserEntity[];
-
 
   @OneToMany(() => Task, (task) => task.project, {
     onDelete: 'SET NULL',
@@ -64,4 +59,10 @@ export class Project extends CustomBaseEntity {
     nullable: true
   })
   projectLead: UserEntity;
+
+  @ManyToOne(() => Customer, (client) => client.projects, {
+    onDelete: 'SET NULL',
+    nullable: true
+  })
+  customer: Customer;
 }

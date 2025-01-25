@@ -53,6 +53,11 @@ export interface PermissionPayload {
 export const PermissionConfiguration: PermissionConfigInterface = {
   roles: [
     {
+      id: 'ed34dee5-9aa9-4434-a08f-369d82425a89',
+      name: 'Project Manager',
+      description: 'normal user of the system'
+    },
+    {
       id: '3a8f7d5f-95c4-4a9e-af3e-39f5b72b3f6c',
       name: 'superuser',
       description: 'superuser of the system'
@@ -63,17 +68,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       description: 'normal user of the system'
     },
     {
-      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
-      name: 'Project Manager',
-      description: 'normal user of the system'
-    },
-    {
-      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
+      id: 'c781eb6c-f4ec-41ed-861e-17d0ef1afa97',
       name: 'Audit Senior',
       description: 'normal user of the system'
     },
     {
-      id: '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7',
+      id: '4ea78ec9-3cd1-45d1-a8ee-9f373b9315eb',
       name: 'Audit Junior',
       description: 'normal user of the system'
     }
@@ -597,7 +597,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.PATCH
             }
           ]
-        },
+        }
       ]
     },
     {
@@ -631,7 +631,50 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.PATCH
             }
           ]
+        }
+      ]
+    },
+    {
+      name: 'Client Management',
+      resource: 'client',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all Client',
+          route: [
+            {
+              path: '/clients',
+              method: MethodList.GET
+            }
+          ]
         },
+        {
+          name: 'Get Single Client',
+          route: [
+            {
+              path: '/clients/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add Client',
+          route: [
+            {
+              path: '/clients',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit Client',
+          route: [
+            {
+              path: '/clients/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        }
       ]
     }
   ]

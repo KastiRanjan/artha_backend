@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards
+} from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -8,7 +17,7 @@ import { PermissionGuard } from 'src/common/guard/permission.guard';
 
 @ApiTags('client')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
-@Controller('client')
+@Controller('clients')
 @ApiBearerAuth()
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
@@ -29,7 +38,10 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCustomerDto: UpdateCustomerDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateCustomerDto: UpdateCustomerDto
+  ) {
     return this.customersService.update(id, updateCustomerDto);
   }
 

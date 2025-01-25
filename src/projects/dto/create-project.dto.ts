@@ -1,4 +1,12 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsDate, IsArray, IsInt } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsDate,
+  IsArray,
+  IsInt
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateProjectDto {
@@ -11,22 +19,26 @@ export class CreateProjectDto {
   description: string;
 
   @IsEnum(['active', 'suspended', 'archived', 'signed_off'], {
-    message: 'status must be one of: active, suspended, archived, signed_off',
+    message: 'status must be one of: active, suspended, archived, signed_off'
   })
   status: 'active' | 'suspended' | 'archived' | 'signed_off';
 
-  @IsEnum([
-    'external_audit',
-    'tax_compliance',
-    'accounts_review',
-    'legal_services',
-    'financial_projection',
-    'valuation',
-    'internal_audit',
-    'others',
-  ], {
-    message: 'natureOfWork must be one of: external_audit, tax_compliance, accounts_review, legal_services, financial_projection, valuation, internal_audit, others',
-  })
+  @IsEnum(
+    [
+      'external_audit',
+      'tax_compliance',
+      'accounts_review',
+      'legal_services',
+      'financial_projection',
+      'valuation',
+      'internal_audit',
+      'others'
+    ],
+    {
+      message:
+        'natureOfWork must be one of: external_audit, tax_compliance, accounts_review, legal_services, financial_projection, valuation, internal_audit, others'
+    }
+  )
   natureOfWork:
     | 'external_audit'
     | 'tax_compliance'
@@ -53,8 +65,11 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsArray()
-  users?: string[];  // Assuming user ids are passed
+  users?: string[]; // Assuming user ids are passed
 
   @IsOptional()
   projectLead?: string;
+
+  @IsOptional()
+  customer?: string;
 }

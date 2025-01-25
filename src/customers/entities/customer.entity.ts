@@ -4,6 +4,7 @@ import { BoardMember } from './board-member.entity';
 import { ManagementTeamMember } from './management-team-member.entity';
 import { OtherImportantInfo } from './other-important-info.entity';
 import { RegistrationAndLicense } from './registration-and-license.entity';
+import { Project } from 'src/projects/entities/project.entity';
 
 @Entity()
 export class Customer extends CustomBaseEntity {
@@ -107,6 +108,9 @@ export class Customer extends CustomBaseEntity {
 
   @Column({ length: 100, nullable: true })
   password?: string;
+
+  @OneToMany(() => Project, (project) => project.customer)
+  projects: Project[];
 
   @OneToMany(
     () => RegistrationAndLicense,

@@ -9,7 +9,7 @@ const ormConfig: ConnectionOptions = {
   port: parseInt(process.env.DB_PORT, 10) || 5432,
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'admin',
-  database: process.env.DB_NAME || 'artha',
+  database: process.env.DB_NAME || 'arthas',
   migrationsTransactionMode: 'each',
   entities: [__dirname + '/../**/*.entity.{js,ts}'],
   logging: false,
@@ -20,7 +20,7 @@ const ormConfig: ConnectionOptions = {
   migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
   cli: {
     migrationsDir: 'src/database/migrations'
-  },
+  }
   // extra: {
   //   "ssl": true
   // }

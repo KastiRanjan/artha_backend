@@ -7,36 +7,53 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { In, Repository } from 'typeorm';
 import { NotificationService } from 'src/notification/notification.service';
 import * as dotenv from 'dotenv';
+import { Customer } from 'src/customers/entities/customer.entity';
 dotenv.config();
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project) private projectRepository: Repository<Project>,
-    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
     private readonly notificationService: NotificationService,
-  ) { }
+    private readonly customerRepository: Repository<Customer>
+  ) {}
   async create(createProjectDto: CreateProjectDto) {
-    const { users: userIds, projectLead, ...projectData } = createProjectDto;
+    const {
+      users: userIds,
+      projectLead,
+      customer,
+      ...projectData
+    } = createProjectDto;
     // Fetch the user entities using the user IDs
     const users = await this.userRepository.findByIds(userIds);
     const lead = await this.userRepository.findOne(projectLead);
+    const client = await this.customerRepository.findOne(customer);
     // Create a new project and assign the fetched users
     const project = await this.projectRepository.create({
       ...projectData,
       users, // Assign the user entities here
-      projectLead: lead || null
+      projectLead: lead || null,
+      customer: client || null
     });
 
     const savedProject = await this.projectRepository.save(project);
 
-    await this.notificationService.create({ message: `Project ${savedProject.name} created`, users: userIds, link: `${process.env.frontendUrl}/projects/${savedProject.id}` });
+    await this.notificationService.create({
+      message: `Project ${savedProject.name} created`,
+      users: userIds,
+      link: `${process.env.frontendUrl}/projects/${savedProject.id}`
+    });
     // Save the project with associated users
-    return savedProject
+    return savedProject;
   }
 
-  async findAll(status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed', user: UserEntity) {
-    let projects = null
+  async findAll(
+    status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed',
+    user: UserEntity
+  ) {
+    let projects = null;
 
     if (user.role.name === 'superuser') {
       projects = await this.projectRepository.find({
@@ -48,18 +65,17 @@ export class ProjectsService {
           updatedAt: 'DESC'
         }
       });
-    }
-    else {
+    } else {
       const users = await this.userRepository.findOne({
         relations: ['projects', 'projects.projectLead', 'projects.users'],
         where: {
           id: user.id
-        },
+        }
       });
-      projects = users.projects
+      projects = users.projects;
     }
 
-    return projects
+    return projects;
   }
 
   findOne(id: string) {
@@ -85,17 +101,22 @@ export class ProjectsService {
     // If there are user updates, handle them
     if (updateProjectDto.users) {
       const users = await this.userRepository.findByIds(updateProjectDto.users);
-      const lead = await this.userRepository.findOne(updateProjectDto.projectLead);
-      project.projectLead = lead || null
+      const lead = await this.userRepository.findOne(
+        updateProjectDto.projectLead
+      );
+      project.projectLead = lead || null;
       project.users = users; // Update users if provided
-
     }
 
     // Save the updated project back to the repository
     const updatedProject = await this.projectRepository.save(project);
 
-    await this.notificationService.create({ message: `Project ${updatedProject.name} updated`, users: updateProjectDto.users, link: `${process.env.frontendUrl}/projects/${updatedProject.id}` });
-    return updatedProject
+    await this.notificationService.create({
+      message: `Project ${updatedProject.name} updated`,
+      users: updateProjectDto.users,
+      link: `${process.env.frontendUrl}/projects/${updatedProject.id}`
+    });
+    return updatedProject;
   }
 
   async remove(id: string) {
