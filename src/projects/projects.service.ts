@@ -75,7 +75,6 @@ export class ProjectsService {
       });
       projects = users.projects;
     }
-    console.log(projects);
     return projects;
   }
 
