@@ -1,23 +1,24 @@
-import { Injectable, Query } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as dotenv from 'dotenv';
+import { UserEntity } from 'src/auth/entity/user.entity';
+import { Customer } from 'src/customers/entities/customer.entity';
+import { NotificationService } from 'src/notification/notification.service';
+import { Repository } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/project.entity';
-import { UserEntity } from 'src/auth/entity/user.entity';
-import { In, Repository } from 'typeorm';
-import { NotificationService } from 'src/notification/notification.service';
-import * as dotenv from 'dotenv';
-import { Customer } from 'src/customers/entities/customer.entity';
 dotenv.config();
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project) private projectRepository: Repository<Project>,
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
-    private readonly notificationService: NotificationService,
-    private readonly customerRepository: Repository<Customer>
+    private readonly notificationService: NotificationService
   ) {}
   async create(createProjectDto: CreateProjectDto) {
     const {
@@ -60,7 +61,7 @@ export class ProjectsService {
         where: {
           status: status
         },
-        relations: ['users', 'tasks', 'projectLead'],
+        relations: ['users', 'tasks', 'projectLead', 'customer'],
         order: {
           updatedAt: 'DESC'
         }
@@ -74,7 +75,7 @@ export class ProjectsService {
       });
       projects = users.projects;
     }
-
+    console.log(projects);
     return projects;
   }
 

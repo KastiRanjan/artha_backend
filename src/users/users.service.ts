@@ -31,7 +31,7 @@ export class UsersService {
     private trainingRepository: Repository<UserTrainningEntity>,
 
     private readonly authService: AuthService
-  ) { }
+  ) {}
 
   async create(createUsersDto: CreateUsersDto) {
     const { email, name, role } = createUsersDto;
@@ -63,7 +63,7 @@ export class UsersService {
       ...createUsersDto,
       userId: id,
       documentFile: file?.filename
-    }
+    };
     let repository = {
       bank: this.bankRepository,
       profile: this.profileRepository,
@@ -71,11 +71,13 @@ export class UsersService {
       document: this.documentRepository,
       training: this.trainingRepository,
       education: this.educationRepository
-    }
+    };
 
     const repo = repository[option];
     if (!repo) {
-      throw new BadRequestException(`Repository for ${repository[option]} not found`);
+      throw new BadRequestException(
+        `Repository for ${repository[option]} not found`
+      );
     }
 
     savedData = await repo.preload(dataToUpdate);

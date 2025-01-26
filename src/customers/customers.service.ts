@@ -9,7 +9,7 @@ import { Customer } from './entities/customer.entity';
 export class CustomersService {
   constructor(
     @InjectRepository(Customer)
-    private customerRepository: Repository<Customer>,
+    private customerRepository: Repository<Customer>
   ) {}
 
   create(createCustomerDto: CreateCustomerDto) {

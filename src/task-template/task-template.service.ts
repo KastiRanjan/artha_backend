@@ -13,9 +13,10 @@ export class TaskTemplateService {
     private readonly taskTemplateRepository: Repository<TaskTemplate>,
     @InjectRepository(TaskGroup)
     private readonly taskgroupRepository: Repository<TaskGroup>
-  ) { }
+  ) {}
   async create(createTaskTemplateDto: CreateTaskTemplateDto) {
-    const { name, description, groupId, parentTaskId, taskType } = createTaskTemplateDto;
+    const { name, description, groupId, parentTaskId, taskType } =
+      createTaskTemplateDto;
 
     // Create a new task instance
     const task = this.taskTemplateRepository.create({
@@ -23,7 +24,9 @@ export class TaskTemplateService {
       description,
       taskType,
       group: groupId ? await this.taskgroupRepository.findOne(groupId) : null, // Assign task group
-      parentTask: parentTaskId ? await this.taskTemplateRepository.findOne({ id: parentTaskId }) : null
+      parentTask: parentTaskId
+        ? await this.taskTemplateRepository.findOne({ id: parentTaskId })
+        : null
     });
 
     // Save the task to the database
@@ -31,7 +34,9 @@ export class TaskTemplateService {
   }
 
   findAll() {
-    return this.taskTemplateRepository.find({ relations: ['group', 'parentTask','subTasks'] });
+    return this.taskTemplateRepository.find({
+      relations: ['group', 'parentTask', 'subTasks']
+    });
   }
 
   findOne(id: string) {
@@ -39,7 +44,8 @@ export class TaskTemplateService {
   }
 
   async update(id: string, updateTaskTemplateDto: UpdateTaskTemplateDto) {
-    const { name, description, groupId, taskType, parentTaskId } = updateTaskTemplateDto;
+    const { name, description, groupId, taskType, parentTaskId } =
+      updateTaskTemplateDto;
 
     // Create a new task instance
     const task = this.taskTemplateRepository.create({
@@ -47,7 +53,9 @@ export class TaskTemplateService {
       description,
       group: groupId ? await this.taskgroupRepository.findOne(groupId) : null, // Assign task group
       taskType: taskType,
-      parentTask: parentTaskId ? await this.taskTemplateRepository.findOne({ id: parentTaskId }) : null
+      parentTask: parentTaskId
+        ? await this.taskTemplateRepository.findOne({ id: parentTaskId })
+        : null
     });
     return this.taskTemplateRepository.update(id, task);
   }
