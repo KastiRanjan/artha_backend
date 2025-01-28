@@ -33,6 +33,17 @@ export class TasksService {
     const { name, description, projectId, parentTaskId, groupId } =
       createTaskDto;
     // Create a new task instance
+    const existingTask = await this.taskRepository.findOne({
+      where: {
+        name,
+        project: projectId
+      }
+    });
+    if (existingTask) {
+      throw new Error(
+        `Task name ${name} already exists in project ${projectId}`
+      );
+    }
     const task = await this.taskRepository.create({
       name,
       tcode: await this.generateTaskCode(projectId),
@@ -81,36 +92,46 @@ export class TasksService {
 
         const newTasks = await Promise.all(
           taskGroup.tasktemplate.map(async (template) => {
-            const newTask = await this.taskRepository.save(
-              this.taskRepository.create({
+            const existingTask = await this.taskRepository.findOne({
+              where: {
                 name: template.name,
-                tcode: await this.generateTaskCode(project),
-                description: template.description,
-                taskType: template.taskType,
-                project: projectEntity,
-                parentTask: template.parentTask,
-                group: taskGroup
-              })
-            );
-            if (!isEmpty(template.subTasks)) {
-              template.subTasks.map(async (subTaskTemplate) => {
-                const subTasks = await this.taskRepository.create({
-                  name: subTaskTemplate.name,
+                project: projectEntity
+              }
+            });
+            if (!existingTask) {
+              const newTask = await this.taskRepository.save(
+                this.taskRepository.create({
+                  name: template.name,
                   tcode: await this.generateTaskCode(project),
-                  description: subTaskTemplate.description,
-                  taskType: subTaskTemplate.taskType,
+                  description: template.description,
+                  taskType: template.taskType,
                   project: projectEntity,
-                  parentTask: newTask,
+                  parentTask: template.parentTask,
                   group: taskGroup
+                })
+              );
+              if (!isEmpty(template.subTasks)) {
+                template.subTasks.map(async (subTaskTemplate) => {
+                  const subTasks = await this.taskRepository.create({
+                    name: subTaskTemplate.name,
+                    tcode: await this.generateTaskCode(project),
+                    description: subTaskTemplate.description,
+                    taskType: subTaskTemplate.taskType,
+                    project: projectEntity,
+                    parentTask: newTask,
+                    group: taskGroup
+                  });
+                  await this.taskRepository.save(subTasks);
                 });
-                await this.taskRepository.save(subTasks);
-              });
+              }
+              return newTask;
+            } else {
+              return null;
             }
-            return newTask;
           })
         );
 
-        return newTasks;
+        return newTasks.filter((task) => task !== null);
       })
     );
 
@@ -138,8 +159,9 @@ export class TasksService {
     // };
   }
 
-  findAll() {
+  findAll(status: 'open' | 'in_progress' | 'done') {
     return this.taskRepository.find({
+      where: { status },
       relations: ['worklogs', 'project', 'assignees', 'group', 'subTasks']
     });
   }

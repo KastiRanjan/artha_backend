@@ -64,7 +64,7 @@ export class UsersService {
       userId: id,
       documentFile: file?.filename
     };
-    let repository = {
+    const repository = {
       bank: this.bankRepository,
       profile: this.profileRepository,
       contract: this.contractRepository,

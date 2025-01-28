@@ -3,7 +3,11 @@ import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import {
   Column,
-  Entity, JoinColumn, ManyToOne, OneToMany, Unique
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  Unique
 } from 'typeorm';
 
 @Entity()
@@ -38,5 +42,4 @@ export class TaskTemplate extends CustomBaseEntity {
     nullable: true
   })
   taskType?: 'story' | 'task';
-
 }

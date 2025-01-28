@@ -36,7 +36,6 @@ export class ProjectsController {
     user: UserEntity,
     @Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off'
   ) {
-    console.log('pro');
     return this.projectsService.findAll(status, user);
   }
 

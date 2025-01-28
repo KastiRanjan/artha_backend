@@ -20,6 +20,9 @@ export class RoleEntity extends CustomBaseEntity {
   @Column('varchar', { length: 100, unique: true })
   name: string;
 
+  @Column('varchar', { length: 100, unique: true })
+  displayName: string;
+
   @Column('varchar')
   description: string;
 

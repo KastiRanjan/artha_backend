@@ -288,7 +288,7 @@ export class AuthService {
     return this.userRepository.paginate(
       userSearchFilterDto,
       ['role'],
-      ['username', 'email', 'name', 'phoneNumber'],
+      ['username', 'email', 'name', 'phoneNumber', 'status'],
       {
         groups: [
           ...adminUserGroupsForSerializing,
