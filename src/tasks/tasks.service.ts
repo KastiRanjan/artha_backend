@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { Task } from './entities/task.entity';
+import { In } from 'typeorm'; // Add this import
+
 
 @Injectable()
 export class TasksService {
@@ -157,6 +159,84 @@ export class TasksService {
     //   tasks: savedTasks,
     //   message: 'Successfully added tasks to project',
     // };
+  }
+
+  async addBulkList(importTaskTemplateDto: any): Promise<any> {
+    const { project, tasks, tasklist } = importTaskTemplateDto;
+  
+    // Validate project exists
+    const projectEntity = await this.projectRepository.findOne({
+      where: { id: project }
+    });
+    if (!projectEntity) {
+      throw new NotFoundException(`Project with ID ${project} not found`);
+    }
+  
+    // Validate task groups (tasks field contains task group IDs)
+    const taskGroups = await this.taskGroupRepository.find({
+      where: { id: In(tasks) }, // Use In operator for array of IDs
+      relations: ['tasktemplate', 'tasktemplate.parentTask']
+    });
+  
+    if (!taskGroups.length) {
+      throw new NotFoundException(`No valid task groups found for IDs: ${tasks}`);
+    }
+  
+    // Filter task templates based on tasklist (tasklist contains template IDs)
+    const templatesToProcess = taskGroups
+      .flatMap(group => group.tasktemplate || [])
+      .filter(template => tasklist.includes(template.id));
+  
+    if (!templatesToProcess.length) {
+      throw new NotFoundException(`No matching task templates found for IDs: ${tasklist}`);
+    }
+  
+    // Process and create tasks from templates
+    const savedTasks = await Promise.all(
+      templatesToProcess.map(async (template) => {
+        // Check if task already exists
+        const existingTask = await this.taskRepository.findOne({
+          where: {
+            name: template.name,
+            project: projectEntity
+          }
+        });
+  
+        if (existingTask) {
+          return null; // Skip existing tasks
+        }
+  
+        // Find the task group for this template
+        const taskGroup = taskGroups.find(group => 
+          group.tasktemplate.some(t => t.id === template.id)
+        );
+  
+        // Create new task from template
+        const newTask = this.taskRepository.create({
+          name: template.name,
+          tcode: await this.generateTaskCode(project),
+          description: template.description || '',
+          project: projectEntity,
+          status: 'open',
+          group: taskGroup,
+          assignees: [],
+          parentTask: template.parentTask
+            ? await this.taskRepository.findOne({ where: { id: template.parentTask.id } })
+            : null
+        });
+  
+        return await this.taskRepository.save(newTask);
+      })
+    );
+  
+    // Filter out null values (skipped tasks) and return response
+    const successfulTasks = savedTasks.filter(task => task !== null);
+  
+    return {
+      project: projectEntity.id,
+      tasks: successfulTasks,
+      message: `Successfully added ${successfulTasks.length} tasks to project from ${templatesToProcess.length} templates`
+    };
   }
 
   findAll(status: 'open' | 'in_progress' | 'done') {

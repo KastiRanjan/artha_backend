@@ -460,6 +460,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.POST
             }
           ]
+        },
+        {
+          name: 'Add tasktemplate to project bulk',
+          route: [
+            {
+              path: '/tasks/add-bulk-list',
+              method: MethodList.POST
+            }
+          ]
         }
       ]
     },

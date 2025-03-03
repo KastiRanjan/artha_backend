@@ -16,6 +16,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { ImportTaskDto } from './dto/import-task.dto';
+import { ImportTaskTemplateDto } from './dto/import-taskTemplate.dto';
 
 @ApiTags('tasks')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -31,6 +32,11 @@ export class TasksController {
   @Post('/add-bulk')
   addBulk(@Body() importTaskDto: ImportTaskDto) {
     return this.tasksService.addBulk(importTaskDto);
+  }
+
+  @Post('/add-bulk-list')
+  addBulkList(@Body() importTaskTemplateDto: ImportTaskTemplateDto) {
+    return this.tasksService.addBulkList(importTaskTemplateDto);
   }
 
   @Get()
