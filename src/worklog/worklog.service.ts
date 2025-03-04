@@ -64,7 +64,7 @@ export class WorklogService {
         startTime,
         endTime,
         approvedBy: usr,
-        status: createWorklogDto.approvalRequest ? 'requested' : 'open',
+        status:'requested'
       });
       worklogs.push(worklog);
 
