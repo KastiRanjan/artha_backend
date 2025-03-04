@@ -123,7 +123,7 @@ export class WorklogService {
     return this.worklogRepository.save(worklog);
   }
 
-  remove(id: string) {
+  async remove(id: string) {
     return this.worklogRepository.delete(id);
   }
 }
