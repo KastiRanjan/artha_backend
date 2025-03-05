@@ -628,7 +628,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           name: 'Get all AllAttendance',
           route: [
             {
-              path: '/worklogs',
+              path: '/attendance',
               method: MethodList.GET
             }
           ]
@@ -975,7 +975,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           name: 'Get all AllAttendance',
           route: [
             {
-              path: '/worklogs',
+              path: '/attendance',
               method: MethodList.GET
             }
           ]
@@ -1435,6 +1435,7 @@ export const PermissionConfiguration: PermissionConfigInterface = {
         }
       ]
     },
+    //ysma chai endpoint ko lagi permission thapne
     {
       name: 'Task Group Management',
       resource: 'task-group',
@@ -1527,7 +1528,16 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.PATCH
             }
           ]
-        }
+        },
+        {
+          name: 'Delete Worklog',
+          route: [
+            {
+              path: '/worklogs/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
       ]
     },
     {

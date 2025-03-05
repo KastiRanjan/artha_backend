@@ -20,7 +20,7 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { UserEntity } from 'src/auth/entity/user.entity';
 
 @ApiTags('worklog')
-@UseGuards(JwtTwoFactorGuard, PermissionGuard)
+@UseGuards(JwtTwoFactorGuard)
 @Controller('worklogs')
 @ApiBearerAuth()
 export class WorklogController {
