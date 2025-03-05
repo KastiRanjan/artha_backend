@@ -92,6 +92,7 @@ export class WorklogService {
 
   async findOne(id: string) {
     const worklog = await this.worklogRepository.findOne({
+      relations: ['task', 'task.project.users','task.project'],
       where: { id }
     });
     if (!worklog) {
