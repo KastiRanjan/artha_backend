@@ -29,7 +29,7 @@ export class WorklogService {
 
       // Fetch the associated entities
       const task = await this.taskRepository.findOne(taskId);
-      const usr = await this.taskRepository.findOne({ id: approvedBy });
+      const  usr = await this.userRepository.findOne({ id: approvedBy });
       const project = await this.projectRepository.findOne({ id: projectId }, { relations: ['projectLead'] });
 
       if (!task) {
@@ -84,6 +84,17 @@ export class WorklogService {
     return await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
       where: { user, status },
+      order: {
+        createdAt: 'DESC'
+      }
+    });
+  }
+
+  
+  async findRequest(user: UserEntity, status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+    return await this.worklogRepository.find({
+      relations: ['user', 'task', 'task.project'],
+      where: { approvedBy: user, status },
       order: {
         createdAt: 'DESC'
       }

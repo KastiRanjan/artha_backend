@@ -33,6 +33,15 @@ export class WorklogController {
     return this.worklogService.create(createWorklogDto, user);
   }
 
+  @Get('user')
+  findRequest(
+    @GetUser()
+    user: UserEntity,
+    @Query('status') status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+  ) {
+    return this.worklogService.findRequest(user, status);
+  }
+
   @Get()
   findAll(
     @GetUser()
