@@ -25,6 +25,9 @@ export class Worklog extends CustomBaseEntity {
   @Column({ nullable: true })
   approvedBy?: string;
 
+  @Column('text', { nullable: true })
+  remark?: string;
+
   @ManyToOne(() => UserEntity, (user) => user.worklogs, {
     nullable: false
   })

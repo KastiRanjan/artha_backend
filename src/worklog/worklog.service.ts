@@ -25,11 +25,10 @@ export class WorklogService {
     const worklogs = [];
 
     for (const worklogDto of createWorklogDto) {
-      const { projectId, taskId, startTime, endTime, approvedBy, ...worklogData } = worklogDto;
+      const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
 
       // Fetch the associated entities
       const task = await this.taskRepository.findOne(taskId);
-      const  usr = await this.userRepository.findOne({ id: approvedBy });
       const project = await this.projectRepository.findOne({ id: projectId }, { relations: ['projectLead'] });
 
       if (!task) {
@@ -63,7 +62,6 @@ export class WorklogService {
         task,
         startTime,
         endTime,
-        approvedBy: usr,
         status:'requested'
       });
       worklogs.push(worklog);

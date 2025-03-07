@@ -30,6 +30,10 @@ export class CreateWorklogDto {
   approvedBy: string;
 
   @IsOptional()
+  @IsString()
+  remark?: string;
+
+  @IsOptional()
   status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested';
 
   @IsNotEmpty()
