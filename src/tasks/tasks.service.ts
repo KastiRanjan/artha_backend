@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isEmpty } from 'lodash';
 import { UserEntity } from 'src/auth/entity/user.entity';
@@ -32,35 +33,38 @@ export class TasksService {
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { name, description, projectId, parentTaskId, groupId } =
-      createTaskDto;
-    // Create a new task instance
+    const { name, description, projectId, parentTaskId, groupId, dueDate, assineeId } = createTaskDto;
+
+    // Check for existing task with the same name in the project
     const existingTask = await this.taskRepository.findOne({
       where: {
         name,
-        project: projectId
-      }
+        project: { id: projectId },
+      },
     });
+
     if (existingTask) {
-      throw new Error(
-        `Task name ${name} already exists in project ${projectId}`
-      );
+      throw new ConflictException({
+        message: `Task name "${name}" already exists in project`,
+        errors: [{
+          field: 'name',
+          message: 'Task name must be unique within the project'
+        }]
+      });
     }
-    const task = await this.taskRepository.create({
+
+    // Create a new task instance
+    const task = this.taskRepository.create({
       name,
       tcode: await this.generateTaskCode(projectId),
       description,
-      group: await this.taskGroupRepository.findOne(groupId),
-      project: projectId
-        ? await this.projectRepository.findOne(projectId)
-        : null,
-      parentTask: parentTaskId
-        ? await this.taskRepository.findOne({ where: { id: parentTaskId } })
-        : null,
-      assignees: createTaskDto.assineeId
-        ? await this.userRepository.findByIds(createTaskDto.assineeId)
-        : []
+      dueDate: dueDate ? new Date(dueDate) : null,
+      group: groupId ? await this.taskGroupRepository.findOne({ where: { id: groupId } }) : null,
+      project: await this.projectRepository.findOne({ where: { id: projectId } }),
+      parentTask: parentTaskId ? await this.taskRepository.findOne({ where: { id: parentTaskId } }) : null,
+      assignees: assineeId ? await this.userRepository.find({ where: { id: In(assineeId) } }) : [],
     });
+
     // Save the task to the database
     return await this.taskRepository.save(task);
   }
