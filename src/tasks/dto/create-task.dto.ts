@@ -21,7 +21,7 @@ export class CreateTaskDto {
 
   @IsOptional()
   @IsString()   // Keep as string; TypeORM will convert to Date
-  dueDate?: string;
+  dueDate?: Date;
 
   @IsOptional()
   @IsUUID('4')  // Assuming groupId is a UUID

@@ -80,7 +80,7 @@ export class ProjectsService {
 
   findOne(id: string) {
     return this.projectRepository.findOne(id, {
-      relations: ['users', 'tasks', 'projectLead']
+      relations: ['users', 'tasks', 'projectLead','tasks.assignees','tasks.group']
     });
   }
 

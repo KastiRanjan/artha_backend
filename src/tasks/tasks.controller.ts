@@ -19,7 +19,7 @@ import { ImportTaskDto } from './dto/import-task.dto';
 import { ImportTaskTemplateDto } from './dto/import-taskTemplate.dto';
 
 @ApiTags('tasks')
-@UseGuards(JwtTwoFactorGuard, PermissionGuard)
+@UseGuards(JwtTwoFactorGuard)
 @Controller('tasks')
 @ApiBearerAuth()
 export class TasksController {

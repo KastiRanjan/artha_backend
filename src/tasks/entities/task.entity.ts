@@ -51,6 +51,12 @@ export class Task extends CustomBaseEntity {
   })
   taskType?: 'story' | 'task';
 
+  @Column({ nullable: true })
+  first: boolean;
+
+  @Column({ nullable: true })
+  last: boolean;
+
 
   @ManyToOne(() => UserEntity, (user) => user.tasks)
   manager: UserEntity;

@@ -289,6 +289,7 @@ export class TasksService {
     task.name = updateTaskDto.name ?? task.name;
     task.status = updateTaskDto.status ?? task.status;
     task.description = updateTaskDto.description ?? task.description;
+    task.dueDate = updateTaskDto.dueDate
     task.parentTask = updateTaskDto.parentTaskId
       ? await this.taskRepository.findOne({
           where: { id: updateTaskDto.parentTaskId }
