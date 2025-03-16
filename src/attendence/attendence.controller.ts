@@ -17,6 +17,7 @@ import { PermissionGuard } from 'src/common/guard/permission.guard';
 import { Attendance } from './entities/attendence.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
+
 @ApiTags('attendence')
 @UseGuards(JwtTwoFactorGuard)
 @Controller('attendence')
@@ -26,16 +27,16 @@ export class AttendenceController {
 
   @Post()
   create(
-    @GetUser()
-    user: UserEntity,
+    @GetUser() user: UserEntity,
     @Body() createAttendanceDto: CreateAttendanceDto
   ): Promise<Attendance> {
     return this.attendenceService.create(createAttendanceDto, user);
   }
 
   @Get()
-  findAll(    @GetUser()
-  user: UserEntity,) {
+  findAll(
+    @GetUser() user: UserEntity,
+  ) {
     return this.attendenceService.findAll(user);
   }
   
@@ -46,7 +47,6 @@ export class AttendenceController {
   
   @Get(':id')
   findOne(@Param('id') id: string) {
-    // console.log(id);
     return this.attendenceService.findOne(id);
   }
 
@@ -54,8 +54,6 @@ export class AttendenceController {
   find(@Param('id') id: string) {
     return this.attendenceService.findByUser(id);
   }
-
-
 
   @Patch(':id')
   update(

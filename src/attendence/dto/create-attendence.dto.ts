@@ -10,13 +10,18 @@ export class CreateAttendanceDto {
   clockIn?: string;
 
   @IsOptional()
+  @IsString()
   clockOut?: string;
 
-  @IsOptional() //
+  @IsOptional()
   @IsLatitude()
   latitude?: string;
 
   @IsOptional()
   @IsLongitude()
   longitude?: string;
+
+  @IsOptional()
+  @IsString()
+  remark?: string;
 }
