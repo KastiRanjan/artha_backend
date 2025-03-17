@@ -29,7 +29,8 @@ export class AttendenceService {
         ...createAttendanceDto,
         userId: user.id,
         date: today,
-        clockIn: createAttendanceDto.clockIn,
+        clockIn: createAttendanceDto.clockIn || moment().format('HH:mm:ss a'),
+        clockInRemark: createAttendanceDto.clockInRemark, // Include clockInRemark
       };
       attendance = this.attendanceRepository.create(datatosave);
       await this.attendanceRepository.save(attendance);
@@ -49,6 +50,32 @@ export class AttendenceService {
     }
 
     return attendance;
+  }
+
+  async update(id: string, updateAttendenceDto: UpdateAttendenceDto): Promise<Attendance> {
+    const attendance = await this.findOne(id);
+    
+    if (attendance.clockOut) {
+      throw new NotFoundException(`Official clock-out already set for this record`);
+    }
+
+    await this.attendanceRepository.update(id, {
+      clockOut: updateAttendenceDto.clockOut,
+      clockOutRemark: updateAttendenceDto.clockOutRemark, // Include clockOutRemark
+      latitude: updateAttendenceDto.latitude,
+      longitude: updateAttendenceDto.longitude,
+    });
+
+    const historyEntry = this.attendanceHistoryRepository.create({
+      clockOut: updateAttendenceDto.clockOut,
+      latitude: updateAttendenceDto.latitude,
+      longitude: updateAttendenceDto.longitude,
+      remark: "final clock out", // Keep this for history, separate from clockOutRemark
+      attendanceId: id,
+    });
+    await this.attendanceHistoryRepository.save(historyEntry);
+
+    return this.findOne(id);
   }
 
   async findAll(user: UserEntity): Promise<Attendance[]> {
@@ -84,33 +111,6 @@ export class AttendenceService {
       },
       relations: ['history']
     });
-  }
-
-  async update(id: string, updateAttendenceDto: UpdateAttendenceDto): Promise<Attendance> {
-    const attendance = await this.findOne(id);
-    
-    if (attendance.clockOut) {
-      throw new NotFoundException(`Official clock-out already set for this record`);
-    }
-
-    // Set the official clockOut in Attendance
-    await this.attendanceRepository.update(id, {
-      clockOut: updateAttendenceDto.clockOut,
-      latitude: updateAttendenceDto.latitude,
-      longitude: updateAttendenceDto.longitude,
-    });
-
-    // Add a final clock-out entry to AttendanceHistory with remark "final clock out"
-    const historyEntry = this.attendanceHistoryRepository.create({
-      clockOut: updateAttendenceDto.clockOut, // Use same formatted time
-      latitude: updateAttendenceDto.latitude,
-      longitude: updateAttendenceDto.longitude,
-      remark: "final clock out",
-      attendanceId: id,
-    });
-    await this.attendanceHistoryRepository.save(historyEntry);
-
-    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
