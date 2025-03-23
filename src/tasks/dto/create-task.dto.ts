@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsArray } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsArray, IsBoolean } from 'class-validator';
 
 export class CreateTaskDto {
   @IsNotEmpty()
@@ -30,6 +30,14 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   tcode?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  first?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  last?: boolean;
 
   @IsOptional()
   @IsEnum(['open', 'in_progress', 'done'])
