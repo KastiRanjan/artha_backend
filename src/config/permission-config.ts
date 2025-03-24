@@ -469,6 +469,16 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.POST
             }
           ]
+        },
+
+        {
+          name: 'Bulk Update Task',
+          route: [
+            {
+              path: '/tasks/bulk-update',
+              method: MethodList.PATCH
+            }
+          ]
         }
       ]
     },

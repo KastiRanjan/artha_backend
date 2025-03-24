@@ -17,6 +17,7 @@ import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { ImportTaskDto } from './dto/import-task.dto';
 import { ImportTaskTemplateDto } from './dto/import-taskTemplate.dto';
+import { BulkUpdateTaskDto } from './dto/bulk-update-task.dto';
 
 @ApiTags('tasks')
 @UseGuards(JwtTwoFactorGuard)
@@ -58,6 +59,12 @@ export class TasksController {
     @Param('tid') taskId: string
   ) {
     return this.tasksService.findOneByProjectIdAndTaskId(projectId, taskId);
+  }
+
+  @Patch('/bulk-update')
+  bulkUpdate(@Body() bulkUpdateTaskDto: BulkUpdateTaskDto) {
+    console.log(bulkUpdateTaskDto);
+    return this.tasksService.bulkUpdate(bulkUpdateTaskDto);
   }
 
   @Patch(':id')

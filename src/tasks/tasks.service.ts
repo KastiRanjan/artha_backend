@@ -10,6 +10,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { Task } from './entities/task.entity';
 import { In } from 'typeorm'; // Add this import
+import { BulkUpdateTaskDto } from './dto/bulk-update-task.dto';
 
 
 @Injectable()
@@ -301,6 +302,37 @@ export class TasksService {
 
     // Save updated task to the database
     return await this.taskRepository.save(task);
+  }
+
+
+  async bulkUpdate(bulkUpdateTaskDto: BulkUpdateTaskDto): Promise<any> {
+    console.log(bulkUpdateTaskDto);
+    const { taskIds, dueDate, assigneeIds } = bulkUpdateTaskDto;
+
+    const tasks = await this.taskRepository.find({
+      where: { id: In(taskIds) },
+      relations: ['assignees'],
+    });
+
+    if (tasks.length !== taskIds.length) {
+      throw new NotFoundException('One or more tasks not found');
+    }
+
+    const updatedTasks = await Promise.all(
+      tasks.map(async (task) => {
+        if (dueDate) {
+          task.dueDate = new Date(dueDate);
+        }
+        if (assigneeIds) {
+          task.assignees = await this.userRepository.find({
+            where: { id: In(assigneeIds) },
+          });
+        }
+        return this.taskRepository.save(task);
+      })
+    );
+
+    return updatedTasks;
   }
 
   async remove(id: string): Promise<void> {
