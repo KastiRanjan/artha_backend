@@ -291,6 +291,11 @@ export class TasksService {
     task.status = updateTaskDto.status ?? task.status;
     task.description = updateTaskDto.description ?? task.description;
     task.dueDate = updateTaskDto.dueDate
+    task.first = updateTaskDto.first !== undefined ? updateTaskDto.first : task.first;
+    task.last = updateTaskDto.last !== undefined ? updateTaskDto.last : task.last;
+    task.group = updateTaskDto.groupId
+    ? await this.taskGroupRepository.findOne({ where: { id: updateTaskDto.groupId } })
+    : task.group;
     task.parentTask = updateTaskDto.parentTaskId
       ? await this.taskRepository.findOne({
           where: { id: updateTaskDto.parentTaskId }
