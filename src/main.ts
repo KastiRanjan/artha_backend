@@ -9,7 +9,8 @@ import {
 } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-
+import * as fs from 'fs';
+import * as path from 'path';
 import { AppModule } from 'src/app.module';
 import * as dotenv from 'dotenv';
 
@@ -18,16 +19,23 @@ dotenv.config();
 async function bootstrap() {
   // const serverConfig = config.get('server');
   const port = process.env.PORT || 7777;
-  const app = await NestFactory.create(AppModule);
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(__dirname, '../ssl/private.key')),
+    cert: fs.readFileSync(path.join(__dirname, '../ssl/certificate.crt')),
+  };
 
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  const app = await NestFactory.create(AppModule, {
+    httpsOptions});
+
+  // app.use(helmet({ crossOriginResourcePolicy: false }));
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   // const apiConfig = config.get('app');
   // if (process.env.NODE_ENV === 'development') {
   app.enableCors({
-    origin: true,
+    origin: ['https://192.168.18.58:5173', ''],
     credentials: true
   });
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Artha API')
     .setDescription('The Artha API description')

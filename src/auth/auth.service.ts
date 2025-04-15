@@ -51,7 +51,8 @@ dotenv.config();
 // const throttleConfig = config.get('throttle.login');
 // const jwtConfig = config.get('jwt');
 // const appConfig = config.get('app');
-const isSameSite = process.env.IS_SAME_SITE || false;
+// const isSameSite = process.env.IS_SAME_SITE || false;
+const isSameSite = true ;
 // for heroku
 // const isSameSite =
 //   appConfig.sameSite !== null
