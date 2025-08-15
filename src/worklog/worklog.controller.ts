@@ -21,6 +21,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 
 @ApiTags('worklog')
 @UseGuards(JwtTwoFactorGuard)
+@UseGuards(PermissionGuard)
 @Controller('worklogs')
 @ApiBearerAuth()
 export class WorklogController {

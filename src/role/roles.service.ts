@@ -91,33 +91,33 @@ export class RolesService implements CommonServiceInterface<RoleSerializer> {
    * @param id
    * @param updateRoleDto
    */
-  async update(
-    id: string,
-    updateRoleDto: UpdateRoleDto
-  ): Promise<RoleSerializer> {
-    const role = await this.repository.findOne(id);
-    if (!role) {
-      throw new NotFoundException();
+    async update(
+      id: string,
+      updateRoleDto: UpdateRoleDto
+    ): Promise<RoleSerializer> {
+      const role = await this.repository.findOne(id);
+      if (!role) {
+        throw new NotFoundException();
+      }
+      const condition: ObjectLiteral = {
+        name: updateRoleDto.name
+      };
+      condition.id = Not(id);
+      const checkUniqueTitle = await this.repository.countEntityByCondition(
+        condition
+      );
+      if (checkUniqueTitle > 0) {
+        throw new UnprocessableEntityException({
+          property: 'name',
+          constraints: {
+            unique: 'already taken'
+          }
+        });
+      }
+      const { permissions } = updateRoleDto;
+      const permission = await this.getPermissionByIds(permissions);
+      return this.repository.updateItem(role, updateRoleDto, permission);
     }
-    const condition: ObjectLiteral = {
-      name: updateRoleDto.name
-    };
-    condition.id = Not(id);
-    const checkUniqueTitle = await this.repository.countEntityByCondition(
-      condition
-    );
-    if (checkUniqueTitle > 0) {
-      throw new UnprocessableEntityException({
-        property: 'name',
-        constraints: {
-          unique: 'already taken'
-        }
-      });
-    }
-    const { permissions } = updateRoleDto;
-    const permission = await this.getPermissionByIds(permissions);
-    return this.repository.updateItem(role, updateRoleDto, permission);
-  }
 
   /**
    * remove role by id

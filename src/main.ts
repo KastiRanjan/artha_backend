@@ -19,20 +19,14 @@ dotenv.config();
 async function bootstrap() {
   // const serverConfig = config.get('server');
   const port = process.env.PORT || 7777;
-  const httpsOptions = {
-    key: fs.readFileSync(path.join(__dirname, '../ssl/private.key')),
-    cert: fs.readFileSync(path.join(__dirname, '../ssl/certificate.crt')),
-  };
-
-  const app = await NestFactory.create(AppModule, {
-    httpsOptions});
+  const app = await NestFactory.create(AppModule);
 
   // app.use(helmet({ crossOriginResourcePolicy: false }));
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   // const apiConfig = config.get('app');
   // if (process.env.NODE_ENV === 'development') {
   app.enableCors({
-    origin: ['https://192.168.18.58:5173', ''],
+    origin: ['http://192.168.18.58:5173', 'http://localhost:5173'],
     credentials: true
   });
 
