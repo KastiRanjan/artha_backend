@@ -18,9 +18,9 @@ import { Attendance } from './entities/attendence.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 
-@ApiTags('attendence')
-@UseGuards(JwtTwoFactorGuard)
-@Controller('attendence')
+@ApiTags('attendance')
+@UseGuards(JwtTwoFactorGuard, PermissionGuard)
+@Controller('attendance')
 @ApiBearerAuth()
 export class AttendenceController {
   constructor(private readonly attendenceService: AttendenceService) {}
