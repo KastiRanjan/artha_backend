@@ -236,6 +236,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'Update role permissions',
+          route: [
+            {
+              path: '/roles/:id/permissions',
+              method: MethodList.PUT
+            }
+          ]
+        },
+        {
           name: 'Delete role by id',
           route: [
             {
@@ -653,6 +662,24 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'Get Today Attendance',
+          route: [
+            {
+              path: '/attendance/today-attendence',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get Attendance by ID',
+          route: [
+            {
+              path: '/attendance/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'Edit Attendance',
           route: [
             {
@@ -660,7 +687,25 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.PATCH
             }
           ]
-        }
+        },
+        {
+          name: 'Delete Attendance by ID',
+          route: [
+            {
+              path: '/attendance/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get Attendance by User ID',
+          route: [
+            {
+              path: '/attendance/user/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
       ]
     },
     {

@@ -127,4 +127,18 @@ export class RolesService implements CommonServiceInterface<RoleSerializer> {
     await this.findOne(id);
     await this.repository.delete({ id });
   }
+  async updatePermissions(id: string, permissions: string[]): Promise<RoleSerializer> {
+    const role = await this.repository.findOne(id);
+    if (!role) {
+      throw new NotFoundException();
+    }
+    const permissionEntities = await this.getPermissionByIds(permissions);
+    // Build a full UpdateRoleDto object
+    const updateRoleDto: UpdateRoleDto = {
+      name: role.name,
+      description: role.description,
+      permissions
+    };
+    return this.repository.updateItem(role, updateRoleDto, permissionEntities);
+  }
 }

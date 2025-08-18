@@ -66,6 +66,14 @@ export class RolesController {
     return this.rolesService.update(id, updateRoleDto);
   }
 
+  @Put(':id/permissions')
+  async updatePermissions(
+    @Param('id') id: string,
+    @Body('permissions') permissions: string[]
+  ): Promise<RoleSerializer> {
+    return this.rolesService.updatePermissions(id, permissions);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
