@@ -60,6 +60,10 @@ export class Project extends CustomBaseEntity {
   })
   projectLead: UserEntity;
 
+  // Project Manager: Only users with role 'manager' should be assigned
+  @ManyToOne(() => UserEntity, { onDelete: 'SET NULL', nullable: true })
+  projectManager: UserEntity;
+
   @ManyToOne(() => Customer, (client) => client.projects, {
     onDelete: 'SET NULL',
     nullable: true

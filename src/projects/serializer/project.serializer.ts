@@ -8,16 +8,16 @@
 
 // export class ProjectSerializer extends ModelSerializer {
 //   id: number;
-
+//
 //   @ApiProperty()
 //   name: string;
-
+//
 //   @ApiPropertyOptional()
 //   @Expose({
 //     groups: basicFieldGroupsForSerializing
 //   })
 //   description: string;
-
+//
 //   @ApiPropertyOptional()
 //   @Expose({
 //     groups: adminUserGroupsForSerializing
@@ -28,16 +28,22 @@
 //     groups: adminUserGroupsForSerializing
 //   })
 //   nature: string;
-
+//
 //   @ApiPropertyOptional()
 //   @Expose({
 //     groups: basicFieldGroupsForSerializing
 //   })
 //   createdAt: Date;
-
+//
 //   @ApiPropertyOptional()
 //   @Expose({
 //     groups: basicFieldGroupsForSerializing
 //   })
 //   updatedAt: Date;
+//
+//   @ApiPropertyOptional()
+//   @Expose({
+//     groups: basicFieldGroupsForSerializing
+//   })
+//   projectManager: any;
 // }

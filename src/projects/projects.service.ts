@@ -24,18 +24,27 @@ export class ProjectsService {
     const {
       users: userIds,
       projectLead,
+      projectManager,
       customer,
       ...projectData
     } = createProjectDto;
     // Fetch the user entities using the user IDs
     const users = await this.userRepository.findByIds(userIds);
     const lead = await this.userRepository.findOne(projectLead);
+    let manager = null;
+    if (projectManager) {
+      manager = await this.userRepository.findOne({ where: { id: projectManager }, relations: ['role'] });
+      if (!manager || manager.role?.name !== 'manager') {
+        throw new Error('Assigned projectManager must have role "manager"');
+      }
+    }
     const client = await this.customerRepository.findOne(customer);
     // Create a new project and assign the fetched users
     const project = await this.projectRepository.create({
       ...projectData,
       users, // Assign the user entities here
       projectLead: lead || null,
+      projectManager: manager || null,
       customer: client || null
     });
 
@@ -98,14 +107,22 @@ export class ProjectsService {
     // Update project properties with the new values
     Object.assign(project, updateProjectDto);
 
+
     // If there are user updates, handle them
     if (updateProjectDto.users) {
       const users = await this.userRepository.findByIds(updateProjectDto.users);
-      const lead = await this.userRepository.findOne(
-        updateProjectDto.projectLead
-      );
-      project.projectLead = lead || null;
       project.users = users; // Update users if provided
+    }
+    if (updateProjectDto.projectLead) {
+      const lead = await this.userRepository.findOne(updateProjectDto.projectLead);
+      project.projectLead = lead || null;
+    }
+    if (updateProjectDto.projectManager) {
+      const manager = await this.userRepository.findOne({ where: { id: updateProjectDto.projectManager }, relations: ['role'] });
+      if (!manager || manager.role?.name !== 'manager') {
+        throw new Error('Assigned projectManager must have role "manager"');
+      }
+      project.projectManager = manager;
     }
 
     // Save the updated project back to the repository
