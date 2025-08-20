@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isEmpty } from 'lodash';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { ProjectTimelineService } from 'src/projects/project-timeline.service';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { Repository } from 'typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -21,7 +22,8 @@ export class TasksService {
     private userRepository: Repository<UserEntity>,
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(TaskGroup)
-    private taskGroupRepository: Repository<TaskGroup>
+    private taskGroupRepository: Repository<TaskGroup>,
+    private readonly projectTimelineService: ProjectTimelineService
   ) {}
 
   private async generateTaskCode(projectId: string): Promise<string> {
@@ -67,7 +69,15 @@ export class TasksService {
     });
 
     // Save the task to the database
-    return await this.taskRepository.save(task);
+    const savedTask = await this.taskRepository.save(task);
+    // Log task addition in project timeline
+    await this.projectTimelineService.log({
+      projectId: projectId,
+      userId: null,
+      action: 'task_added',
+      details: `Task '${name}' added to project.`
+    });
+    return savedTask;
   }
   async addBulk(importTaskDto: any): Promise<any> {
     const { project, tasks } = importTaskDto;
@@ -301,12 +311,36 @@ export class TasksService {
           where: { id: updateTaskDto.parentTaskId }
         })
       : task.parentTask;
-    task.assignees = updateTaskDto.assineeId
+    // Track previous assignees for logging
+    const prevAssigneeIds = (task.assignees || []).map(u => u.id);
+    const newAssignees = updateTaskDto.assineeId
       ? await this.userRepository.findByIds(updateTaskDto.assineeId)
       : [];
+    task.assignees = newAssignees;
 
     // Save updated task to the database
-    return await this.taskRepository.save(task);
+    const updatedTask = await this.taskRepository.save(task);
+
+    // Log assignment changes in project timeline
+    const added = (newAssignees || []).filter(u => !prevAssigneeIds.includes(u.id));
+    const removed = (task.assignees || []).filter(u => !updateTaskDto.assineeId?.includes(u.id));
+    for (const user of added) {
+      await this.projectTimelineService.log({
+        projectId: task.project.id,
+        userId: user.id,
+        action: 'task_assigned',
+        details: `User '${user.name}' assigned to task '${task.name}'.`
+      });
+    }
+    for (const user of removed) {
+      await this.projectTimelineService.log({
+        projectId: task.project.id,
+        userId: user.id,
+        action: 'task_unassigned',
+        details: `User '${user.name}' unassigned from task '${task.name}'.`
+      });
+    }
+    return updatedTask;
   }
 
 

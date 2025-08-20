@@ -3,6 +3,7 @@ import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { ProjectTimelineService } from 'src/projects/project-timeline.service';
 import { CreateWorklogDto, CreateWorklogListDto } from './dto/create-worklog.dto';
 import { Worklog } from './entities/worklog.entity';
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
@@ -18,7 +19,7 @@ export class WorklogService {
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(Task) private taskRepository: Repository<Task>,
     private readonly notificationService: NotificationService,
-
+    private readonly projectTimelineService: ProjectTimelineService
   ) { }
 
   async create(createWorklogDto: any, user: UserEntity) {
@@ -73,6 +74,15 @@ export class WorklogService {
 
     // Save all worklogs to the database at once
     const savedWorklogs = await this.worklogRepository.save(worklogs);
+    // Log worklog addition in project timeline
+    for (const worklog of savedWorklogs) {
+      await this.projectTimelineService.log({
+        projectId: worklog.task.project.id,
+        userId: user.id,
+        action: 'worklog_added',
+        details: `Worklog added for task '${worklog.task.name}' by user '${user.name}'.`
+      });
+    }
     return savedWorklogs;
   }
 

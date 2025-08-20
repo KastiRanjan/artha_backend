@@ -392,6 +392,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'View project timeline',
+          route: [
+            {
+              path: '/projects/:id/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'Store new project',
           route: [
             {
@@ -790,6 +799,10 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id',
               method: MethodList.GET
+            },
+            {
+              path: '/projects/:id/timeline',
+              method: MethodList.GET
             }
           ]
         },
@@ -1121,6 +1134,10 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id',
               method: MethodList.GET
+            },
+            {
+              path: '/projects/:id/timeline',
+              method: MethodList.GET
             }
           ]
         }
@@ -1380,6 +1397,10 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/projects/:id',
+              method: MethodList.GET
+            },
+            {
+              path: '/projects/:id/timeline',
               method: MethodList.GET
             }
           ]
@@ -1737,6 +1758,10 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/projects/:id',
+              method: MethodList.GET
+            },
+            {
+              path: '/projects/:id/timeline',
               method: MethodList.GET
             }
           ]

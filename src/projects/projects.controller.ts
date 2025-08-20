@@ -10,6 +10,7 @@ import {
   Query
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
+import { ProjectTimelineService } from './project-timeline.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -23,7 +24,15 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 @Controller('projects')
 @ApiBearerAuth()
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly projectTimelineService: ProjectTimelineService
+  ) {}
+
+  @Get(':id/timeline')
+  async getTimeline(@Param('id') id: string) {
+    return this.projectTimelineService.getTimeline(id);
+  }
 
   @Post()
   create(@Body() createProjectDto: CreateProjectDto) {
@@ -32,8 +41,7 @@ export class ProjectsController {
 
   @Get()
   findAll(
-    @GetUser()
-    user: UserEntity,
+    @GetUser() user: UserEntity,
     @Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off'
   ) {
     return this.projectsService.findAll(status, user);
@@ -53,6 +61,7 @@ export class ProjectsController {
   remove(@Param('id') id: string) {
     return this.projectsService.remove(id);
   }
+
   @Get('users/:uid')
   userProjects(@Param('uid') uid: string) {
     return this.projectsService.findByUserId(uid);

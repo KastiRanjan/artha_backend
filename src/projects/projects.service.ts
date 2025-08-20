@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { Project } from './entities/project.entity';
+import { ProjectTimelineService } from './project-timeline.service';
 dotenv.config();
 
 @Injectable()
@@ -18,7 +19,8 @@ export class ProjectsService {
     private customerRepository: Repository<Customer>,
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly projectTimelineService: ProjectTimelineService
   ) {}
   async create(createProjectDto: CreateProjectDto) {
     const {
@@ -54,6 +56,13 @@ export class ProjectsService {
       message: `Project ${savedProject.name} created`,
       users: userIds,
       link: `${process.env.frontendUrl}/projects/${savedProject.id}`
+    });
+    // Log project creation in timeline
+    await this.projectTimelineService.log({
+      projectId: savedProject.id,
+      userId: lead?.id,
+      action: 'project_created',
+      details: `Project created with users: ${userIds?.join(', ')}`
     });
     // Save the project with associated users
     return savedProject;

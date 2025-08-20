@@ -1,3 +1,4 @@
+import { ProjectTimeline } from './project-timeline.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
@@ -7,6 +8,11 @@ import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity()
 export class Project extends CustomBaseEntity {
+  @OneToMany(() => ProjectTimeline, (timeline) => timeline.project, {
+    cascade: true,
+    nullable: true
+  })
+  timelines: ProjectTimeline[];
   @Column({ length: 100 })
   name: string;
 

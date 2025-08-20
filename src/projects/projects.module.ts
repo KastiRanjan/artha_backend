@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ProjectsController } from './projects.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Project } from './entities/project.entity';
+import { ProjectTimeline } from './entities/project-timeline.entity';
+import { ProjectTimelineService } from './project-timeline.service';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Notification } from 'src/notification/entities/notification.entity';
@@ -11,9 +13,10 @@ import { Customer } from 'src/customers/entities/customer.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, UserEntity, Notification, Customer])
-  ], // Add the missing entity to the imports
+    TypeOrmModule.forFeature([Project, ProjectTimeline, UserEntity, Notification, Customer])
+  ],
   controllers: [ProjectsController],
-  providers: [ProjectsService, NotificationService, CustomersService]
+  providers: [ProjectsService, ProjectTimelineService, NotificationService, CustomersService],
+  exports: [ProjectsService, ProjectTimelineService]
 })
 export class ProjectsModule {}

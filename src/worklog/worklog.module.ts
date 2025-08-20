@@ -8,10 +8,14 @@ import { WorklogService } from './worklog.service';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { ProjectsModule } from 'src/projects/projects.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Worklog, UserEntity, Project, Task,Notification])],
+  imports: [
+    TypeOrmModule.forFeature([Worklog, UserEntity, Project, Task, Notification]),
+    ProjectsModule
+  ],
   controllers: [WorklogController],
-  providers: [WorklogService,NotificationService]
+  providers: [WorklogService, NotificationService]
 })
 export class WorklogModule {}
