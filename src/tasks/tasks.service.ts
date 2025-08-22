@@ -70,9 +70,17 @@ export class TasksService {
 
     // Save the task to the database
     const savedTask = await this.taskRepository.save(task);
+    // Ensure project relation is loaded
+    let taskWithProject = savedTask;
+    if (!taskWithProject.project) {
+      taskWithProject = await this.taskRepository.findOne({
+        where: { id: savedTask.id },
+        relations: ['project']
+      });
+    }
     // Log task addition in project timeline
     await this.projectTimelineService.log({
-      projectId: projectId,
+      projectId: taskWithProject.project.id,
       userId: null,
       action: 'task_added',
       details: `Task '${name}' added to project.`
@@ -324,20 +332,28 @@ export class TasksService {
     // Log assignment changes in project timeline
     const added = (newAssignees || []).filter(u => !prevAssigneeIds.includes(u.id));
     const removed = (task.assignees || []).filter(u => !updateTaskDto.assineeId?.includes(u.id));
+    // Ensure project relation is loaded
+    let taskWithProject = task;
+    if (!taskWithProject.project) {
+      taskWithProject = await this.taskRepository.findOne({
+        where: { id: task.id },
+        relations: ['project']
+      });
+    }
     for (const user of added) {
       await this.projectTimelineService.log({
-        projectId: task.project.id,
+        projectId: taskWithProject.project.id,
         userId: user.id,
         action: 'task_assigned',
-        details: `User '${user.name}' assigned to task '${task.name}'.`
+        details: `User '${user.name}' assigned to task '${taskWithProject.name}'.`
       });
     }
     for (const user of removed) {
       await this.projectTimelineService.log({
-        projectId: task.project.id,
+        projectId: taskWithProject.project.id,
         userId: user.id,
         action: 'task_unassigned',
-        details: `User '${user.name}' unassigned from task '${task.name}'.`
+        details: `User '${user.name}' unassigned from task '${taskWithProject.name}'.`
       });
     }
     return updatedTask;

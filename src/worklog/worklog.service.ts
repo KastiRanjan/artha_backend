@@ -76,11 +76,19 @@ export class WorklogService {
     const savedWorklogs = await this.worklogRepository.save(worklogs);
     // Log worklog addition in project timeline
     for (const worklog of savedWorklogs) {
+      // Ensure task.project is loaded
+      let taskWithProject = worklog.task;
+      if (!taskWithProject.project) {
+        taskWithProject = await this.taskRepository.findOne({
+          where: { id: worklog.task.id },
+          relations: ['project']
+        });
+      }
       await this.projectTimelineService.log({
-        projectId: worklog.task.project.id,
+        projectId: taskWithProject.project.id,
         userId: user.id,
         action: 'worklog_added',
-        details: `Worklog added for task '${worklog.task.name}' by user '${user.name}'.`
+        details: `Worklog added for task '${taskWithProject.name}' by user '${user.name}'.`
       });
     }
     return savedWorklogs;

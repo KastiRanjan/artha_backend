@@ -79,14 +79,14 @@ export class ProjectsService {
         where: {
           status: status
         },
-        relations: ['users', 'tasks', 'projectLead', 'customer', 'projectManager'],
+        relations: ['users', 'tasks', 'projectLead', 'customer', 'projectManager','users.role'],
         order: {
           updatedAt: 'DESC'
         }
       });
     } else {
       const users = await this.userRepository.findOne({
-        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager'],
+        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager','projects.users.role'],
         where: {
           id: user.id
         }
