@@ -435,67 +435,115 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
-          name: 'View all taskGroup',
+          name: 'View all tasks',
           route: [
-            {
-              path: '/tasks',
-              method: MethodList.GET
-            }
+            { path: '/tasks', method: MethodList.GET }
           ]
         },
         {
-          name: 'Add task to project',
+          name: 'Add task',
           route: [
-            {
-              path: '/tasks',
-              method: MethodList.POST
-            }
+            { path: '/tasks', method: MethodList.POST }
           ]
         },
         {
-          name: 'Edit task o project',
+          name: 'Add tasks in bulk',
           route: [
-            {
-              path: '/tasks/:id',
-              method: MethodList.PATCH
-            }
+            { path: '/tasks/add-bulk', method: MethodList.POST },
+            { path: '/tasks/add-bulk-list', method: MethodList.POST }
           ]
         },
         {
-          name: 'Get Project task',
+          name: 'Get task by id',
           route: [
-            {
-              path: '/tasks/project/:id',
-              method: MethodList.GET
-            }
+            { path: '/tasks/:id', method: MethodList.GET }
           ]
         },
         {
-          name: 'Add task to project bulk',
+          name: 'Get tasks by project id',
           route: [
-            {
-              path: '/tasks/add-bulk',
-              method: MethodList.POST
-            }
+            { path: '/tasks/project/:id', method: MethodList.GET },
+            { path: '/tasks/:tid/project/:pid', method: MethodList.GET }
           ]
         },
         {
-          name: 'Add tasktemplate to project bulk',
+          name: 'Update task by id',
           route: [
-            {
-              path: '/tasks/add-bulk-list',
-              method: MethodList.POST
-            }
+            { path: '/tasks/:id', method: MethodList.PATCH }
           ]
         },
-
         {
-          name: 'Bulk Update Task',
+          name: 'Bulk update tasks',
           route: [
-            {
-              path: '/tasks/bulk-update',
-              method: MethodList.PATCH
-            }
+            { path: '/tasks/bulk-update', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'Delete task by id',
+          route: [
+            { path: '/tasks/:id', method: MethodList.DELETE }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Notification Management',
+      resource: 'notification',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Create notification',
+          route: [
+            { path: '/notification', method: MethodList.POST }
+          ]
+        },
+        {
+          name: 'View all notifications',
+          route: [
+            { path: '/notification', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'View notification by id',
+          route: [
+            { path: '/notification/:id', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'Update notification by id',
+          route: [
+            { path: '/notification/:id', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'Delete notification by id',
+          route: [
+            { path: '/notification/:id', method: MethodList.DELETE }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Dashboard',
+      resource: 'dashboard',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get user stats',
+          route: [
+            { path: '/dashboard/users', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'Get os stats',
+          route: [
+            { path: '/dashboard/os', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'Get browser stats',
+          route: [
+            { path: '/dashboard/browser', method: MethodList.GET }
           ]
         }
       ]

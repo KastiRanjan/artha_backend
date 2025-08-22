@@ -36,8 +36,8 @@ export class ProjectsService {
     let manager = null;
     if (projectManager) {
       manager = await this.userRepository.findOne({ where: { id: projectManager }, relations: ['role'] });
-      if (!manager || manager.role?.name !== 'manager') {
-        throw new Error('Assigned projectManager must have role "manager"');
+      if (!manager || manager.role?.name !== 'projectmanager') {
+        throw new Error('Assigned projectManager must have role "projectmanager"');
       }
     }
     const client = await this.customerRepository.findOne(customer);
@@ -79,14 +79,14 @@ export class ProjectsService {
         where: {
           status: status
         },
-        relations: ['users', 'tasks', 'projectLead', 'customer'],
+        relations: ['users', 'tasks', 'projectLead', 'customer', 'projectManager'],
         order: {
           updatedAt: 'DESC'
         }
       });
     } else {
       const users = await this.userRepository.findOne({
-        relations: ['projects', 'projects.projectLead', 'projects.users'],
+        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager'],
         where: {
           id: user.id
         }
@@ -98,7 +98,7 @@ export class ProjectsService {
 
   findOne(id: string) {
     return this.projectRepository.findOne(id, {
-      relations: ['users', 'tasks', 'projectLead','tasks.assignees','tasks.group']
+      relations: ['users', 'tasks', 'projectLead', 'projectManager', 'tasks.assignees', 'tasks.group']
     });
   }
 
@@ -128,7 +128,7 @@ export class ProjectsService {
     }
     if (updateProjectDto.projectManager) {
       const manager = await this.userRepository.findOne({ where: { id: updateProjectDto.projectManager }, relations: ['role'] });
-      if (!manager || manager.role?.name !== 'manager') {
+      if (!manager || manager.role?.name !== 'projectmanager') {
         throw new Error('Assigned projectManager must have role "manager"');
       }
       project.projectManager = manager;
