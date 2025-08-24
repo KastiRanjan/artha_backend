@@ -658,39 +658,45 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
-          name: 'Get all workloglist',
+          name: 'Get all worklogs',
           route: [
-            {
-              path: '/worklogs',
-              method: MethodList.GET
-            }
+            { path: '/worklogs', method: MethodList.GET }
           ]
         },
         {
-          name: 'Get My workloglist',
+          name: 'Get worklog by id',
           route: [
-            {
-              path: '/worklogs/:uid',
-              method: MethodList.GET
-            }
+            { path: '/worklogs/:id', method: MethodList.GET }
           ]
         },
         {
-          name: 'Add Worklog',
+          name: 'Get worklogs by task',
           route: [
-            {
-              path: '/worklogs',
-              method: MethodList.POST
-            }
+            { path: '/worklogs/task/:id', method: MethodList.GET }
           ]
         },
         {
-          name: 'Edit Worklog',
+          name: 'Get worklogs by user',
           route: [
-            {
-              path: '/worklogs/:id',
-              method: MethodList.PATCH
-            }
+            { path: '/worklogs/user', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'Add worklog',
+          route: [
+            { path: '/worklogs', method: MethodList.POST }
+          ]
+        },
+        {
+          name: 'Edit worklog',
+          route: [
+            { path: '/worklogs/:id', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'Delete worklog',
+          route: [
+            { path: '/worklogs/:id', method: MethodList.DELETE }
           ]
         }
       ]

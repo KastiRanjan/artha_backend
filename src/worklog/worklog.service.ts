@@ -110,7 +110,7 @@ export class WorklogService {
   async findRequest(user: UserEntity, status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
     return await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
-      where: { approvedBy: user, status },
+      where: { approvedBy: user.id, status },
       order: {
         createdAt: 'DESC'
       }
@@ -130,16 +130,17 @@ export class WorklogService {
 
 
   async findByTaskId(id: string) {
-    const worklog = await this.worklogRepository.find({
-      relations: ['user'],
+    const worklogs = await this.worklogRepository.find({
+      where: { task: { id } },
+      relations: ['user', 'task', 'task.project'],
       order: {
         createdAt: 'DESC'
       },
     });
-    if (!worklog) {
-      throw new NotFoundException(`Worklog with task ID ${id} not found`);
+    if (!worklogs || worklogs.length === 0) {
+      throw new NotFoundException(`No worklogs found for task ID ${id}`);
     }
-    return worklog;
+    return worklogs;
   }
 
   async update(id: string, updateWorklogDto: UpdateWorklogDto) {
@@ -147,8 +148,22 @@ export class WorklogService {
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
     }
+    // Handle taskId update
+    if (updateWorklogDto.taskId) {
+      const task = await this.taskRepository.findOne({ where: { id: updateWorklogDto.taskId } });
+      if (!task) throw new NotFoundException(`Task with ID ${updateWorklogDto.taskId} not found`);
+      worklog.task = task;
+    }
+    // Handle userId update
+    if (updateWorklogDto.userId) {
+      const user = await this.userRepository.findOne({ where: { id: updateWorklogDto.userId } });
+      if (!user) throw new NotFoundException(`User with ID ${updateWorklogDto.userId} not found`);
+      worklog.user = user;
+    }
+    // Assign other fields
     Object.assign(worklog, updateWorklogDto);
     return this.worklogRepository.save(worklog);
+  return this.worklogRepository.save(worklog);
   }
 
   async remove(id: string) {
