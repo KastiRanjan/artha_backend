@@ -1,11 +1,17 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { HolidayService } from './holiday.service';
+import { Controller, Get, Post, Body, Param, Patch, Delete, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImportHolidayCsvDto } from './dto/import-holiday-csv.dto';
+import { HolidayService } from './holiday.service';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
+import { PermissionGuard } from 'src/common/guard/permission.guard';
 
+@ApiTags('holiday')
+@UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('holiday')
+@ApiBearerAuth()
 export class HolidayController {
   constructor(private readonly holidayService: HolidayService) {}
 

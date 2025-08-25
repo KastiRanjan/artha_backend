@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
-import { WorkhourService } from './workhour.service';
 import { CreateWorkhourDto } from './dto/create-workhour.dto';
 import { UpdateWorkhourDto } from './dto/update-workhour.dto';
+import { WorkhourService } from './workhour.service';
 
 @Controller('workhour')
 export class WorkhourController {

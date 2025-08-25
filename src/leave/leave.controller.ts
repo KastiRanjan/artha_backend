@@ -1,9 +1,15 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
-import { LeaveService } from './leave.service';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
+import { LeaveService } from './leave.service';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
+import { PermissionGuard } from 'src/common/guard/permission.guard';
 
+@ApiTags('leave')
+@UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('leave')
+@ApiBearerAuth()
 export class LeaveController {
   constructor(private readonly leaveService: LeaveService) {}
 
