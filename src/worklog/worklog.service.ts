@@ -9,6 +9,9 @@ import { Worklog } from './entities/worklog.entity';
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
 import { Task } from 'src/tasks/entities/task.entity';
 import { NotificationService } from 'src/notification/notification.service';
+
+import { LeaveService } from 'src/leave/leave.service';
+import { HolidayService } from 'src/holiday/holiday.service';
 import moment = require('moment');
 
 @Injectable()
@@ -19,12 +22,14 @@ export class WorklogService {
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(Task) private taskRepository: Repository<Task>,
     private readonly notificationService: NotificationService,
-    private readonly projectTimelineService: ProjectTimelineService
+  private readonly projectTimelineService: ProjectTimelineService,
+  private readonly leaveService: LeaveService,
+  private readonly holidayService: HolidayService
   ) { }
 
   async create(createWorklogDto: any, user: UserEntity) {
-    const worklogs = [];
 
+    const worklogs = [];
     for (const worklogDto of createWorklogDto) {
       const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
 
@@ -39,6 +44,33 @@ export class WorklogService {
         throw new NotFoundException(`Project with ID ${projectId} not found`);
       }
 
+      // Block if user is on approved leave for any part of the worklog date range
+      const leaves = await this.leaveService.findAll('approved');
+      const worklogStart = moment.utc(startTime).format('YYYY-MM-DD');
+      const worklogEnd = moment.utc(endTime).format('YYYY-MM-DD');
+      const onLeave = leaves.some(leave => {
+        return leave.user.id === user.id && worklogStart <= leave.endDate && worklogEnd >= leave.startDate;
+      });
+      if (onLeave) {
+        throw new BadRequestException('You are on leave during this worklog period. Worklog is not allowed.');
+      }
+
+      // Block if any day in the worklog range is a holiday
+      const holidays = await this.holidayService.findAll();
+      const holidayDates = holidays.map(h => h.date);
+      let isHoliday = false;
+      let current = moment.utc(worklogStart);
+      const end = moment.utc(worklogEnd);
+      while (current.isSameOrBefore(end)) {
+        if (holidayDates.includes(current.format('YYYY-MM-DD'))) {
+          isHoliday = true;
+          break;
+        }
+        current.add(1, 'day');
+      }
+      if (isHoliday) {
+        throw new BadRequestException('One or more days in this worklog period are holidays. Worklog is not allowed.');
+      }
 
       const startDate = moment.utc(startTime).toDate();  // Convert to UTC date object
       const endDate = moment.utc(endTime).toDate();      // Convert to UTC date object

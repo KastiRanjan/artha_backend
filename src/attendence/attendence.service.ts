@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateAttendanceDto } from './dto/create-attendence.dto';
 import { UpdateAttendenceDto } from './dto/update-attendence.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,6 +6,8 @@ import { Attendance } from './entities/attendence.entity';
 import { Repository } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import * as moment from 'moment';
+import { LeaveService } from 'src/leave/leave.service';
+import { HolidayService } from 'src/holiday/holiday.service';
 import { AttendanceHistory } from './entities/attendence-history.entity';
 
 @Injectable()
@@ -15,10 +17,27 @@ export class AttendenceService {
     private attendanceRepository: Repository<Attendance>,
     @InjectRepository(AttendanceHistory)
     private attendanceHistoryRepository: Repository<AttendanceHistory>,
+    private readonly leaveService: LeaveService,
+    private readonly holidayService: HolidayService,
   ) {}
 
   async create(createAttendanceDto: CreateAttendanceDto, user: UserEntity): Promise<Attendance> {
     const today = moment().format('YYYY-MM-DD').toString();
+
+    // Block if user is on approved leave today
+    const leaves = await this.leaveService.findAll('approved');
+    const onLeave = leaves.some(leave => leave.user.id === user.id && today >= leave.startDate && today <= leave.endDate);
+    if (onLeave) {
+      throw new ForbiddenException('You are on leave today. Attendance is not allowed.');
+    }
+
+    // Block if today is a holiday
+    const holidays = await this.holidayService.findAll();
+    const isHoliday = holidays.some(holiday => holiday.date === today);
+    if (isHoliday) {
+      throw new ForbiddenException('Today is a holiday. Attendance is not allowed.');
+    }
+
     let attendance = await this.attendanceRepository.findOne({ 
       where: { userId: user.id, date: today },
       relations: ['history']
