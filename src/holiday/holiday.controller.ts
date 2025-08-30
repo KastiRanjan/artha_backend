@@ -9,7 +9,7 @@ import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 
 @ApiTags('holiday')
-@UseGuards(JwtTwoFactorGuard, PermissionGuard)
+@UseGuards(JwtTwoFactorGuard)
 @Controller('holiday')
 @ApiBearerAuth()
 export class HolidayController {

@@ -20,12 +20,16 @@ import * as ormConfig from 'src/config/ormconfig';
 import winstonConfig from 'src/config/winston';
 import { DashboardModule } from 'src/dashboard/dashboard.module';
 import { EmailTemplateModule } from 'src/email-template/email-template.module';
+import { HolidayModule } from 'src/holiday/holiday.module';
+import { LeaveModule } from 'src/leave/leave.module';
 import { MailModule } from 'src/mail/mail.module';
 import { PermissionsModule } from 'src/permission/permissions.module';
 import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
 import { RolesModule } from 'src/role/roles.module';
 import { TwofaModule } from 'src/twofa/twofa.module';
+import { WorkhourModule } from 'src/workhour/workhour.module';
 import { AttendenceModule } from './attendence/attendence.module';
+import { CalendarModule } from './calendar/calendar.module';
 import { CustomersModule } from './customers/customers.module';
 import { NotificationModule } from './notification/notification.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -82,7 +86,11 @@ import { WorklogModule } from './worklog/worklog.module';
     WorklogModule,
     TaskTemplateModule,
     AttendenceModule,
-    NotificationModule
+    NotificationModule,
+    CalendarModule,
+    HolidayModule,
+    LeaveModule,
+    WorkhourModule
   ],
   providers: [
     {

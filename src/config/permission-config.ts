@@ -813,6 +813,313 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         }
       ]
+    },
+    {
+      name: 'Holiday Management',
+      resource: 'holiday',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all holidays',
+          route: [
+            {
+              path: '/holiday',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add holiday',
+          route: [
+            {
+              path: '/holiday',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View holiday by id',
+          route: [
+            {
+              path: '/holiday/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update holiday',
+          route: [
+            {
+              path: '/holiday/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete holiday',
+          route: [
+            {
+              path: '/holiday/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Import holidays CSV',
+          route: [
+            {
+              path: '/holiday/import-csv',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Preview holidays CSV',
+          route: [
+            {
+              path: '/holiday/preview-csv',
+              method: MethodList.POST
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Leave Management',
+      resource: 'leave',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all leaves',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Apply for leave',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View leave by id',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update leave',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete leave',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Approve leave by lead',
+          route: [
+            {
+              path: '/leave/:id/approve/lead',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Approve leave by PM',
+          route: [
+            {
+              path: '/leave/:id/approve/pm',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Approve leave by admin',
+          route: [
+            {
+              path: '/leave/:id/approve/admin',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Reject leave',
+          route: [
+            {
+              path: '/leave/:id/reject',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Leave calendar view',
+          route: [
+            {
+              path: '/leave/calendar/view',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Work Hour Management',
+      resource: 'workhour',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all work hours',
+          route: [
+            {
+              path: '/workhour',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create work hour config',
+          route: [
+            {
+              path: '/workhour',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View work hour by id',
+          route: [
+            {
+              path: '/workhour/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update work hour config',
+          route: [
+            {
+              path: '/workhour/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete work hour config',
+          route: [
+            {
+              path: '/workhour/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Resolve work hours for user',
+          route: [
+            {
+              path: '/workhour/resolve/:userId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Calendar Management',
+      resource: 'calendar',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all calendar events',
+          route: [
+            {
+              path: '/calendar',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create calendar event',
+          route: [
+            {
+              path: '/calendar',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View calendar event by id',
+          route: [
+            {
+              path: '/calendar/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update calendar event',
+          route: [
+            {
+              path: '/calendar/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete calendar event',
+          route: [
+            {
+              path: '/calendar/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'AD to BS conversion',
+          route: [
+            {
+              path: '/calendar/convert/ad-to-bs',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'BS to AD conversion',
+          route: [
+            {
+              path: '/calendar/convert/bs-to-ad',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Calendar month view',
+          route: [
+            {
+              path: '/calendar/month',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
     }
   ],
   projectmanagerPermission: [
@@ -1147,6 +1454,313 @@ export const PermissionConfiguration: PermissionConfigInterface = {
         }
       ]
     }
+      ]
+    },
+    {
+      name: 'Holiday Management',
+      resource: 'holiday',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all holidays',
+          route: [
+            {
+              path: '/holiday',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add holiday',
+          route: [
+            {
+              path: '/holiday',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View holiday by id',
+          route: [
+            {
+              path: '/holiday/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update holiday',
+          route: [
+            {
+              path: '/holiday/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete holiday',
+          route: [
+            {
+              path: '/holiday/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Import holidays CSV',
+          route: [
+            {
+              path: '/holiday/import-csv',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Preview holidays CSV',
+          route: [
+            {
+              path: '/holiday/preview-csv',
+              method: MethodList.POST
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Leave Management',
+      resource: 'leave',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all leaves',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Apply for leave',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View leave by id',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update leave',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete leave',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Approve leave by lead',
+          route: [
+            {
+              path: '/leave/:id/approve/lead',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Approve leave by PM',
+          route: [
+            {
+              path: '/leave/:id/approve/pm',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Approve leave by admin',
+          route: [
+            {
+              path: '/leave/:id/approve/admin',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Reject leave',
+          route: [
+            {
+              path: '/leave/:id/reject',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Leave calendar view',
+          route: [
+            {
+              path: '/leave/calendar/view',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Work Hour Management',
+      resource: 'workhour',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all work hours',
+          route: [
+            {
+              path: '/workhour',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create work hour config',
+          route: [
+            {
+              path: '/workhour',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View work hour by id',
+          route: [
+            {
+              path: '/workhour/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update work hour config',
+          route: [
+            {
+              path: '/workhour/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete work hour config',
+          route: [
+            {
+              path: '/workhour/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Resolve work hours for user',
+          route: [
+            {
+              path: '/workhour/resolve/:userId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Calendar Management',
+      resource: 'calendar',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all calendar events',
+          route: [
+            {
+              path: '/calendar',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create calendar event',
+          route: [
+            {
+              path: '/calendar',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View calendar event by id',
+          route: [
+            {
+              path: '/calendar/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update calendar event',
+          route: [
+            {
+              path: '/calendar/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete calendar event',
+          route: [
+            {
+              path: '/calendar/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'AD to BS conversion',
+          route: [
+            {
+              path: '/calendar/convert/ad-to-bs',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'BS to AD conversion',
+          route: [
+            {
+              path: '/calendar/convert/bs-to-ad',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Calendar month view',
+          route: [
+            {
+              path: '/calendar/month',
+              method: MethodList.GET
+            }
+          ]
+        }
       ]
     }
   ],
@@ -1773,6 +2387,142 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         }
       ]
+    },
+    {
+      name: 'Holiday Management',
+      resource: 'holiday',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all holidays',
+          route: [
+            {
+              path: '/holiday',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Leave Management',
+      resource: 'leave',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all leaves',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Apply for leave',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View leave by id',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update leave',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Leave calendar view',
+          route: [
+            {
+              path: '/leave/calendar/view',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Work Hour Management',
+      resource: 'workhour',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all work hours',
+          route: [
+            {
+              path: '/workhour',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Resolve work hours for user',
+          route: [
+            {
+              path: '/workhour/resolve/:userId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Calendar Management',
+      resource: 'calendar',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all calendar events',
+          route: [
+            {
+              path: '/calendar',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Calendar month view',
+          route: [
+            {
+              path: '/calendar/month',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'AD to BS conversion',
+          route: [
+            {
+              path: '/calendar/convert/ad-to-bs',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'BS to AD conversion',
+          route: [
+            {
+              path: '/calendar/convert/bs-to-ad',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
     }
   ],
   auditjuniorPermission: [
@@ -1877,6 +2627,142 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/worklogs/:id',
               method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Holiday Management',
+      resource: 'holiday',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all holidays',
+          route: [
+            {
+              path: '/holiday',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Leave Management',
+      resource: 'leave',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all leaves',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Apply for leave',
+          route: [
+            {
+              path: '/leave',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View leave by id',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update leave',
+          route: [
+            {
+              path: '/leave/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Leave calendar view',
+          route: [
+            {
+              path: '/leave/calendar/view',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Work Hour Management',
+      resource: 'workhour',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all work hours',
+          route: [
+            {
+              path: '/workhour',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Resolve work hours for user',
+          route: [
+            {
+              path: '/workhour/resolve/:userId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Calendar Management',
+      resource: 'calendar',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all calendar events',
+          route: [
+            {
+              path: '/calendar',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Calendar month view',
+          route: [
+            {
+              path: '/calendar/month',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'AD to BS conversion',
+          route: [
+            {
+              path: '/calendar/convert/ad-to-bs',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'BS to AD conversion',
+          route: [
+            {
+              path: '/calendar/convert/bs-to-ad',
+              method: MethodList.GET
             }
           ]
         }
