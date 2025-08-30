@@ -37,7 +37,7 @@ export class WorklogController {
   findRequest(
     @GetUser()
     user: UserEntity,
-    @Query('status') status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+    @Query('status') status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
   ) {
     return this.worklogService.findRequest(user, status);
   }
@@ -46,7 +46,7 @@ export class WorklogController {
   findAll(
     @GetUser()
     user: UserEntity,
-    @Query('status') status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+    @Query('status') status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
   ) {
     return this.worklogService.findAll(user, status);
   }

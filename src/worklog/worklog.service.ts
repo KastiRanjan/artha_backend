@@ -128,10 +128,15 @@ export class WorklogService {
 
 
 
-  async findAll(user: UserEntity, status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+  async findAll(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+    const whereCondition: any = { user };
+    if (status) {
+      whereCondition.status = status;
+    }
+    
     return await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
-      where: { user, status },
+      where: whereCondition,
       order: {
         createdAt: 'DESC'
       }
@@ -139,10 +144,15 @@ export class WorklogService {
   }
 
   
-  async findRequest(user: UserEntity, status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+  async findRequest(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+    const whereCondition: any = { approvedBy: user.id };
+    if (status) {
+      whereCondition.status = status;
+    }
+    
     return await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
-      where: { approvedBy: user.id, status },
+      where: whereCondition,
       order: {
         createdAt: 'DESC'
       }
