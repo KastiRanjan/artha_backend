@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { LeaveType } from 'src/leave-type/entities/leave-type.entity';
 
 export type LeaveStatus = 'pending' | 'approved_by_lead' | 'approved_by_pm' | 'approved' | 'rejected';
 
@@ -11,6 +12,9 @@ export class Leave {
   @ManyToOne(() => UserEntity, { eager: true })
   user: UserEntity;
 
+  @ManyToOne(() => LeaveType, { eager: true })
+  leaveType: LeaveType;
+
   @Column({ type: 'date' })
   startDate: string;
 
@@ -18,7 +22,7 @@ export class Leave {
   endDate: string;
 
   @Column({ type: 'varchar', length: 30 })
-  type: string; // e.g., sick, casual, unpaid
+  type: string; // Legacy field - kept for backward compatibility
 
   @Column({ type: 'text', nullable: true })
   reason?: string;

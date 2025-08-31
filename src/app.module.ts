@@ -38,6 +38,7 @@ import { TaskTemplateModule } from './task-template/task-template.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 import { WorklogModule } from './worklog/worklog.module';
+import { LeaveTypeModule } from './leave-type/leave-type.module';
 
 // const appConfig = config.get('app');
 
@@ -90,6 +91,7 @@ import { WorklogModule } from './worklog/worklog.module';
     CalendarModule,
     HolidayModule,
     LeaveModule,
+    LeaveTypeModule,
     WorkhourModule
   ],
   providers: [

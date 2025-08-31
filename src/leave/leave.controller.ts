@@ -5,6 +5,8 @@ import { LeaveService } from './leave.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @ApiTags('leave')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -14,8 +16,8 @@ export class LeaveController {
   constructor(private readonly leaveService: LeaveService) {}
 
   @Post()
-  create(@Body() createLeaveDto: CreateLeaveDto) {
-    return this.leaveService.create(createLeaveDto);
+  create(@Body() createLeaveDto: CreateLeaveDto, @GetUser() user: UserEntity) {
+    return this.leaveService.create(createLeaveDto, user);
   }
 
   @Get()
@@ -63,5 +65,25 @@ export class LeaveController {
   @Get('calendar/view')
   calendarView(@Query('from') from: string, @Query('to') to: string, @Query('projectId') projectId?: string) {
     return this.leaveService.calendarView(from, to, projectId);
+  }
+
+  // Leave balance endpoints
+  @Get('balance/my')
+  getMyLeaveBalances(@GetUser() user: UserEntity, @Query('year') year?: number) {
+    return this.leaveService.getAllLeaveBalances(user.id, year);
+  }
+
+  @Get('balance/:userId')
+  getUserLeaveBalances(@Param('userId') userId: string, @Query('year') year?: number) {
+    return this.leaveService.getAllLeaveBalances(userId, year);
+  }
+
+  @Get('balance/:userId/:leaveType')
+  getSpecificLeaveBalance(
+    @Param('userId') userId: string, 
+    @Param('leaveType') leaveType: string,
+    @Query('year') year?: number
+  ) {
+    return this.leaveService.getLeaveBalance(userId, leaveType, year);
   }
 }

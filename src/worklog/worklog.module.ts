@@ -4,6 +4,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from './entities/worklog.entity';
 import { Leave } from 'src/leave/entities/leave.entity';
+import { LeaveType } from 'src/leave-type/entities/leave-type.entity';
 import { Holiday } from 'src/holiday/entities/holiday.entity';
 import { WorklogController } from './worklog.controller';
 import { WorklogService } from './worklog.service';
@@ -12,15 +13,16 @@ import { Notification } from 'src/notification/entities/notification.entity';
 import { NotificationService } from 'src/notification/notification.service';
 
 import { ProjectsModule } from 'src/projects/projects.module';
-import { LeaveService } from 'src/leave/leave.service';
+import { LeaveModule } from 'src/leave/leave.module';
 import { HolidayService } from 'src/holiday/holiday.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Worklog, UserEntity, Project, Task, Notification, Leave, Holiday]),
-    ProjectsModule
+    TypeOrmModule.forFeature([Worklog, UserEntity, Project, Task, Notification, Leave, Holiday, LeaveType]),
+    ProjectsModule,
+    LeaveModule
   ],
   controllers: [WorklogController],
-  providers: [WorklogService, NotificationService, LeaveService, HolidayService]
+  providers: [WorklogService, NotificationService, HolidayService]
 })
 export class WorklogModule {}

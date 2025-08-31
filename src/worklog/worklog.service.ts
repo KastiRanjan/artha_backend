@@ -69,7 +69,7 @@ export class WorklogService {
         current.add(1, 'day');
       }
       if (isHoliday) {
-        throw new BadRequestException('One or more days in this worklog period are holidays. Worklog is not allowed.');
+        throw new BadRequestException('Worklog is not allowed on holidays.');
       }
 
       const startDate = moment.utc(startTime).toDate();  // Convert to UTC date object

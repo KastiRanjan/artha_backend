@@ -2,19 +2,128 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Leave } from './entities/leave.entity';
+import { LeaveType } from '../leave-type/entities/leave-type.entity';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
+import { UserEntity } from '../auth/entity/user.entity';
+import * as moment from 'moment';
 
 @Injectable()
 export class LeaveService {
   constructor(
     @InjectRepository(Leave)
     private readonly leaveRepository: Repository<Leave>,
+    @InjectRepository(LeaveType)
+    private readonly leaveTypeRepository: Repository<LeaveType>,
   ) {}
 
-  async create(createLeaveDto: CreateLeaveDto): Promise<Leave> {
-    const leave = this.leaveRepository.create({ ...createLeaveDto, status: 'pending' });
+  async create(createLeaveDto: CreateLeaveDto, user: UserEntity): Promise<Leave> {
+    // Validate leave type exists and is active
+    const leaveType = await this.leaveTypeRepository.findOne({
+      where: { name: createLeaveDto.type, isActive: true }
+    });
+
+    if (!leaveType) {
+      throw new BadRequestException(`Invalid or inactive leave type: ${createLeaveDto.type}`);
+    }
+
+    // Calculate requested days
+    const startDate = moment(createLeaveDto.startDate);
+    const endDate = moment(createLeaveDto.endDate);
+    const requestedDays = endDate.diff(startDate, 'days') + 1;
+
+    // Check if leave type has a limit and validate against used days
+    if (leaveType.maxDaysPerYear) {
+      const currentYear = startDate.year();
+      const usedDays = await this.getUsedLeavedays(user, createLeaveDto.type, currentYear);
+      
+      if (usedDays + requestedDays > leaveType.maxDaysPerYear) {
+        throw new BadRequestException(
+          `Cannot request ${requestedDays} days. You have used ${usedDays} out of ${leaveType.maxDaysPerYear} days for ${leaveType.name} this year.`
+        );
+      }
+    }
+
+    const leave = this.leaveRepository.create({ 
+      ...createLeaveDto, 
+      status: 'pending',
+      user,
+      leaveType 
+    });
     return this.leaveRepository.save(leave);
+  }
+
+  private async getUsedLeavedays(user: UserEntity, type: string, year: number): Promise<number> {
+    const startOfYear = `${year}-01-01`;
+    const endOfYear = `${year}-12-31`;
+    
+    const approvedLeaves = await this.leaveRepository
+      .createQueryBuilder('leave')
+      .where('leave.user = :userId', { userId: user.id })
+      .andWhere('leave.type = :type', { type })
+      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_lead', 'approved_by_pm'] })
+      .andWhere('leave.startDate <= :endOfYear', { endOfYear })
+      .andWhere('leave.endDate >= :startOfYear', { startOfYear })
+      .getMany();
+
+    return approvedLeaves.reduce((total, leave) => {
+      const leaveStart = moment(leave.startDate);
+      const leaveEnd = moment(leave.endDate);
+      const yearStart = moment(startOfYear);
+      const yearEnd = moment(endOfYear);
+      
+      // Calculate overlap with the year
+      const overlapStart = moment.max(leaveStart, yearStart);
+      const overlapEnd = moment.min(leaveEnd, yearEnd);
+      
+      return total + overlapEnd.diff(overlapStart, 'days') + 1;
+    }, 0);
+  }
+
+  async getLeaveBalance(userId: string, leaveTypeName: string, year?: number): Promise<{
+    leaveType: LeaveType;
+    maxDays: number | null;
+    usedDays: number;
+    remainingDays: number | null;
+  }> {
+    const leaveType = await this.leaveTypeRepository.findOne({
+      where: { name: leaveTypeName, isActive: true }
+    });
+
+    if (!leaveType) {
+      throw new NotFoundException(`Leave type '${leaveTypeName}' not found or inactive`);
+    }
+
+    const currentYear = year || moment().year();
+    const user = { id: userId } as UserEntity;
+    const usedDays = await this.getUsedLeavedays(user, leaveTypeName, currentYear);
+    
+    return {
+      leaveType,
+      maxDays: leaveType.maxDaysPerYear,
+      usedDays,
+      remainingDays: leaveType.maxDaysPerYear ? leaveType.maxDaysPerYear - usedDays : null,
+    };
+  }
+
+  async getAllLeaveBalances(userId: string, year?: number): Promise<Array<{
+    leaveType: LeaveType;
+    maxDays: number | null;
+    usedDays: number;
+    remainingDays: number | null;
+  }>> {
+    const activeLeaveTypes = await this.leaveTypeRepository.find({
+      where: { isActive: true },
+      order: { name: 'ASC' }
+    });
+
+    const balances = [];
+    for (const leaveType of activeLeaveTypes) {
+      const balance = await this.getLeaveBalance(userId, leaveType.name, year);
+      balances.push(balance);
+    }
+
+    return balances;
   }
 
   async findAll(status?: string): Promise<Leave[]> {
