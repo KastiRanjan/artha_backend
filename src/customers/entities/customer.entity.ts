@@ -8,8 +8,12 @@ import { Project } from 'src/projects/entities/project.entity';
 
 @Entity()
 export class Customer extends CustomBaseEntity {
+
   @Column({ length: 100 })
   name: string;
+
+  @Column({ length: 20, nullable: true })
+  shortName?: string;
 
   @Column({ length: 15 })
   panNo: string;

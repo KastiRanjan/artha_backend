@@ -56,9 +56,15 @@ export enum IndustryNature {
 }
 
 export class CreateCustomerDto {
+
   @IsString()
   @Length(1, 100)
   name: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 20)
+  shortName?: string;
 
   @IsString()
   @Length(1, 15)

@@ -373,58 +373,42 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       resource: 'projects',
       hasSubmodules: false,
       permissions: [
+        // ...existing project permissions...
+      ]
+    },
+    {
+      name: 'Project Types',
+      resource: 'nature-of-work',
+      hasSubmodules: false,
+      permissions: [
         {
-          name: 'View all Projects',
+          name: 'View all Project Types',
           route: [
-            {
-              path: '/projects',
-              method: MethodList.GET
-            }
+            { path: '/nature-of-work', method: MethodList.GET }
           ]
         },
         {
-          name: 'View project by id',
+          name: 'View Project Type by id',
           route: [
-            {
-              path: '/projects/:id',
-              method: MethodList.GET
-            }
+            { path: '/nature-of-work/:id', method: MethodList.GET }
           ]
         },
         {
-          name: 'View project timeline',
+          name: 'Create Project Type',
           route: [
-            {
-              path: '/projects/:id/timeline',
-              method: MethodList.GET
-            }
+            { path: '/nature-of-work', method: MethodList.POST }
           ]
         },
         {
-          name: 'Store new project',
+          name: 'Update Project Type',
           route: [
-            {
-              path: '/projects',
-              method: MethodList.POST
-            }
+            { path: '/nature-of-work/:id', method: MethodList.PATCH }
           ]
         },
         {
-          name: 'Update project by id',
+          name: 'Delete Project Type',
           route: [
-            {
-              path: '/projects/:id',
-              method: MethodList.PATCH
-            }
-          ]
-        },
-        {
-          name: 'Delete project by id',
-          route: [
-            {
-              path: '/projects/:id',
-              method: MethodList.DELETE
-            }
+            { path: '/nature-of-work/:id', method: MethodList.DELETE }
           ]
         }
       ]

@@ -39,6 +39,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 import { WorklogModule } from './worklog/worklog.module';
 import { LeaveTypeModule } from './leave-type/leave-type.module';
+import { NatureOfWorkModule } from './nature-of-work/nature-of-work.module';
 
 // const appConfig = config.get('app');
 
@@ -92,7 +93,8 @@ import { LeaveTypeModule } from './leave-type/leave-type.module';
     HolidayModule,
     LeaveModule,
     LeaveTypeModule,
-    WorkhourModule
+  WorkhourModule,
+  NatureOfWorkModule
   ],
   providers: [
     {
