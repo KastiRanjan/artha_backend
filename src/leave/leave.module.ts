@@ -5,9 +5,10 @@ import { LeaveService } from './leave.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Leave } from './entities/leave.entity';
 import { LeaveType } from '../leave-type/entities/leave-type.entity';
+import { Project } from '../projects/entities/project.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Leave, LeaveType])],
+  imports: [TypeOrmModule.forFeature([Leave, LeaveType, Project])],
   controllers: [LeaveController],
   providers: [LeaveService],
   exports: [LeaveService],

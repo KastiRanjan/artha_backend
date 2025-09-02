@@ -148,6 +148,26 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     {
       path: '/logout',
       method: MethodList.POST
+    },
+    {
+      path: '/leave/my-leaves',
+      method: MethodList.GET
+    },
+    {
+      path: '/leave/balance/:userId',
+      method: MethodList.GET
+    },
+    {
+      path: '/leave/balance/:userId/:leaveType',
+      method: MethodList.GET
+    },
+    {
+      path: '/leave/approvals/pending',
+      method: MethodList.GET
+    },
+    {
+      path: '/leave/:id/approve',
+      method: MethodList.PATCH
     }
   ],
   modules: [

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { LeaveService } from './leave.service';
@@ -23,6 +23,47 @@ export class LeaveController {
   @Get()
   findAll(@Query('status') status?: string) {
     return this.leaveService.findAll(status);
+  }
+
+  // New endpoints for enhanced leave management and static routes must be
+  // declared before parameterized routes to avoid route collisions (e.g. ':id' matching 'my-leaves').
+  @Get('approvals/pending')
+  getPendingApprovals(@GetUser() user: UserEntity) {
+    return this.leaveService.getLeavesForApproval(user.id);
+  }
+
+  @Get('my-leaves')
+  getMyLeaves(@GetUser() user: UserEntity, @Query('status') status?: string) {
+    if (!user || !user.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return this.leaveService.getUserLeaves(user.id, status);
+  }
+
+  // Calendar view
+  @Get('calendar/view')
+  calendarView(@Query('from') from: string, @Query('to') to: string, @Query('projectId') projectId?: string) {
+    return this.leaveService.calendarView(from, to, projectId);
+  }
+
+  // Leave balance endpoints
+  @Get('balance/my')
+  getMyLeaveBalances(@GetUser() user: UserEntity, @Query('year') year?: number) {
+    return this.leaveService.getAllLeaveBalances(user.id, year);
+  }
+
+  @Get('balance/:userId')
+  getUserLeaveBalances(@Param('userId') userId: string, @Query('year') year?: number) {
+    return this.leaveService.getAllLeaveBalances(userId, year);
+  }
+
+  @Get('balance/:userId/:leaveType')
+  getSpecificLeaveBalance(
+    @Param('userId') userId: string, 
+    @Param('leaveType') leaveType: string,
+    @Query('year') year?: number
+  ) {
+    return this.leaveService.getLeaveBalance(userId, leaveType, year);
   }
 
   @Get(':id')
@@ -56,34 +97,21 @@ export class LeaveController {
     return this.leaveService.approveByAdmin(id, userId);
   }
 
+  // Generic approve endpoint that determines approval level based on user role
+  @Patch(':id/approve')
+  approve(@Param('id') id: string, @GetUser() user: UserEntity) {
+    if (!user || !user.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return this.leaveService.approve(id, user.id);
+  }
+
   @Patch(':id/reject')
   reject(@Param('id') id: string, @Body('userId') userId: string) {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
     return this.leaveService.reject(id, userId);
   }
-
-  // Calendar view
-  @Get('calendar/view')
-  calendarView(@Query('from') from: string, @Query('to') to: string, @Query('projectId') projectId?: string) {
-    return this.leaveService.calendarView(from, to, projectId);
-  }
-
-  // Leave balance endpoints
-  @Get('balance/my')
-  getMyLeaveBalances(@GetUser() user: UserEntity, @Query('year') year?: number) {
-    return this.leaveService.getAllLeaveBalances(user.id, year);
-  }
-
-  @Get('balance/:userId')
-  getUserLeaveBalances(@Param('userId') userId: string, @Query('year') year?: number) {
-    return this.leaveService.getAllLeaveBalances(userId, year);
-  }
-
-  @Get('balance/:userId/:leaveType')
-  getSpecificLeaveBalance(
-    @Param('userId') userId: string, 
-    @Param('leaveType') leaveType: string,
-    @Query('year') year?: number
-  ) {
-    return this.leaveService.getLeaveBalance(userId, leaveType, year);
-  }
+  
 }

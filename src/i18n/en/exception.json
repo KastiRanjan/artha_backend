@@ -21,5 +21,8 @@
   "invalidRefreshToken": "Invalid refresh token!",
   "deleteDefaultError": "Cannot delete default item!",
   "refreshTokenExpired": "Refresh token is expired!",
-  "tooManyTries": "Too many tries!"
+  "Invalid Leave ID format": "Invalid leave ID format. Please provide a valid UUID or numeric ID.",
+  "Invalid User ID format": "Invalid user ID format. Please provide a valid UUID or numeric ID.",
+  "User not authenticated": "User not authenticated. Please log in again.",
+  "User ID is required": "User ID is required for this operation."
 }

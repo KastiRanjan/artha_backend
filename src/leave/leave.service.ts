@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Leave } from './entities/leave.entity';
+import { Leave, LeaveStatus } from './entities/leave.entity';
 import { LeaveType } from '../leave-type/entities/leave-type.entity';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UserEntity } from '../auth/entity/user.entity';
+import { Project } from '../projects/entities/project.entity';
 import * as moment from 'moment';
 
 @Injectable()
@@ -15,7 +16,43 @@ export class LeaveService {
     private readonly leaveRepository: Repository<Leave>,
     @InjectRepository(LeaveType)
     private readonly leaveTypeRepository: Repository<LeaveType>,
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
   ) {}
+
+  private validateUUID(id: string, fieldName: string = 'ID'): void {
+    console.log(`Validating ${fieldName}:`, id, typeof id, `length:`, id?.length);
+    
+    // Handle null, undefined, or empty strings
+    if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
+      console.log(`Validation failed for ${fieldName}: empty, null, or undefined value`);
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+    
+    // Convert to string and trim whitespace
+    const cleanId = id.toString().trim();
+    console.log(`Cleaned ID:`, cleanId, `length:`, cleanId.length);
+    
+    // Check for common invalid formats
+    if (cleanId.includes('"') || cleanId.includes("'") || cleanId.includes(' ')) {
+      console.log(`Validation failed for ${fieldName}: contains invalid characters`);
+      throw new BadRequestException(`Invalid ${fieldName} format - contains invalid characters`);
+    }
+    
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    // Allow simple numeric IDs as well for backward compatibility
+    const isNumeric = /^\d+$/.test(cleanId);
+    
+    console.log(`UUID regex test:`, uuidRegex.test(cleanId));
+    console.log(`Numeric test:`, isNumeric);
+    
+    if (!uuidRegex.test(cleanId) && !isNumeric) {
+      console.log(`Validation failed for ${fieldName}: ${cleanId} - does not match UUID or numeric format`);
+      throw new BadRequestException(`Invalid ${fieldName} format`);
+    }
+    
+    console.log(`Validation passed for ${fieldName}: ${cleanId}`);
+  }
 
   async create(createLeaveDto: CreateLeaveDto, user: UserEntity): Promise<Leave> {
     // Validate leave type exists and is active
@@ -44,12 +81,41 @@ export class LeaveService {
       }
     }
 
+    // Determine initial status based on user role hierarchy
+    let initialStatus: LeaveStatus = 'pending';
+    
+    // Load user with role information
+    const userWithRole = await this.leaveRepository.manager
+      .getRepository(UserEntity)
+      .findOne({
+        where: { id: user.id },
+        relations: ['role']
+      });
+
+    if (userWithRole?.role?.name) {
+      const roleName = userWithRole.role.name.toLowerCase();
+      
+      // Project Manager goes directly to admin approval
+      if (roleName === 'projectmanager') {
+        initialStatus = 'approved_by_pm';
+      }
+      // Team Lead skips to PM approval
+      else if (roleName === 'teamlead') {
+        initialStatus = 'approved_by_lead';
+      }
+      // Regular employees start with pending (goes to team lead first)
+      else {
+        initialStatus = 'pending';
+      }
+    }
+
     const leave = this.leaveRepository.create({ 
       ...createLeaveDto, 
-      status: 'pending',
+      status: initialStatus,
       user,
       leaveType 
     });
+    
     return this.leaveRepository.save(leave);
   }
 
@@ -86,6 +152,7 @@ export class LeaveService {
     usedDays: number;
     remainingDays: number | null;
   }> {
+    this.validateUUID(userId, 'User ID');
     const leaveType = await this.leaveTypeRepository.findOne({
       where: { name: leaveTypeName, isActive: true }
     });
@@ -112,6 +179,7 @@ export class LeaveService {
     usedDays: number;
     remainingDays: number | null;
   }>> {
+    this.validateUUID(userId, 'User ID');
     const activeLeaveTypes = await this.leaveTypeRepository.find({
       where: { isActive: true },
       order: { name: 'ASC' }
@@ -132,6 +200,7 @@ export class LeaveService {
   }
 
   async findOne(id: string): Promise<Leave> {
+    this.validateUUID(id, 'Leave ID');
     const leave = await this.leaveRepository.findOne({ where: { id } });
     if (!leave) throw new NotFoundException('Leave not found');
     return leave;
@@ -150,6 +219,7 @@ export class LeaveService {
 
   // Approval logic
   async approveByLead(id: string, userId: string): Promise<Leave> {
+    this.validateUUID(userId, 'User ID');
     const leave = await this.findOne(id);
     if (leave.status !== 'pending') throw new BadRequestException('Leave not pending');
     leave.status = 'approved_by_lead';
@@ -158,6 +228,7 @@ export class LeaveService {
   }
 
   async approveByPM(id: string, userId: string): Promise<Leave> {
+    this.validateUUID(userId, 'User ID');
     const leave = await this.findOne(id);
     if (leave.status !== 'approved_by_lead') throw new BadRequestException('Leave not approved by lead');
     leave.status = 'approved_by_pm';
@@ -166,6 +237,7 @@ export class LeaveService {
   }
 
   async approveByAdmin(id: string, userId: string): Promise<Leave> {
+    this.validateUUID(userId, 'User ID');
     const leave = await this.findOne(id);
     if (leave.status !== 'approved_by_pm') throw new BadRequestException('Leave not approved by PM');
     leave.status = 'approved';
@@ -174,17 +246,149 @@ export class LeaveService {
   }
 
   async reject(id: string, userId: string): Promise<Leave> {
+    this.validateUUID(userId, 'User ID');
     const leave = await this.findOne(id);
     leave.status = 'rejected';
     // Optionally track who rejected
     return this.leaveRepository.save(leave);
   }
 
+  // Generic approve method that determines the correct approval level based on user role
+  async approve(id: string, userId: string): Promise<Leave> {
+    this.validateUUID(userId, 'User ID');
+    
+    // Get user details and their role
+    const user = await this.getUserDetails(userId);
+    const roleName = user.role?.name?.toLowerCase();
+    
+    // Determine which approval method to use based on role
+    if (roleName === 'teamlead') {
+      return this.approveByLead(id, userId);
+    } else if (roleName === 'projectmanager') {
+      return this.approveByPM(id, userId);
+    } else if (roleName === 'admin') {
+      return this.approveByAdmin(id, userId);
+    } else {
+      throw new BadRequestException('User does not have permission to approve leaves');
+    }
+  }
+
+  // Get leaves that need approval by a specific user (based on their role and projects)
+  async getLeavesForApproval(userId: string): Promise<Leave[]> {
+    this.validateUUID(userId, 'User ID');
+    // Get user details and their role
+    const user = await this.getUserDetails(userId);
+    
+    if (user.role?.name?.toLowerCase() === 'admin') {
+      // Admin can see all leaves that are approved by PM and need final approval
+      return this.leaveRepository.find({
+        where: { status: 'approved_by_pm' },
+        relations: ['user', 'leaveType'],
+        order: { createdAt: 'DESC' }
+      });
+    }
+
+    if (user.role?.name?.toLowerCase() === 'projectmanager') {
+      // PM can see leaves from their projects that are approved by lead
+      const pmProjects = await this.projectRepository.find({
+        where: { projectManager: { id: userId } },
+        relations: ['users']
+      });
+
+      const userIds = pmProjects.flatMap(project => 
+        project.users.map(user => user.id)
+      );
+
+      if (userIds.length === 0) return [];
+
+      return this.leaveRepository
+        .createQueryBuilder('leave')
+        .leftJoinAndSelect('leave.user', 'user')
+        .leftJoinAndSelect('leave.leaveType', 'leaveType')
+        .where('user.id IN (:...userIds)', { userIds })
+        .andWhere('leave.status = :status', { status: 'approved_by_lead' })
+        .orderBy('leave.createdAt', 'DESC')
+        .getMany();
+    }
+
+    // Team leads can see leaves from their project team members that are pending
+    const leadProjects = await this.projectRepository.find({
+      where: { projectLead: { id: userId } },
+      relations: ['users']
+    });
+
+    const userIds = leadProjects.flatMap(project => 
+      project.users.map(user => user.id)
+    );
+
+    if (userIds.length === 0) return [];
+
+    return this.leaveRepository
+      .createQueryBuilder('leave')
+      .leftJoinAndSelect('leave.user', 'user')
+      .leftJoinAndSelect('leave.leaveType', 'leaveType')
+      .where('user.id IN (:...userIds)', { userIds })
+      .andWhere('leave.status = :status', { status: 'pending' })
+      .orderBy('leave.createdAt', 'DESC')
+      .getMany();
+  }
+
+  private async getUserDetails(userId: string): Promise<UserEntity> {
+    this.validateUUID(userId, 'User ID');
+    // This should be injected from the UserService in a real implementation
+    // For now, we'll do a simple query - you should inject UserRepository or UserService
+    const user = await this.leaveRepository.manager
+      .getRepository(UserEntity)
+      .findOne({
+        where: { id: userId },
+        relations: ['role']
+      });
+    
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  // Get user's own leaves
+  async getUserLeaves(userId: string, status?: string): Promise<Leave[]> {
+    this.validateUUID(userId, 'User ID');
+    console.log(`Fetching leaves for User ID:`, userId, `with status:`, status);
+    const where: any = { user: { id: userId } };
+    if (status && status !== 'all') where.status = status;
+
+    return this.leaveRepository.find({
+      where,
+      relations: ['leaveType'],
+      order: { createdAt: 'DESC' }
+    });
+  }
+
   // Calendar view: get all leaves in a date range, optionally filter by project
   async calendarView(from: string, to: string, projectId?: string): Promise<Leave[]> {
-    // For now, just return all leaves in range; project filter can be added if relation exists
-    return this.leaveRepository.createQueryBuilder('leave')
+    let query = this.leaveRepository
+      .createQueryBuilder('leave')
+      .leftJoinAndSelect('leave.user', 'user')
+      .leftJoinAndSelect('leave.leaveType', 'leaveType')
       .where('leave.startDate <= :to AND leave.endDate >= :from', { from, to })
-      .getMany();
+      .andWhere('leave.status = :status', { status: 'approved' });
+
+    if (projectId) {
+      // Validate UUID format
+      this.validateUUID(projectId, 'Project ID');
+
+      // Filter by project team members
+      const project = await this.projectRepository.findOne({
+        where: { id: projectId },
+        relations: ['users']
+      });
+
+      if (project) {
+        const userIds = project.users.map(user => user.id);
+        if (userIds.length > 0) {
+          query = query.andWhere('user.id IN (:...userIds)', { userIds });
+        }
+      }
+    }
+
+    return query.getMany();
   }
 }
