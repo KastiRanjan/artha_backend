@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Leave, LeaveStatus } from './entities/leave.entity';
 import { LeaveType } from '../leave-type/entities/leave-type.entity';
+import { Holiday } from '../holiday/entities/holiday.entity';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UserEntity } from '../auth/entity/user.entity';
@@ -16,9 +17,64 @@ export class LeaveService {
     private readonly leaveRepository: Repository<Leave>,
     @InjectRepository(LeaveType)
     private readonly leaveTypeRepository: Repository<LeaveType>,
-    @InjectRepository(Project)
-    private readonly projectRepository: Repository<Project>,
+  @InjectRepository(Project)
+  private readonly projectRepository: Repository<Project>,
+  @InjectRepository(Holiday)
+  private readonly holidayRepository: Repository<Holiday>,
   ) {}
+
+  private createMoment(dateInput: any): moment.Moment {
+    if (!dateInput) {
+      console.error('createMoment: No date input provided');
+      throw new BadRequestException('Date is required');
+    }
+    
+    console.log('createMoment input:', dateInput, 'type:', typeof dateInput);
+    
+    try {
+      const m = moment(dateInput);
+      console.log('createMoment result:', m.format(), 'isValid:', m.isValid());
+      
+      if (!m.isValid()) {
+        console.error('createMoment: Invalid moment object created from:', dateInput);
+        throw new BadRequestException(`Invalid date: ${dateInput}`);
+      }
+      return m;
+    } catch (error) {
+      console.error('createMoment error:', error);
+      throw new BadRequestException(`Error processing date: ${dateInput}`);
+    }
+  }
+
+  private generateDateRange(startDate: string, endDate: string): string[] {
+    console.log('generateDateRange called with:', { startDate, endDate });
+    
+    try {
+      const start = this.createMoment(startDate);
+      const end = this.createMoment(endDate);
+      const days: string[] = [];
+      
+      const current = start.clone();
+      console.log('Starting date range generation, current:', current.format(), 'end:', end.format());
+      
+      while (current.isSameOrBefore(end)) {
+        days.push(current.format('YYYY-MM-DD'));
+        current.add(1, 'day');
+        
+        // Safety check to prevent infinite loops
+        if (days.length > 365) {
+          console.error('generateDateRange: Too many days generated, breaking loop');
+          throw new BadRequestException('Date range too large');
+        }
+      }
+      
+      console.log('Generated date range:', days);
+      return days;
+    } catch (error) {
+      console.error('generateDateRange error:', error);
+      throw error;
+    }
+  }
 
   private validateUUID(id: string, fieldName: string = 'ID'): void {
     console.log(`Validating ${fieldName}:`, id, typeof id, `length:`, id?.length);
@@ -65,9 +121,33 @@ export class LeaveService {
     }
 
     // Calculate requested days
-    const startDate = moment(createLeaveDto.startDate);
-    const endDate = moment(createLeaveDto.endDate);
+    const startDate = this.createMoment(createLeaveDto.startDate);
+    const endDate = this.createMoment(createLeaveDto.endDate);
     const requestedDays = endDate.diff(startDate, 'days') + 1;
+
+    // Prevent creating leave that overlaps an existing approved leave for the same user
+    const overlappingApproved = await this.leaveRepository
+      .createQueryBuilder('leave')
+      .where('leave.user = :userId', { userId: user.id })
+      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_lead', 'approved_by_pm'] })
+      .andWhere('leave.startDate <= :endDate AND leave.endDate >= :startDate', { startDate: createLeaveDto.startDate, endDate: createLeaveDto.endDate })
+      .getCount();
+
+    if (overlappingApproved > 0) {
+      throw new BadRequestException('Requested dates overlap with already approved leave');
+    }
+
+    // Prevent creating leave on company/public holidays
+    const days = this.generateDateRange(createLeaveDto.startDate, createLeaveDto.endDate);
+
+    const holidayCount = await this.holidayRepository
+      .createQueryBuilder('holiday')
+      .where('holiday.date IN (:...days)', { days })
+      .getCount();
+
+    if (holidayCount > 0) {
+      throw new BadRequestException('Cannot request leave on company/public holiday');
+    }
 
     // Check if leave type has a limit and validate against used days
     if (leaveType.maxDaysPerYear) {
@@ -103,6 +183,10 @@ export class LeaveService {
       else if (roleName === 'teamlead') {
         initialStatus = 'approved_by_lead';
       }
+      // Admin and Superuser requests skip to PM approval (need admin/superuser approval)
+      else if (roleName === 'admin' || roleName === 'superuser') {
+        initialStatus = 'approved_by_pm';
+      }
       // Regular employees start with pending (goes to team lead first)
       else {
         initialStatus = 'pending';
@@ -133,10 +217,10 @@ export class LeaveService {
       .getMany();
 
     return approvedLeaves.reduce((total, leave) => {
-      const leaveStart = moment(leave.startDate);
-      const leaveEnd = moment(leave.endDate);
-      const yearStart = moment(startOfYear);
-      const yearEnd = moment(endOfYear);
+      const leaveStart = this.createMoment(leave.startDate);
+      const leaveEnd = this.createMoment(leave.endDate);
+      const yearStart = this.createMoment(startOfYear);
+      const yearEnd = this.createMoment(endOfYear);
       
       // Calculate overlap with the year
       const overlapStart = moment.max(leaveStart, yearStart);
@@ -253,6 +337,47 @@ export class LeaveService {
     return this.leaveRepository.save(leave);
   }
 
+  // Override an already approved leave (revert to pending or appropriate status)
+  async override(id: string, userId: string, newStatus: 'pending' | 'rejected' = 'pending'): Promise<Leave> {
+    this.validateUUID(userId, 'User ID');
+    
+    const user = await this.getUserDetails(userId);
+    const leave = await this.findOne(id);
+    
+    // Only allow override of approved leaves
+    if (leave.status !== 'approved') {
+      throw new BadRequestException('Can only override approved leaves');
+    }
+    
+    // Check if user has authority to override based on role hierarchy
+    const currentUserRole = user.role?.name?.toLowerCase();
+    const requesterRole = leave.user?.role?.name?.toLowerCase();
+    
+    const canOverride = 
+      (currentUserRole === 'superuser') ||
+      (currentUserRole === 'administrator' && ['manager', 'projectlead', 'auditjunior'].includes(requesterRole || '')) ||
+      (currentUserRole === 'manager' && ['projectlead', 'auditjunior'].includes(requesterRole || '')) ||
+      (currentUserRole === 'projectlead' && requesterRole === 'auditjunior');
+    
+    if (!canOverride) {
+      throw new BadRequestException('You do not have authority to override this approval');
+    }
+    
+    // Reset the leave to appropriate status based on override reason
+    leave.status = newStatus;
+    leave.adminApproverId = null; // Clear approval trail
+    leave.pmApproverId = null;
+    if (newStatus === 'pending') {
+      leave.leadApproverId = null;
+    }
+    
+    // Track who performed the override
+    leave.overriddenBy = userId;
+    leave.overriddenAt = new Date();
+    
+    return this.leaveRepository.save(leave);
+  }
+
   // Generic approve method that determines the correct approval level based on user role
   async approve(id: string, userId: string): Promise<Leave> {
     this.validateUUID(userId, 'User ID');
@@ -268,6 +393,9 @@ export class LeaveService {
       return this.approveByPM(id, userId);
     } else if (roleName === 'admin') {
       return this.approveByAdmin(id, userId);
+    } else if (roleName === 'superuser') {
+      // Superuser can directly approve to final status
+      return this.approveByAdmin(id, userId);
     } else {
       throw new BadRequestException('User does not have permission to approve leaves');
     }
@@ -278,59 +406,136 @@ export class LeaveService {
     this.validateUUID(userId, 'User ID');
     // Get user details and their role
     const user = await this.getUserDetails(userId);
+    const roleName = user.role?.name?.toLowerCase();
     
-    if (user.role?.name?.toLowerCase() === 'admin') {
-      // Admin can see all leaves that are approved by PM and need final approval
-      return this.leaveRepository.find({
-        where: { status: 'approved_by_pm' },
-        relations: ['user', 'leaveType'],
+    let pendingLeaves: Leave[] = [];
+    let overridableLeaves: Leave[] = [];
+
+    if (roleName === 'superuser') {
+      // Superuser can see all pending approvals and override any approved leaves
+      pendingLeaves = await this.leaveRepository.find({
+        where: [
+          { status: 'pending' },
+          { status: 'approved_by_lead' },
+          { status: 'approved_by_pm' }
+        ],
+        relations: ['user', 'user.role', 'leaveType'],
         order: { createdAt: 'DESC' }
       });
-    }
-
-    if (user.role?.name?.toLowerCase() === 'projectmanager') {
-      // PM can see leaves from their projects that are approved by lead
-      const pmProjects = await this.projectRepository.find({
+      
+      // Superuser can override leaves approved by admin, manager, projectlead
+      overridableLeaves = await this.leaveRepository
+        .createQueryBuilder('leave')
+        .leftJoinAndSelect('leave.user', 'user')
+        .leftJoinAndSelect('leave.user.role', 'userRole')
+        .leftJoinAndSelect('leave.leaveType', 'leaveType')
+        .where('leave.status = :status', { status: 'approved' })
+        .andWhere('userRole.name IN (:...roles)', { 
+          roles: ['administrator', 'manager', 'projectlead', 'auditjunior'] 
+        })
+        .orderBy('leave.createdAt', 'DESC')
+        .getMany();
+        
+    } else if (roleName === 'admin' || roleName === 'administrator') {
+      // Admin can see all leaves that need admin approval
+      pendingLeaves = await this.leaveRepository.find({
+        where: { status: 'approved_by_pm' },
+        relations: ['user', 'user.role', 'leaveType'],
+        order: { createdAt: 'DESC' }
+      });
+      
+      // Admin can override leaves approved by manager, projectlead
+      overridableLeaves = await this.leaveRepository
+        .createQueryBuilder('leave')
+        .leftJoinAndSelect('leave.user', 'user')
+        .leftJoinAndSelect('leave.user.role', 'userRole')
+        .leftJoinAndSelect('leave.leaveType', 'leaveType')
+        .where('leave.status = :status', { status: 'approved' })
+        .andWhere('userRole.name IN (:...roles)', { 
+          roles: ['manager', 'projectlead', 'auditjunior'] 
+        })
+        .orderBy('leave.createdAt', 'DESC')
+        .getMany();
+        
+    } else if (roleName === 'manager') {
+      // Manager can see leaves that need manager approval and override projectlead approvals
+      const managerProjects = await this.projectRepository.find({
         where: { projectManager: { id: userId } },
         relations: ['users']
       });
 
-      const userIds = pmProjects.flatMap(project => 
+      const userIds = managerProjects.flatMap(project => 
         project.users.map(user => user.id)
       );
 
-      if (userIds.length === 0) return [];
+      if (userIds.length > 0) {
+        pendingLeaves = await this.leaveRepository
+          .createQueryBuilder('leave')
+          .leftJoinAndSelect('leave.user', 'user')
+          .leftJoinAndSelect('leave.user.role', 'userRole')
+          .leftJoinAndSelect('leave.leaveType', 'leaveType')
+          .where('user.id IN (:...userIds)', { userIds })
+          .andWhere('leave.status = :status', { status: 'approved_by_lead' })
+          .orderBy('leave.createdAt', 'DESC')
+          .getMany();
+          
+        // Manager can override leaves approved by projectlead in their projects
+        overridableLeaves = await this.leaveRepository
+          .createQueryBuilder('leave')
+          .leftJoinAndSelect('leave.user', 'user')
+          .leftJoinAndSelect('leave.user.role', 'userRole')
+          .leftJoinAndSelect('leave.leaveType', 'leaveType')
+          .where('user.id IN (:...userIds)', { userIds })
+          .andWhere('leave.status = :status', { status: 'approved' })
+          .andWhere('userRole.name IN (:...roles)', { roles: ['projectlead', 'auditjunior'] })
+          .orderBy('leave.createdAt', 'DESC')
+          .getMany();
+      }
+      
+    } else if (roleName === 'projectlead') {
+      // Team leads can see leaves from their project team members that are pending
+      const leadProjects = await this.projectRepository.find({
+        where: { projectLead: { id: userId } },
+        relations: ['users']
+      });
 
-      return this.leaveRepository
-        .createQueryBuilder('leave')
-        .leftJoinAndSelect('leave.user', 'user')
-        .leftJoinAndSelect('leave.leaveType', 'leaveType')
-        .where('user.id IN (:...userIds)', { userIds })
-        .andWhere('leave.status = :status', { status: 'approved_by_lead' })
-        .orderBy('leave.createdAt', 'DESC')
-        .getMany();
+      const userIds = leadProjects.flatMap(project => 
+        project.users.map(user => user.id)
+      );
+
+      if (userIds.length > 0) {
+        pendingLeaves = await this.leaveRepository
+          .createQueryBuilder('leave')
+          .leftJoinAndSelect('leave.user', 'user')
+          .leftJoinAndSelect('leave.user.role', 'userRole')
+          .leftJoinAndSelect('leave.leaveType', 'leaveType')
+          .where('user.id IN (:...userIds)', { userIds })
+          .andWhere('leave.status = :status', { status: 'pending' })
+          .orderBy('leave.createdAt', 'DESC')
+          .getMany();
+          
+        // Projectlead can override leaves they approved for audit juniors
+        overridableLeaves = await this.leaveRepository
+          .createQueryBuilder('leave')
+          .leftJoinAndSelect('leave.user', 'user')
+          .leftJoinAndSelect('leave.user.role', 'userRole')
+          .leftJoinAndSelect('leave.leaveType', 'leaveType')
+          .where('user.id IN (:...userIds)', { userIds })
+          .andWhere('leave.status = :status', { status: 'approved' })
+          .andWhere('userRole.name = :role', { role: 'auditjunior' })
+          .andWhere('leave.leadApproverId = :leadId', { leadId: userId })
+          .orderBy('leave.createdAt', 'DESC')
+          .getMany();
+      }
     }
 
-    // Team leads can see leaves from their project team members that are pending
-    const leadProjects = await this.projectRepository.find({
-      where: { projectLead: { id: userId } },
-      relations: ['users']
-    });
-
-    const userIds = leadProjects.flatMap(project => 
-      project.users.map(user => user.id)
-    );
-
-    if (userIds.length === 0) return [];
-
-    return this.leaveRepository
-      .createQueryBuilder('leave')
-      .leftJoinAndSelect('leave.user', 'user')
-      .leftJoinAndSelect('leave.leaveType', 'leaveType')
-      .where('user.id IN (:...userIds)', { userIds })
-      .andWhere('leave.status = :status', { status: 'pending' })
-      .orderBy('leave.createdAt', 'DESC')
-      .getMany();
+    // Combine pending and overridable leaves, mark overridable ones
+    const allLeaves = [
+      ...pendingLeaves.map(leave => ({ ...leave, canOverride: false })),
+      ...overridableLeaves.map(leave => ({ ...leave, canOverride: true }))
+    ];
+    
+    return allLeaves.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   private async getUserDetails(userId: string): Promise<UserEntity> {
@@ -357,7 +562,7 @@ export class LeaveService {
 
     return this.leaveRepository.find({
       where,
-      relations: ['leaveType'],
+      relations: ['leaveType', 'user', 'user.role'],
       order: { createdAt: 'DESC' }
     });
   }

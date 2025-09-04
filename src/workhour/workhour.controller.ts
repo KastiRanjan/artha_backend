@@ -13,8 +13,8 @@ export class WorkhourController {
   }
 
   @Get()
-  findAll(@Query('role') role?: string, @Query('userId') userId?: string) {
-    return this.workhourService.findAll(role, userId);
+  findAll(@Query('roleId') roleId?: string, @Query('userId') userId?: string) {
+    return this.workhourService.findAll(roleId, userId);
   }
 
   @Get(':id')
@@ -34,7 +34,7 @@ export class WorkhourController {
 
   // Get resolved work hours for a user (role default or override)
   @Get('resolve/:userId')
-  resolveForUser(@Param('userId') userId: string, @Query('role') role?: string) {
-    return this.workhourService.resolveForUser(userId, role);
+  resolveForUser(@Param('userId') userId: string, @Query('roleId') roleId?: string) {
+    return this.workhourService.resolveForUser(userId, roleId);
   }
 }

@@ -17,9 +17,9 @@ export class WorkhourService {
     return this.workhourRepository.save(workhour);
   }
 
-  async findAll(role?: string, userId?: string): Promise<Workhour[]> {
+  async findAll(roleId?: string, userId?: string): Promise<Workhour[]> {
     const where: any = {};
-    if (role) where.role = role;
+    if (roleId) where.roleId = roleId;
     if (userId) where.userId = userId;
     return this.workhourRepository.find({ where });
   }
@@ -42,14 +42,14 @@ export class WorkhourService {
   }
 
   // Resolve work hours for a user (user override > role default > fallback)
-  async resolveForUser(userId: string, role?: string): Promise<number> {
+  async resolveForUser(userId: string, roleId?: string): Promise<number> {
     // 1. Check for user-specific config
     const userConfig = await this.workhourRepository.findOne({ where: { userId } });
-    if (userConfig) return userConfig.hours;
+    if (userConfig) return userConfig.workHours;
     // 2. Check for role default
-    if (role) {
-      const roleConfig = await this.workhourRepository.findOne({ where: { role } });
-      if (roleConfig) return roleConfig.hours;
+    if (roleId) {
+      const roleConfig = await this.workhourRepository.findOne({ where: { roleId } });
+      if (roleConfig) return roleConfig.workHours;
     }
     // 3. Fallback default
     return 8;

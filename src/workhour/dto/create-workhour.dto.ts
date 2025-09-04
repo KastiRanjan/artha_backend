@@ -3,7 +3,7 @@ import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 export class CreateWorkhourDto {
   @IsOptional()
   @IsString()
-  role?: string;
+  roleId?: string;
 
   @IsOptional()
   @IsString()
@@ -11,5 +11,13 @@ export class CreateWorkhourDto {
 
   @IsInt()
   @Min(1)
-  hours: number;
+  workHours: number;
+
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @IsOptional()
+  @IsString()
+  endTime?: string;
 }

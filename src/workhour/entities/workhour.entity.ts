@@ -5,14 +5,20 @@ export class Workhour {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  role?: string; // e.g., Developer, Intern
+  @Column({ type: 'uuid', nullable: true })
+  roleId?: string;
 
   @Column({ type: 'uuid', nullable: true })
-  userId?: string; // If set, overrides role default
+  userId?: string;
 
   @Column({ type: 'int', default: 8 })
-  hours: number; // Default work hours
+  workHours: number;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  startTime?: string; // e.g., "09:00"
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  endTime?: string; // e.g., "17:00"
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

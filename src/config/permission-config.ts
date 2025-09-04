@@ -982,6 +982,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.GET
             }
           ]
+        },
+        {
+          name: 'View user leaves',
+          route: [
+            {
+              path: '/leave/user/:userId',
+              method: MethodList.GET
+            }
+          ]
         }
       ]
     },
@@ -1691,6 +1700,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/leave/calendar/view',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user leaves',
+          route: [
+            {
+              path: '/leave/user/:userId',
               method: MethodList.GET
             }
           ]

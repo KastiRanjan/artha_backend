@@ -66,6 +66,12 @@ export class LeaveController {
     return this.leaveService.getLeaveBalance(userId, leaveType, year);
   }
 
+  // Get leaves for a specific user (used by profile pages and manager views)
+  @Get('user/:userId')
+  getUserLeaves(@Param('userId') userId: string, @Query('status') status?: string) {
+    return this.leaveService.getUserLeaves(userId, status);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.leaveService.findOne(id);
@@ -112,6 +118,14 @@ export class LeaveController {
       throw new BadRequestException('User ID is required');
     }
     return this.leaveService.reject(id, userId);
+  }
+
+  @Patch(':id/override')
+  override(@Param('id') id: string, @GetUser() user: UserEntity, @Body('newStatus') newStatus?: 'pending' | 'rejected') {
+    if (!user || !user.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return this.leaveService.override(id, user.id, newStatus);
   }
   
 }

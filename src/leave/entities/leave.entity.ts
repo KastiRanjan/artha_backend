@@ -39,6 +39,12 @@ export class Leave {
   @Column({ type: 'uuid', nullable: true })
   adminApproverId?: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  overriddenBy?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  overriddenAt?: Date;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 

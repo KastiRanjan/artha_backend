@@ -4,9 +4,11 @@ export class WorkhourSerializer {
   static serialize(workhour: Workhour) {
     return {
       id: workhour.id,
-      role: workhour.role,
+      roleId: workhour.roleId,
       userId: workhour.userId,
-      hours: workhour.hours,
+      workHours: workhour.workHours,
+      startTime: workhour.startTime,
+      endTime: workhour.endTime,
       createdAt: workhour.createdAt,
       updatedAt: workhour.updatedAt,
     };
