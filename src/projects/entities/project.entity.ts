@@ -4,6 +4,7 @@ import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
+import { Billing } from 'src/billing/entities/billing.entity';
 import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity()
@@ -75,4 +76,10 @@ export class Project extends CustomBaseEntity {
     nullable: true
   })
   customer: Customer;
+
+  @ManyToOne(() => Billing, (billing) => billing.projects, {
+    onDelete: 'SET NULL',
+    nullable: true
+  })
+  billing: Billing;
 }

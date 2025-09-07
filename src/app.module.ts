@@ -29,6 +29,7 @@ import { RolesModule } from 'src/role/roles.module';
 import { TwofaModule } from 'src/twofa/twofa.module';
 import { WorkhourModule } from 'src/workhour/workhour.module';
 import { AttendenceModule } from './attendence/attendence.module';
+import { BillingModule } from './billing/billing.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { CustomersModule } from './customers/customers.module';
 import { NotificationModule } from './notification/notification.module';
@@ -93,8 +94,9 @@ import { NatureOfWorkModule } from './nature-of-work/nature-of-work.module';
     HolidayModule,
     LeaveModule,
     LeaveTypeModule,
-  WorkhourModule,
-  NatureOfWorkModule
+    WorkhourModule,
+    NatureOfWorkModule,
+    BillingModule
   ],
   providers: [
     {

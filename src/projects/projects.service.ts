@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { Billing } from 'src/billing/entities/billing.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Repository } from 'typeorm';
@@ -19,6 +20,8 @@ export class ProjectsService {
     private customerRepository: Repository<Customer>,
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
+    @InjectRepository(Billing)
+    private billingRepository: Repository<Billing>,
     private readonly notificationService: NotificationService,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
@@ -28,6 +31,7 @@ export class ProjectsService {
       projectLead,
       projectManager,
       customer,
+      billing,
       ...projectData
     } = createProjectDto;
     // Fetch the user entities using the user IDs
@@ -41,13 +45,16 @@ export class ProjectsService {
       }
     }
     const client = await this.customerRepository.findOne(customer);
+    const billingEntity = billing ? await this.billingRepository.findOne(billing) : null;
+    
     // Create a new project and assign the fetched users
     const project = await this.projectRepository.create({
       ...projectData,
       users, // Assign the user entities here
       projectLead: lead || null,
       projectManager: manager || null,
-      customer: client || null
+      customer: client || null,
+      billing: billingEntity
     });
 
     const savedProject = await this.projectRepository.save(project);
@@ -79,14 +86,14 @@ export class ProjectsService {
         where: {
           status: status
         },
-        relations: ['users', 'tasks', 'projectLead', 'customer', 'projectManager','users.role'],
+        relations: ['users', 'tasks', 'projectLead', 'customer', 'billing', 'projectManager','users.role'],
         order: {
           updatedAt: 'DESC'
         }
       });
     } else {
       const users = await this.userRepository.findOne({
-        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager','projects.users.role'],
+        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager', 'projects.billing', 'projects.customer', 'projects.users.role'],
         where: {
           id: user.id
         }
@@ -98,7 +105,7 @@ export class ProjectsService {
 
   findOne(id: string) {
     return this.projectRepository.findOne(id, {
-      relations: ['users', 'tasks', 'projectLead', 'projectManager', 'tasks.assignees', 'tasks.group']
+      relations: ['users', 'tasks', 'projectLead', 'projectManager', 'tasks.assignees', 'tasks.group', 'billing', 'customer']
     });
   }
 
@@ -132,6 +139,16 @@ export class ProjectsService {
         throw new Error('Assigned projectManager must have role "manager"');
       }
       project.projectManager = manager;
+    }
+    
+    if (updateProjectDto.customer) {
+      const client = await this.customerRepository.findOne(updateProjectDto.customer);
+      project.customer = client || null;
+    }
+    
+    if (updateProjectDto.billing) {
+      const billingEntity = await this.billingRepository.findOne(updateProjectDto.billing);
+      project.billing = billingEntity || null;
     }
 
     // Save the updated project back to the repository

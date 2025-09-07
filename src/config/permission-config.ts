@@ -819,6 +819,58 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       ]
     },
     {
+  name: 'Billing Management',
+  resource: 'billing',
+  hasSubmodules: false,
+  permissions: [
+    {
+      name: 'View all billings',
+      route: [
+        {
+          path: '/billing',
+          method: MethodList.GET
+        }
+      ]
+    },
+    {
+      name: 'View billing by id',
+      route: [
+        {
+          path: '/billing/:id',
+          method: MethodList.GET
+        }
+      ]
+    },
+    {
+      name: 'Store new billing',
+      route: [
+        {
+          path: '/billing',
+          method: MethodList.POST
+        }
+      ]
+    },
+    {
+      name: 'Update billing by id',
+      route: [
+        {
+          path: '/billing/:id',
+          method: MethodList.PATCH
+        }
+      ]
+    },
+    {
+      name: 'Delete billing by id',
+      route: [
+        {
+          path: '/billing/:id',
+          method: MethodList.DELETE
+        }
+      ]
+    }
+  ]
+},
+    {
       name: 'Holiday Management',
       resource: 'holiday',
       hasSubmodules: false,
@@ -2550,6 +2602,59 @@ export const PermissionConfiguration: PermissionConfigInterface = {
         }
       ]
     },
+{
+  name: 'Billing Management',
+  resource: 'billing',
+  hasSubmodules: false,
+  permissions: [
+    {
+      name: 'View all billings',
+      route: [
+        {
+          path: '/billing',
+          method: MethodList.GET
+        }
+      ]
+    },
+    {
+      name: 'View billing by id',
+      route: [
+        {
+          path: '/billing/:id',
+          method: MethodList.GET
+        }
+      ]
+    },
+    {
+      name: 'Store new billing',
+      route: [
+        {
+          path: '/billing',
+          method: MethodList.POST
+        }
+      ]
+    },
+    {
+      name: 'Update billing by id',
+      route: [
+        {
+          path: '/billing/:id',
+          method: MethodList.PATCH
+        }
+      ]
+    },
+    {
+      name: 'Delete billing by id',
+      route: [
+        {
+          path: '/billing/:id',
+          method: MethodList.DELETE
+        }
+      ]
+    }
+  ]
+},
+
     {
       name: 'Holiday Management',
       resource: 'holiday',

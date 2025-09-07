@@ -10,13 +10,15 @@ import { Notification } from 'src/notification/entities/notification.entity';
 import { ProjectsService } from './projects.service';
 import { CustomersService } from 'src/customers/customers.service';
 import { Customer } from 'src/customers/entities/customer.entity';
+import { Billing } from 'src/billing/entities/billing.entity';
+import { BillingService } from 'src/billing/billing.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, ProjectTimeline, UserEntity, Notification, Customer])
+    TypeOrmModule.forFeature([Project, ProjectTimeline, UserEntity, Notification, Customer, Billing])
   ],
   controllers: [ProjectsController],
-  providers: [ProjectsService, ProjectTimelineService, NotificationService, CustomersService],
+  providers: [ProjectsService, ProjectTimelineService, NotificationService, CustomersService, BillingService],
   exports: [ProjectsService, ProjectTimelineService]
 })
 export class ProjectsModule {}

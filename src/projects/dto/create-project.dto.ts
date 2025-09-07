@@ -76,4 +76,7 @@ export class CreateProjectDto {
 
   @IsOptional()
   customer?: string;
+
+  @IsOptional()
+  billing?: string;
 }
