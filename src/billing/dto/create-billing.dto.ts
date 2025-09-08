@@ -7,6 +7,11 @@ export class CreateBillingDto {
   @MaxLength(100)
   name: string;
 
+  @ApiProperty({ description: 'Short name of the billing entity (for use in project naming)' })
+  @IsString()
+  @MaxLength(20)
+  shortName: string;
+
   @ApiProperty({ description: 'Registration number', required: false })
   @IsString()
   @IsOptional()

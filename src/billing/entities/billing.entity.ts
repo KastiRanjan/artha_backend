@@ -7,6 +7,9 @@ export class Billing extends CustomBaseEntity {
   @Column({ length: 100 })
   name: string;
 
+  @Column({ length: 20, nullable: true })
+  shortName: string;
+
   @Column({ length: 30, nullable: true })
   registration_number: string;
 
