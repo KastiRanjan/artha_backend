@@ -41,6 +41,8 @@ import { UsersModule } from './users/users.module';
 import { WorklogModule } from './worklog/worklog.module';
 import { LeaveTypeModule } from './leave-type/leave-type.module';
 import { NatureOfWorkModule } from './nature-of-work/nature-of-work.module';
+import { BusinessSizeModule } from './business-size/business-size.module';
+import { BusinessNatureModule } from './business-nature/business-nature.module';
 
 // const appConfig = config.get('app');
 
@@ -96,6 +98,8 @@ import { NatureOfWorkModule } from './nature-of-work/nature-of-work.module';
     LeaveTypeModule,
     WorkhourModule,
     NatureOfWorkModule,
+    BusinessSizeModule,
+    BusinessNatureModule,
     BillingModule
   ],
   providers: [

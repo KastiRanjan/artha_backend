@@ -1,10 +1,12 @@
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BoardMember } from './board-member.entity';
 import { ManagementTeamMember } from './management-team-member.entity';
 import { OtherImportantInfo } from './other-important-info.entity';
 import { RegistrationAndLicense } from './registration-and-license.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { BusinessSize } from 'src/business-size/entities/business-size.entity';
+import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
 
 @Entity()
 export class Customer extends CustomBaseEntity {
@@ -64,9 +66,14 @@ export class Customer extends CustomBaseEntity {
 
   @Column({
     type: 'enum',
-    enum: ['micro', 'cottage', 'small', 'medium', 'large', 'not_applicable']
+    enum: ['micro', 'cottage', 'small', 'medium', 'large', 'not_applicable'],
+    nullable: true
   })
-  businessSize: string;
+  businessSizeEnum?: string;
+
+  @ManyToOne(() => BusinessSize, { nullable: true })
+  @JoinColumn()
+  businessSize?: BusinessSize;
 
   @Column({
     type: 'enum',
@@ -88,9 +95,14 @@ export class Customer extends CustomBaseEntity {
       'personal_service',
       'business_related_service',
       'others'
-    ]
+    ],
+    nullable: true
   })
-  industryNature: string;
+  industryNatureEnum?: string;
+
+  @ManyToOne(() => BusinessNature, { nullable: true })
+  @JoinColumn()
+  industryNature?: BusinessNature;
 
   @Column({ length: 15, nullable: true })
   telephoneNo?: string;

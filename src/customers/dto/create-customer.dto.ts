@@ -4,7 +4,8 @@ import {
   IsOptional,
   IsEnum,
   IsDateString,
-  Length
+  Length,
+  IsUUID
 } from 'class-validator';
 
 // Define enums for choices
@@ -104,11 +105,23 @@ export class CreateCustomerDto {
   @IsEnum(LegalStatus)
   legalStatus: LegalStatus;
 
+  // Both options for business size
+  @IsOptional()
   @IsEnum(BusinessSize)
-  businessSize: BusinessSize;
+  businessSizeEnum?: BusinessSize;
 
+  @IsOptional()
+  @IsUUID()
+  businessSizeId?: string;
+
+  // Both options for industry nature
+  @IsOptional()
   @IsEnum(IndustryNature)
-  industryNature: IndustryNature;
+  industryNatureEnum?: IndustryNature;
+
+  @IsOptional()
+  @IsUUID()
+  industryNatureId?: string;
 
   @IsOptional()
   @IsString()
