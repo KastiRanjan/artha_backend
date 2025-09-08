@@ -5,6 +5,7 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Billing } from 'src/billing/entities/billing.entity';
+import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
 import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity()
@@ -23,16 +24,8 @@ export class Project extends CustomBaseEntity {
   @Column({ length: 20 })
   status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed';
 
-  @Column({ length: 30 })
-  natureOfWork:
-    | 'external_audit'
-    | 'tax_compliance'
-    | 'accounts_review'
-    | 'legal_services'
-    | 'financial_projection'
-    | 'valuation'
-    | 'internal_audit'
-    | 'others';
+  @ManyToOne(() => NatureOfWork, { onDelete: 'SET NULL', nullable: true })
+  natureOfWork: NatureOfWork;
 
   @Column()
   fiscalYear: number;

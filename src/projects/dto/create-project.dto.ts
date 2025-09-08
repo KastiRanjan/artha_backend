@@ -5,7 +5,8 @@ import {
   IsString,
   IsDate,
   IsArray,
-  IsInt
+  IsInt,
+  IsUUID
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -23,31 +24,9 @@ export class CreateProjectDto {
   })
   status: 'active' | 'suspended' | 'archived' | 'signed_off';
 
-  @IsEnum(
-    [
-      'external_audit',
-      'tax_compliance',
-      'accounts_review',
-      'legal_services',
-      'financial_projection',
-      'valuation',
-      'internal_audit',
-      'others'
-    ],
-    {
-      message:
-        'natureOfWork must be one of: external_audit, tax_compliance, accounts_review, legal_services, financial_projection, valuation, internal_audit, others'
-    }
-  )
-  natureOfWork:
-    | 'external_audit'
-    | 'tax_compliance'
-    | 'accounts_review'
-    | 'legal_services'
-    | 'financial_projection'
-    | 'valuation'
-    | 'internal_audit'
-    | 'others';
+  @IsNotEmpty()
+  @IsUUID()
+  natureOfWork: string; // Reference to NatureOfWork entity
 
   @IsNotEmpty()
   @IsInt()
@@ -76,6 +55,10 @@ export class CreateProjectDto {
 
   @IsOptional()
   customer?: string;
+  
+  // For backward compatibility with frontend that uses "client" instead of "customer"
+  @IsOptional()
+  client?: string;
 
   @IsOptional()
   billing?: string;
