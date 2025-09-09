@@ -9,6 +9,8 @@ import { ManagementTeamMember } from './entities/management-team-member.entity';
 import { OtherImportantInfo } from './entities/other-important-info.entity';
 import { BusinessSize } from 'src/business-size/entities/business-size.entity';
 import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
+import { BusinessSizeModule } from 'src/business-size/business-size.module';
+import { BusinessNatureModule } from 'src/business-nature/business-nature.module';
 
 @Module({
   imports: [
@@ -20,9 +22,12 @@ import { BusinessNature } from 'src/business-nature/entities/business-nature.ent
       OtherImportantInfo,
       BusinessSize,
       BusinessNature,
-    ])
+    ]),
+    BusinessSizeModule,
+    BusinessNatureModule
   ],
   controllers: [CustomersController],
-  providers: [CustomersService]
+  providers: [CustomersService],
+  exports: [CustomersService]
 })
 export class CustomersModule {}

@@ -1,16 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PermissionEntity } from 'src/permission/entities/permission.entity';
 import { MethodList } from 'src/config/permission-config';
 import { customModules } from 'src/config/permissions';
+import { PermissionRepository } from 'src/permission/permission.repository';
 import { LoadPermissionMisc } from 'src/permission/misc/load-permission.misc';
 
 @Injectable()
 export class PermissionSeedService {
   constructor(
-    @InjectRepository(PermissionEntity)
-    private readonly permissionRepository: Repository<PermissionEntity>,
+    @InjectRepository(PermissionRepository)
+    private readonly permissionRepository: PermissionRepository,
     private readonly loadPermissionMisc: LoadPermissionMisc,
   ) {}
 

@@ -14,10 +14,26 @@ import { Billing } from 'src/billing/entities/billing.entity';
 import { BillingService } from 'src/billing/billing.service';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
 import { NatureOfWorkService } from 'src/nature-of-work/nature-of-work.service';
+import { BusinessSize } from 'src/business-size/entities/business-size.entity';
+import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
+import { BusinessSizeModule } from 'src/business-size/business-size.module';
+import { BusinessNatureModule } from 'src/business-nature/business-nature.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, ProjectTimeline, UserEntity, Notification, Customer, Billing, NatureOfWork])
+    TypeOrmModule.forFeature([
+      Project, 
+      ProjectTimeline, 
+      UserEntity, 
+      Notification, 
+      Customer, 
+      Billing, 
+      NatureOfWork,
+      BusinessSize,
+      BusinessNature
+    ]),
+    BusinessSizeModule,
+    BusinessNatureModule
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService, ProjectTimelineService, NotificationService, CustomersService, BillingService, NatureOfWorkService],

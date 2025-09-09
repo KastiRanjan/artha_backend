@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import {
   ModulesPayloadInterface,
   PermissionPayload,
@@ -5,6 +6,7 @@ import {
   SubModulePayloadInterface
 } from 'src/config/permission-config';
 
+@Injectable()
 export class LoadPermissionMisc {
   assignResourceAndConcatPermission(
     modules: ModulesPayloadInterface | SubModulePayloadInterface,
