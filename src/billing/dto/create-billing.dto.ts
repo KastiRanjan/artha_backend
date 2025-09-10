@@ -71,6 +71,26 @@ export class CreateBillingDto {
   @MaxLength(50)
   bank_account_number?: string;
 
+  @ApiProperty({ description: 'Country', required: true })
+  @IsString()
+  @MaxLength(100)
+  country: string;
+
+  @ApiProperty({ description: 'State/Province', required: true })
+  @IsString()
+  @MaxLength(100)
+  state: string;
+
+  @ApiProperty({ description: 'District', required: true })
+  @IsString()
+  @MaxLength(100)
+  district: string;
+
+  @ApiProperty({ description: 'Local Jurisdiction', required: true })
+  @IsString()
+  @MaxLength(100)
+  localJurisdiction: string;
+
   @ApiProperty({ description: 'Status', enum: ['active', 'suspended', 'archived'], default: 'active', required: false })
   @IsEnum(['active', 'suspended', 'archived'])
   @IsOptional()

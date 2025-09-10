@@ -201,8 +201,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           name: 'Update user by id',
           route: [
             {
-              path: '/users/:id',
+              path: '/users/edit/:id',
               method: MethodList.PUT
+            },
+            {
+              path: '/users/edit/:id',
+              method: MethodList.PATCH
             }
           ]
         },
@@ -212,6 +216,144 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/users/:id',
               method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete user by id',
+          route: [
+            {
+              path: '/users/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.PUT
+            },
+            {
+              path: '/users/:id/profile',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.PUT
+            },
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.PUT
+            },
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get user documents',
+          route: [
+            {
+              path: '/users/:id/document',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Upload user documents',
+          route: [
+            {
+              path: '/users/:id/document',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Delete user document',
+          route: [
+            {
+              path: '/users/:id/document/:documentId',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Update user status',
+          route: [
+            {
+              path: '/users/:id/status',
+              method: MethodList.PATCH
             }
           ]
         }
@@ -1487,10 +1629,55 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
+          name: 'View all user',
+          route: [
+            {
+              path: '/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'Get user by id',
           route: [
             {
               path: '/users/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user documents',
+          route: [
+            {
+              path: '/users/:id/document',
               method: MethodList.GET
             }
           ]
@@ -2260,10 +2447,55 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
+          name: 'View all user',
+          route: [
+            {
+              path: '/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'Get user by id',
           route: [
             {
               path: '/users/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user documents',
+          route: [
+            {
+              path: '/users/:id/document',
               method: MethodList.GET
             }
           ]
@@ -2408,6 +2640,10 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/users/:id',
               method: MethodList.PUT
+            },
+            {
+              path: '/users/:id',
+              method: MethodList.PATCH
             }
           ]
         },
@@ -2417,6 +2653,144 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/users/:id',
               method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete user by id',
+          route: [
+            {
+              path: '/users/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.PUT
+            },
+            {
+              path: '/users/:id/profile',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.PUT
+            },
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.PUT
+            },
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get user documents',
+          route: [
+            {
+              path: '/users/:id/document',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Upload user documents',
+          route: [
+            {
+              path: '/users/:id/document',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Delete user document',
+          route: [
+            {
+              path: '/users/:id/document/:documentId',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Update user status',
+          route: [
+            {
+              path: '/users/:id/status',
+              method: MethodList.PATCH
             }
           ]
         }
@@ -3178,10 +3552,55 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
+          name: 'View all user',
+          route: [
+            {
+              path: '/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'Get user by id',
           route: [
             {
               path: '/users/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user profile',
+          route: [
+            {
+              path: '/users/:id/profile',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user bank details',
+          route: [
+            {
+              path: '/users/:id/bank-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user education details',
+          route: [
+            {
+              path: '/users/:id/education-detail',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get user documents',
+          route: [
+            {
+              path: '/users/:id/document',
               method: MethodList.GET
             }
           ]

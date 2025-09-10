@@ -39,6 +39,18 @@ export class Billing extends CustomBaseEntity {
 
   @Column({ length: 50, nullable: true })
   bank_account_number: string;
+  
+  @Column({ length: 100, nullable: true })
+  country: string;
+
+  @Column({ length: 100, nullable: true })
+  state: string;
+
+  @Column({ length: 100, nullable: true })
+  district: string;
+
+  @Column({ length: 100, nullable: true })
+  localJurisdiction: string;
 
   @Column({
     type: 'enum',
