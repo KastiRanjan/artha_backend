@@ -1,6 +1,6 @@
-import { MethodList } from '../permission-config';
+import { ModulesPayloadInterface, MethodList } from '../../config/permission-config';
 
-export const businessNaturePermissions = {
+export const businessNaturePermissions: ModulesPayloadInterface = {
   name: 'Business Nature Management',
   resource: 'business-nature',
   hasSubmodules: false,

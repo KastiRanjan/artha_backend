@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MethodList } from 'src/config/permission-config';
-import { customModules } from 'src/config/permissions';
+import { MethodList, PermissionConfiguration } from 'src/config/permission-config';
 import { PermissionRepository } from 'src/permission/permission.repository';
 import { LoadPermissionMisc } from 'src/permission/misc/load-permission.misc';
 
@@ -17,10 +16,11 @@ export class PermissionSeedService {
     // Get existing permissions
     const existingPermissions = await this.permissionRepository.find();
 
-    // Process all custom modules to extract routes
+    // Process all modules from the PermissionConfiguration to extract routes
     let permissionsList = [];
 
-    for (const module of customModules) {
+    // Process modules from the main configuration
+    for (const module of PermissionConfiguration.modules) {
       permissionsList = this.loadPermissionMisc.assignResourceAndConcatPermission(
         module,
         permissionsList,

@@ -1,4 +1,5 @@
-import { businessSizePermissions, businessNaturePermissions } from './business-permissions';
+// Import removed since modules now directly defined in this file
+// import { businessSizePermissions, businessNaturePermissions } from './business-permissions';
 
 interface PermissionConfigInterface {
   roles: Array<rolePayload>;
@@ -1361,6 +1362,121 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         }
       ]
+    },
+    // Legal Status Management
+    {
+      name: 'Legal Status Management',
+      resource: 'legal-status',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all legal statuses',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create legal status',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View legal status by id',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    // Portal Credentials Management
+    {
+      name: 'Portal Credentials Management',
+      resource: 'portal-credentials',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all portal credentials',
+          route: [
+            {
+              path: '/portal-credentials',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View portal credentials by id',
+          route: [
+            {
+              path: '/portal-credentials/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View portal credentials by customer',
+          route: [
+            {
+              path: '/portal-credentials/customer/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create portal credentials',
+          route: [
+            {
+              path: '/portal-credentials',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update portal credentials',
+          route: [
+            {
+              path: '/portal-credentials/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete portal credentials',
+          route: [
+            {
+              path: '/portal-credentials/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
     }
 
   ],
@@ -2083,6 +2199,58 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         }
       ]
+    },
+    {
+      name: 'Legal Status Management',
+      resource: 'legal-status',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all legal statuses',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create legal status',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View legal status by id',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
     }
   ],
   auditseniorPermission: [
@@ -2152,6 +2320,58 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/tasks/project/:id',
               method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Legal Status Management',
+      resource: 'legal-status',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all legal statuses',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create legal status',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View legal status by id',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.DELETE
             }
           ]
         }
@@ -2893,6 +3113,58 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/calendar/convert/bs-to-ad',
               method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Legal Status Management',
+      resource: 'legal-status',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all legal statuses',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create legal status',
+          route: [
+            {
+              path: '/legal-status',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View legal status by id',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete legal status',
+          route: [
+            {
+              path: '/legal-status/:id',
+              method: MethodList.DELETE
             }
           ]
         }

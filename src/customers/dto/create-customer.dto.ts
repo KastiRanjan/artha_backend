@@ -102,8 +102,14 @@ export class CreateCustomerDto {
   @Length(1, 100)
   locality: string;
 
+  // Both options for legal status
+  @IsOptional()
   @IsEnum(LegalStatus)
-  legalStatus: LegalStatus;
+  legalStatusEnum?: LegalStatus;
+
+  @IsOptional()
+  @IsUUID()
+  legalStatusId?: string;
 
   // Both options for business size
   @IsOptional()

@@ -43,6 +43,7 @@ import { LeaveTypeModule } from './leave-type/leave-type.module';
 import { NatureOfWorkModule } from './nature-of-work/nature-of-work.module';
 import { BusinessSizeModule } from './business-size/business-size.module';
 import { BusinessNatureModule } from './business-nature/business-nature.module';
+import { LegalStatusModule } from './legal-status/legal-status.module';
 
 // const appConfig = config.get('app');
 
@@ -100,6 +101,7 @@ import { BusinessNatureModule } from './business-nature/business-nature.module';
     NatureOfWorkModule,
     BusinessSizeModule,
     BusinessNatureModule,
+    LegalStatusModule,
     BillingModule
   ],
   providers: [

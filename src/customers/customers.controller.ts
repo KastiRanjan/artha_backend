@@ -6,12 +6,13 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards
+  UseGuards,
+  Query
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 
@@ -28,7 +29,11 @@ export class CustomersController {
   }
 
   @Get()
-  findAll() {
+  @ApiQuery({ name: 'status', required: false, enum: ['active', 'suspended', 'archive'] })
+  findAll(@Query('status') status?: string) {
+    if (status) {
+      return this.customersService.findByStatus(status);
+    }
     return this.customersService.findAll();
   }
 

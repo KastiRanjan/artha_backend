@@ -7,6 +7,8 @@ import { RegistrationAndLicense } from './registration-and-license.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { BusinessSize } from 'src/business-size/entities/business-size.entity';
 import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
+import { LegalStatus } from 'src/legal-status/entities/legal-status.entity';
+import { PortalCredential } from './portal-credential.entity';
 
 @Entity()
 export class Customer extends CustomBaseEntity {
@@ -60,9 +62,14 @@ export class Customer extends CustomBaseEntity {
       'cooperative',
       'government_soe',
       'others'
-    ]
+    ],
+    nullable: true
   })
-  legalStatus: string;
+  legalStatusEnum?: string;
+
+  @ManyToOne(() => LegalStatus, { nullable: true })
+  @JoinColumn()
+  legalStatus?: LegalStatus;
 
   @Column({
     type: 'enum',
@@ -148,6 +155,12 @@ export class Customer extends CustomBaseEntity {
     (otherImportantInfo) => otherImportantInfo.customer
   )
   otherImportantInfos: OtherImportantInfo[];
+
+  @OneToMany(
+    () => PortalCredential,
+    (portalCredential) => portalCredential.customer
+  )
+  portalCredentials: PortalCredential[];
 
   toString() {
     return this.name;

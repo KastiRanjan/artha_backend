@@ -1,6 +1,6 @@
-import { MethodList } from '../permission-config';
+import { ModulesPayloadInterface, MethodList } from '../../config/permission-config';
 
-export const businessSizePermissions = {
+export const businessSizePermissions: ModulesPayloadInterface = {
   name: 'Business Size Management',
   resource: 'business-size',
   hasSubmodules: false,
