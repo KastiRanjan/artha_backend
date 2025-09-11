@@ -106,7 +106,8 @@ export class WorklogService {
 
     // Save all worklogs to the database at once
     const savedWorklogs = await this.worklogRepository.save(worklogs);
-    // Log worklog addition in project timeline
+    
+    // Log worklog addition in project timeline and update task status
     for (const worklog of savedWorklogs) {
       // Ensure task.project is loaded
       let taskWithProject = worklog.task;
@@ -116,6 +117,21 @@ export class WorklogService {
           relations: ['project']
         });
       }
+      
+      // Update task status to in_progress if it's currently 'open'
+      if (taskWithProject.status === 'open') {
+        taskWithProject.status = 'in_progress';
+        await this.taskRepository.save(taskWithProject);
+        
+        // Add a log entry for the status change
+        await this.projectTimelineService.log({
+          projectId: taskWithProject.project.id,
+          userId: user.id,
+          action: 'task_status_changed',
+          details: `Task '${taskWithProject.name}' status changed from 'open' to 'in_progress' after worklog addition.`
+        });
+      }
+      
       await this.projectTimelineService.log({
         projectId: taskWithProject.project.id,
         userId: user.id,
