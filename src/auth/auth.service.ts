@@ -90,14 +90,17 @@ export class AuthService {
     slug: string,
     linkLabel: string
   ) {
-    // const appConfig = config.get('app');
+    // Get the frontend URL from environment variable (support both formats for backward compatibility)
+    const frontendUrl = process.env.FRONTEND_URL || process.env.frontendUrl || 'https://artha.sarojkasti.com.np';
+    console.log('Frontend URL for email:', frontendUrl); // Log for debugging
+    
     const mailData: MailJobInterface = {
       to: user.email,
       subject,
       slug,
       context: {
         email: user.email,
-        link: `<a href="${process.env.frontendUrl}/${url}">${linkLabel} →</a>`,
+        link: `<a href="${frontendUrl}/${url}">${linkLabel} →</a>`,
         username: user.username,
         subject
       }

@@ -26,7 +26,7 @@ async function bootstrap() {
   // const apiConfig = config.get('app');
   // if (process.env.NODE_ENV === 'development') {
   app.enableCors({
-    origin: ['http://192.168.18.58:5173', 'http://localhost:5173'],
+    origin: ['http://192.168.18.58:5173', 'http://localhost:5173', 'https://artha.sarojkasti.com.np'],
     credentials: true
   });
 
