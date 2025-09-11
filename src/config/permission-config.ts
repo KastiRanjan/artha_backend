@@ -964,6 +964,58 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       ]
     },
     {
+      name: 'Client Portal Credentials Management',
+      resource: 'client-portal-credentials',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View client portal credentials',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View client portal credential by id',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    {
   name: 'Billing Management',
   resource: 'billing',
   hasSubmodules: false,
@@ -1614,6 +1666,59 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/portal-credentials/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    // Client Portal Credentials Management
+    {
+      name: 'Client Portal Credentials Management',
+      resource: 'client-portal-credentials',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View client portal credentials',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View client portal credential by id',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
               method: MethodList.DELETE
             }
           ]
@@ -2433,6 +2538,101 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/legal-status/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Client Management',
+      resource: 'client',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all Client',
+          route: [
+            {
+              path: '/clients',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get Single Client',
+          route: [
+            {
+              path: '/clients/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add Client',
+          route: [
+            {
+              path: '/clients',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit Client',
+          route: [
+            {
+              path: '/clients/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Client Portal Credentials Management',
+      resource: 'client-portal-credentials',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View client portal credentials',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View client portal credential by id',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
               method: MethodList.DELETE
             }
           ]
@@ -3298,6 +3498,119 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/clients/:id',
               method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Client Portal Credentials Management',
+      resource: 'client-portal-credentials',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View client portal credentials',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View client portal credential by id',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete client portal credential',
+          route: [
+            {
+              path: '/clients/:customerId/portal-credentials/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Portal Credentials Management',
+      resource: 'portal-credentials',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all portal credentials',
+          route: [
+            {
+              path: '/portal-credentials',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View portal credentials by id',
+          route: [
+            {
+              path: '/portal-credentials/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View portal credentials by customer',
+          route: [
+            {
+              path: '/portal-credentials/customer/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create portal credentials',
+          route: [
+            {
+              path: '/portal-credentials',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update portal credentials',
+          route: [
+            {
+              path: '/portal-credentials/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete portal credentials',
+          route: [
+            {
+              path: '/portal-credentials/:id',
+              method: MethodList.DELETE
             }
           ]
         }
