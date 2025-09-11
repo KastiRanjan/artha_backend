@@ -538,7 +538,64 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       resource: 'projects',
       hasSubmodules: false,
       permissions: [
-        // ...existing project permissions...
+        {
+          name: 'View all Projects',
+          route: [
+            {
+              path: '/projects',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.GET
+            },
+            {
+              path: '/projects/:id/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user projects',
+          route: [
+            {
+              path: '/projects/users/:uid',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Store new project',
+          route: [
+            {
+              path: '/projects',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Update project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete project by id',
+          route: [
+            {
+              path: '/projects/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
       ]
     },
     {
