@@ -158,19 +158,36 @@ export class BaseRepository<
   ): Promise<Pagination<K>> {
     const whereCondition = [];
     const findOptions: FindManyOptions = {};
+    
+    // Handle keywords search
     if (searchFilter.hasOwnProperty('keywords') && searchFilter.keywords) {
       for (const key of searchCriteria) {
-        whereCondition.push({
+        const condition: any = {
           [key]: ILike(`%${searchFilter.keywords}%`)
+        };
+        
+        // Add status filter to each keyword condition if status is provided
+        if (searchFilter.hasOwnProperty('status') && searchFilter.status) {
+          condition.status = searchFilter.status;
+        }
+        
+        whereCondition.push(condition);
+      }
+    } else {
+      // If no keywords, but status is provided, add status-only condition
+      if (searchFilter.hasOwnProperty('status') && searchFilter.status) {
+        whereCondition.push({
+          status: searchFilter.status
         });
       }
     }
+    
     const paginationInfo: PaginationInfoInterface =
       this.getPaginationInfo(searchFilter);
     findOptions.relations = relations;
     findOptions.take = paginationInfo.limit;
     findOptions.skip = paginationInfo.skip;
-    findOptions.where = whereCondition;
+    findOptions.where = whereCondition.length > 0 ? whereCondition : undefined;
     findOptions.order = {
       createdAt: 'DESC'
     };
