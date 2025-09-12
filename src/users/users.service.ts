@@ -89,12 +89,26 @@ export class UsersService {
     return savedData;
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll() {
+    // This method should be implemented based on your requirements
+    // For now, return a basic message or implement pagination
+    return this.userRepository.find({
+      relations: ['role'],
+      select: ['id', 'name', 'email', 'username', 'status', 'createdAt', 'updatedAt']
+    });
   }
 
-  findOne(id: string) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['role']
+    });
+    
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    
+    return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
@@ -102,6 +116,16 @@ export class UsersService {
     if (!user) {
       throw new BadRequestException('User not found');
     }
+
+    // Convert role field to roleId if provided (matching create behavior)
+    const updateData: any = { ...updateUserDto };
+    if (updateUserDto.role) {
+      updateData.roleId = updateUserDto.role;
+      delete updateData.role;
+    }
+
+    // Use the auth service's update method which has proper validation and role handling
+    return await this.authService.update(id, updateData);
   }
 
   remove(id: string) {
