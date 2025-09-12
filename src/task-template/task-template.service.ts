@@ -18,6 +18,15 @@ export class TaskTemplateService {
     const { name, description, groupId, parentTaskId, taskType } =
       createTaskTemplateDto;
 
+    // Check for duplicate name first
+    const existingTask = await this.taskTemplateRepository.findOne({
+      where: { name }
+    });
+
+    if (existingTask) {
+      throw new BadRequestException(`A task template with the name "${name}" already exists`);
+    }
+
     // Validate parent task if parentTaskId is provided
     let parentTask = null;
     if (parentTaskId) {
@@ -59,14 +68,22 @@ export class TaskTemplateService {
       parentTask
     });
 
-    // Save the task to the database
-    const savedTask = await this.taskTemplateRepository.save(task);
+    try {
+      // Save the task to the database
+      const savedTask = await this.taskTemplateRepository.save(task);
 
-    // Return the saved task with relations
-    return await this.taskTemplateRepository.findOne({
-      where: { id: savedTask.id },
-      relations: ['group', 'parentTask', 'subTasks']
-    });
+      // Return the saved task with relations
+      return await this.taskTemplateRepository.findOne({
+        where: { id: savedTask.id },
+        relations: ['group', 'parentTask', 'subTasks']
+      });
+    } catch (error) {
+      // Handle database constraint violations
+      if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
+        throw new BadRequestException(`A task template with the name "${name}" already exists`);
+      }
+      throw error;
+    }
   }
 
   async findAll() {
@@ -113,6 +130,17 @@ export class TaskTemplateService {
       throw new BadRequestException(`Task template with ID ${id} not found`);
     }
 
+    // Check for duplicate name if name is being changed
+    if (name && name !== existingTask.name) {
+      const duplicateTask = await this.taskTemplateRepository.findOne({
+        where: { name }
+      });
+
+      if (duplicateTask) {
+        throw new BadRequestException(`A task template with the name "${name}" already exists`);
+      }
+    }
+
     // Validate parent task if parentTaskId is provided
     let parentTask = null;
     if (parentTaskId) {
@@ -147,20 +175,28 @@ export class TaskTemplateService {
       }
     }
 
-    // Update the task
-    await this.taskTemplateRepository.update(id, {
-      name: name || existingTask.name,
-      description: description !== undefined ? description : existingTask.description,
-      taskType: taskType || existingTask.taskType,
-      group,
-      parentTask
-    });
+    try {
+      // Update the task
+      await this.taskTemplateRepository.update(id, {
+        name: name || existingTask.name,
+        description: description !== undefined ? description : existingTask.description,
+        taskType: taskType || existingTask.taskType,
+        group,
+        parentTask
+      });
 
-    // Return the updated task with relations
-    return await this.taskTemplateRepository.findOne({
-      where: { id },
-      relations: ['group', 'parentTask', 'subTasks']
-    });
+      // Return the updated task with relations
+      return await this.taskTemplateRepository.findOne({
+        where: { id },
+        relations: ['group', 'parentTask', 'subTasks']
+      });
+    } catch (error) {
+      // Handle database constraint violations
+      if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
+        throw new BadRequestException(`A task template with the name "${name}" already exists`);
+      }
+      throw error;
+    }
   }
 
   remove(id: string) {
