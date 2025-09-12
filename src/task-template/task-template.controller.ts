@@ -6,7 +6,8 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards
+  UseGuards,
+  UseFilters
 } from '@nestjs/common';
 import { TaskTemplateService } from './task-template.service';
 import { CreateTaskTemplateDto } from './dto/create-task-template.dto';
@@ -14,9 +15,11 @@ import { UpdateTaskTemplateDto } from './dto/update-task-template.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
+import { ValidationExceptionFilter } from 'src/common/exception/validation-exception.filter';
 
 @ApiTags('task-template')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
+@UseFilters(ValidationExceptionFilter)
 @Controller('task-template')
 @ApiBearerAuth()
 export class TaskTemplateController {

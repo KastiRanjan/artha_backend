@@ -1,10 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateTaskTemplateDto {
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Task template name is required' })
   @IsString()
-  @MaxLength(100)
+  @MinLength(1, { message: 'Task template name cannot be empty' })
+  @MaxLength(100, { message: 'Task template name cannot exceed 100 characters' })
   name: string;
 
   @IsOptional()

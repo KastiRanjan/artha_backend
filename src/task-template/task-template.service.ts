@@ -18,6 +18,11 @@ export class TaskTemplateService {
     const { name, description, groupId, parentTaskId, taskType } =
       createTaskTemplateDto;
 
+    // Validate name length
+    if (name && name.length > 100) {
+      throw new BadRequestException('Task template name cannot exceed 100 characters');
+    }
+
     // Check for duplicate name first
     const existingTask = await this.taskTemplateRepository.findOne({
       where: { name }
@@ -78,10 +83,16 @@ export class TaskTemplateService {
         relations: ['group', 'parentTask', 'subTasks']
       });
     } catch (error) {
-      // Handle database constraint violations
+      // Handle database constraint violations and validation errors
       if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
         throw new BadRequestException(`A task template with the name "${name}" already exists`);
       }
+      
+      // Handle database length constraint violations
+      if (error.code === '22001' || (error.message && error.message.includes('Data too long'))) {
+        throw new BadRequestException('Task template name cannot exceed 100 characters');
+      }
+      
       throw error;
     }
   }
@@ -119,6 +130,11 @@ export class TaskTemplateService {
   async update(id: string, updateTaskTemplateDto: UpdateTaskTemplateDto) {
     const { name, description, groupId, taskType, parentTaskId } =
       updateTaskTemplateDto;
+
+    // Validate name length if name is being updated
+    if (name && name.length > 100) {
+      throw new BadRequestException('Task template name cannot exceed 100 characters');
+    }
 
     // Find the existing task
     const existingTask = await this.taskTemplateRepository.findOne({
@@ -191,10 +207,16 @@ export class TaskTemplateService {
         relations: ['group', 'parentTask', 'subTasks']
       });
     } catch (error) {
-      // Handle database constraint violations
+      // Handle database constraint violations and validation errors
       if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
         throw new BadRequestException(`A task template with the name "${name}" already exists`);
       }
+      
+      // Handle database length constraint violations
+      if (error.code === '22001' || (error.message && error.message.includes('Data too long'))) {
+        throw new BadRequestException('Task template name cannot exceed 100 characters');
+      }
+      
       throw error;
     }
   }
