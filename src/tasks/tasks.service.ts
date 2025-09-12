@@ -136,18 +136,31 @@ export class TasksService {
                 })
               );
               if (!isEmpty(template.subTasks)) {
-                template.subTasks.map(async (subTaskTemplate) => {
-                  const subTasks = await this.taskRepository.create({
-                    name: subTaskTemplate.name,
-                    tcode: await this.generateTaskCode(project),
-                    description: subTaskTemplate.description,
-                    taskType: subTaskTemplate.taskType,
-                    project: projectEntity,
-                    parentTask: newTask,
-                    group: taskGroup
-                  });
-                  await this.taskRepository.save(subTasks);
-                });
+                // Process subtasks sequentially to ensure proper creation
+                await Promise.all(
+                  template.subTasks.map(async (subTaskTemplate) => {
+                    const existingSubTask = await this.taskRepository.findOne({
+                      where: {
+                        name: subTaskTemplate.name,
+                        project: projectEntity
+                      }
+                    });
+                    
+                    if (!existingSubTask) {
+                      const subTask = this.taskRepository.create({
+                        name: subTaskTemplate.name,
+                        tcode: await this.generateTaskCode(project),
+                        description: subTaskTemplate.description,
+                        taskType: subTaskTemplate.taskType,
+                        project: projectEntity,
+                        parentTask: newTask,
+                        group: taskGroup
+                      });
+                      return await this.taskRepository.save(subTask);
+                    }
+                    return null;
+                  })
+                );
               }
               return newTask;
             } else {
@@ -198,67 +211,286 @@ export class TasksService {
     // Validate task groups (tasks field contains task group IDs)
     const taskGroups = await this.taskGroupRepository.find({
       where: { id: In(tasks) }, // Use In operator for array of IDs
-      relations: ['tasktemplate', 'tasktemplate.parentTask']
+      relations: ['tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks']
     });
   
     if (!taskGroups.length) {
       throw new NotFoundException(`No valid task groups found for IDs: ${tasks}`);
     }
   
-    // Filter task templates based on tasklist (tasklist contains template IDs)
+    // Parse tasklist to extract individual template IDs and determine explicit selections
+    // Frontend sends compound IDs like "parentId-childId" for children and simple IDs for standalone/parents
+    const parseTaskList = (tasklist: string[]): { 
+      individualTemplateIds: string[], 
+      explicitParents: Set<string>, 
+      explicitChildren: Set<string>,
+      compoundSelections: Map<string, string[]> // parentId -> [childId1, childId2, ...]
+    } => {
+      const templateIds = new Set<string>();
+      const explicitParents = new Set<string>();
+      const explicitChildren = new Set<string>();
+      const compoundSelections = new Map<string, string[]>();
+      
+      tasklist.forEach(item => {
+        // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (8-4-4-4-12 characters)
+        // Compound format: parentUUID-childUUID
+        // We need to split at the correct position - after the first complete UUID
+        const uuidPattern = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+        const match = item.match(uuidPattern);
+        
+        if (match) {
+          // This is a compound ID: parentId-childId
+          const [, parentId, childId] = match;
+          templateIds.add(parentId);
+          templateIds.add(childId);
+          explicitChildren.add(childId);
+          
+          // Track compound selections
+          if (!compoundSelections.has(parentId)) {
+            compoundSelections.set(parentId, []);
+          }
+          compoundSelections.get(parentId)!.push(childId);
+        } else {
+          // This is a simple template ID (explicitly selected parent or standalone)
+          templateIds.add(item);
+          explicitParents.add(item);
+        }
+      });
+      
+      return { 
+        individualTemplateIds: Array.from(templateIds), 
+        explicitParents, 
+        explicitChildren,
+        compoundSelections
+      };
+    };
+    
+    const { individualTemplateIds, explicitParents, explicitChildren, compoundSelections } = parseTaskList(tasklist);
+    
+    // Debug logging
+    console.log('=== Debug Task List Parsing ===');
+    console.log('Original tasklist:', tasklist);
+    console.log('Individual template IDs:', individualTemplateIds);
+    console.log('Explicit parents:', Array.from(explicitParents));
+    console.log('Explicit children:', Array.from(explicitChildren));
+    console.log('Compound selections:', Object.fromEntries(compoundSelections));
+    
+    // Filter task templates based on parsed template IDs
     const templatesToProcess = taskGroups
       .flatMap(group => group.tasktemplate || [])
-      .filter(template => tasklist.includes(template.id));
+      .filter(template => individualTemplateIds.includes(template.id));
   
     if (!templatesToProcess.length) {
-      throw new NotFoundException(`No matching task templates found for IDs: ${tasklist}`);
+      throw new NotFoundException(`No matching task templates found for IDs: ${individualTemplateIds}`);
     }
+
+    // Separate parent and child templates
+    // Include parents that are explicitly selected OR part of compound selections
+    const parentTemplates = templatesToProcess.filter(t => 
+      !t.parentTask && (explicitParents.has(t.id) || compoundSelections.has(t.id))
+    );
+    const childTemplates = templatesToProcess.filter(t => t.parentTask);
+    
+    // Debug logging
+    console.log('=== Debug Template Processing ===');
+    console.log('Templates to process:', templatesToProcess.map(t => ({ id: t.id, name: t.name, taskType: t.taskType, hasParent: !!t.parentTask })));
+    console.log('Parent templates:', parentTemplates.map(t => ({ id: t.id, name: t.name })));
+    console.log('Child templates:', childTemplates.map(t => ({ id: t.id, name: t.name, parentId: t.parentTask?.id })));
+    
+    // Create a map to track created parent tasks
+    const createdParentTasks = new Map();
+    const allSuccessfulTasks = [];
   
-    // Process and create tasks from templates
-    const savedTasks = await Promise.all(
-      templatesToProcess.map(async (template) => {
-        // Check if task already exists
-        const existingTask = await this.taskRepository.findOne({
+    // Process parent templates first
+    for (const template of parentTemplates) {
+      // Check if task already exists in project
+      const existingTask = await this.taskRepository.findOne({
+        where: {
+          name: template.name,
+          project: projectEntity
+        }
+      });
+
+      if (existingTask) {
+        createdParentTasks.set(template.id, existingTask);
+        continue; // Skip existing tasks
+      }
+
+      // Find the task group for this template
+      const taskGroup = taskGroups.find(group => 
+        group.tasktemplate.some(t => t.id === template.id)
+      );
+
+      // Create new parent task from template
+      const newTask = this.taskRepository.create({
+        name: template.name,
+        tcode: await this.generateTaskCode(project),
+        description: template.description || '',
+        taskType: template.taskType,
+        project: projectEntity,
+        status: 'open',
+        group: taskGroup,
+        assignees: [],
+        parentTask: null
+      });
+
+      const savedTask = await this.taskRepository.save(newTask);
+      createdParentTasks.set(template.id, savedTask);
+      allSuccessfulTasks.push(savedTask);
+    }
+
+    // Process child templates - only if parent wasn't explicitly selected
+    // Track which child tasks we've created to avoid duplicates later
+    const createdChildTasks = new Set<string>();
+    
+    for (const template of childTemplates) {
+      // Skip children that are part of compound selections - they'll be handled by parent processing
+      const isPartOfCompoundSelection = Array.from(compoundSelections.values())
+        .flat()
+        .includes(template.id);
+      
+      if (isPartOfCompoundSelection) {
+        // Add to createdChildTasks to track that this will be handled by parent processing
+        createdChildTasks.add(template.id);
+        continue; // Skip this child as it will be handled by parent processing
+      }
+
+      // Check if task already exists in project
+      const existingTask = await this.taskRepository.findOne({
+        where: {
+          name: template.name,
+          project: projectEntity
+        }
+      });
+
+      if (existingTask) {
+        continue; // Skip existing tasks
+      }
+
+      // Find parent task - either from created tasks or existing in project
+      let parentTask = createdParentTasks.get(template.parentTask.id);
+      
+      if (!parentTask) {
+        // Look for existing parent task in project
+        parentTask = await this.taskRepository.findOne({
           where: {
-            name: template.name,
-            project: projectEntity
+            name: template.parentTask.name,
+            project: projectEntity,
+            taskType: 'story'
           }
         });
-  
-        if (existingTask) {
-          return null; // Skip existing tasks
-        }
-  
-        // Find the task group for this template
+      }
+
+      // If parent still doesn't exist, create it first
+      if (!parentTask) {
+        const parentTemplate = template.parentTask;
         const taskGroup = taskGroups.find(group => 
-          group.tasktemplate.some(t => t.id === template.id)
+          group.tasktemplate.some(t => t.id === parentTemplate.id)
         );
-  
-        // Create new task from template
-        const newTask = this.taskRepository.create({
-          name: template.name,
+
+        const newParentTask = this.taskRepository.create({
+          name: parentTemplate.name,
           tcode: await this.generateTaskCode(project),
-          description: template.description || '',
+          description: parentTemplate.description || '',
+          taskType: parentTemplate.taskType,
           project: projectEntity,
           status: 'open',
           group: taskGroup,
           assignees: [],
-          parentTask: template.parentTask
-            ? await this.taskRepository.findOne({ where: { id: template.parentTask.id } })
-            : null
+          parentTask: null
         });
-  
-        return await this.taskRepository.save(newTask);
-      })
-    );
-  
-    // Filter out null values (skipped tasks) and return response
-    const successfulTasks = savedTasks.filter(task => task !== null);
+
+        parentTask = await this.taskRepository.save(newParentTask);
+        createdParentTasks.set(parentTemplate.id, parentTask);
+        allSuccessfulTasks.push(parentTask);
+      }
+
+      // Find the task group for this template
+      const taskGroup = taskGroups.find(group => 
+        group.tasktemplate.some(t => t.id === template.id)
+      );
+
+      // Create new child task from template
+      const newTask = this.taskRepository.create({
+        name: template.name,
+        tcode: await this.generateTaskCode(project),
+        description: template.description || '',
+        taskType: template.taskType,
+        project: projectEntity,
+        status: 'open',
+        group: taskGroup,
+        assignees: [],
+        parentTask: parentTask
+      });
+
+      const savedTask = await this.taskRepository.save(newTask);
+      createdChildTasks.add(template.id);
+      allSuccessfulTasks.push(savedTask);
+    }
+
+    // Now process subtasks for explicitly selected parent tasks
+    for (const parentTemplate of parentTemplates) {
+      const parentTask = createdParentTasks.get(parentTemplate.id);
+      if (!parentTask) continue;
+
+      // Get all subtasks for this parent from the template
+      const parentTemplateWithSubtasks = taskGroups
+        .flatMap(group => group.tasktemplate || [])
+        .find(t => t.id === parentTemplate.id);
+
+      if (parentTemplateWithSubtasks && parentTemplateWithSubtasks.subTasks) {
+        for (const subTaskTemplate of parentTemplateWithSubtasks.subTasks) {
+          // Check if this subtask was explicitly selected via compound selection
+          const parentCompoundChildren = compoundSelections.get(parentTemplate.id) || [];
+          const wasExplicitlySelected = explicitChildren.has(subTaskTemplate.id) && 
+                                       parentCompoundChildren.includes(subTaskTemplate.id);
+          
+          // Only process if it was explicitly selected as part of a compound selection
+          if (!wasExplicitlySelected) {
+            continue;
+          }
+
+          // Check if subtask already exists
+          const existingSubTask = await this.taskRepository.findOne({
+            where: {
+              name: subTaskTemplate.name,
+              project: projectEntity,
+              parentTask: parentTask
+            }
+          });
+
+          if (existingSubTask) {
+            continue; // Skip existing subtasks
+          }
+
+          // Find the task group for this subtask template
+          const taskGroup = taskGroups.find(group => 
+            group.tasktemplate.some(t => t.id === subTaskTemplate.id)
+          );
+
+          // Create subtask
+          const newSubTask = this.taskRepository.create({
+            name: subTaskTemplate.name,
+            tcode: await this.generateTaskCode(project),
+            description: subTaskTemplate.description || '',
+            taskType: subTaskTemplate.taskType,
+            project: projectEntity,
+            status: 'open',
+            group: taskGroup,
+            assignees: [],
+            parentTask: parentTask
+          });
+
+          const savedSubTask = await this.taskRepository.save(newSubTask);
+          allSuccessfulTasks.push(savedSubTask);
+        }
+      }
+    }
   
     return {
       project: projectEntity.id,
-      tasks: successfulTasks,
-      message: `Successfully added ${successfulTasks.length} tasks to project from ${templatesToProcess.length} templates`
+      tasks: allSuccessfulTasks,
+      message: `Successfully added ${allSuccessfulTasks.length} tasks to project from ${templatesToProcess.length} templates`
     };
   }
 
@@ -390,8 +622,36 @@ export class TasksService {
     return updatedTasks;
   }
 
-  async remove(id: string): Promise<void> {
-    const task = await this.findOne(id); // Ensures task exists
-    await this.taskRepository.remove(task); // Remove the task
+  async remove(id: string): Promise<{ message: string; taskId: string; projectId?: string }> {
+    const task = await this.taskRepository.findOne({
+      where: { id },
+      relations: ['project']
+    });
+    
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${id} not found`);
+    }
+    
+    const projectId = task.project?.id;
+    const taskName = task.name;
+    
+    // Remove the task
+    await this.taskRepository.remove(task);
+    
+    // Log task deletion in project timeline if project exists
+    if (projectId) {
+      await this.projectTimelineService.log({
+        projectId: projectId,
+        userId: null,
+        action: 'task_deleted',
+        details: `Task '${taskName}' was deleted from project.`
+      });
+    }
+    
+    return {
+      message: 'Task deleted successfully',
+      taskId: id,
+      projectId: projectId
+    };
   }
 }
