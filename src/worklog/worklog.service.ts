@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { LessThanOrEqual, MoreThanOrEqual, Repository, Between } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
@@ -28,26 +28,44 @@ export class WorklogService {
   ) { }
 
   async create(createWorklogDto: any, user: UserEntity) {
-
     const worklogs = [];
     for (const worklogDto of createWorklogDto) {
       const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
 
       // Fetch the associated entities
-      const task = await this.taskRepository.findOne(taskId);
-      const project = await this.projectRepository.findOne({ id: projectId }, { relations: ['projectLead'] });
+      const task = await this.taskRepository.findOne({ where: { id: taskId }, relations: ['project'] });
+      
+      // Derive projectId from task if not provided
+      const actualProjectId = projectId || task?.project?.id;
+      
+      const project = await this.projectRepository.findOne({ where: { id: actualProjectId }, relations: ['projectLead'] });
 
       if (!task) {
         throw new NotFoundException(`Task with ID ${taskId} not found`);
       }
       if (!project) {
-        throw new NotFoundException(`Project with ID ${projectId} not found`);
+        throw new NotFoundException(`Project with ID ${actualProjectId} not found`);
+      }
+
+      // Convert provided times to proper Date objects and handle timezone
+      let worklogStartTime: Date;
+      let worklogEndTime: Date;
+      
+      if (startTime && endTime) {
+        // Use the provided times as-is if they're already proper datetime strings
+        worklogStartTime = new Date(startTime);
+        worklogEndTime = new Date(endTime);
+      } else {
+        // Fallback to current time if no times provided (shouldn't happen in normal flow)
+        const now = new Date();
+        worklogStartTime = now;
+        worklogEndTime = now;
       }
 
       // Block if user is on approved leave for any part of the worklog date range
       const leaves = await this.leaveService.findAll('approved');
-      const worklogStart = moment.utc(startTime).format('YYYY-MM-DD');
-      const worklogEnd = moment.utc(endTime).format('YYYY-MM-DD');
+      const worklogStart = moment(worklogStartTime).utcOffset('+05:45').format('YYYY-MM-DD');
+      const worklogEnd = moment(worklogEndTime).utcOffset('+05:45').format('YYYY-MM-DD');
       const onLeave = leaves.some(leave => {
         return leave.user.id === user.id && worklogStart <= leave.endDate && worklogEnd >= leave.startDate;
       });
@@ -59,8 +77,8 @@ export class WorklogService {
       const holidays = await this.holidayService.findAll();
       const holidayDates = holidays.map(h => h.date);
       let isHoliday = false;
-      let current = moment.utc(worklogStart);
-      const end = moment.utc(worklogEnd);
+      let current = moment(worklogStart).utcOffset('+05:45');
+      const end = moment(worklogEnd).utcOffset('+05:45');
       while (current.isSameOrBefore(end)) {
         if (holidayDates.includes(current.format('YYYY-MM-DD'))) {
           isHoliday = true;
@@ -72,40 +90,66 @@ export class WorklogService {
         throw new BadRequestException('Worklog is not allowed on holidays.');
       }
 
-      const startDate = moment.utc(startTime).toDate();  // Convert to UTC date object
-      const endDate = moment.utc(endTime).toDate();      // Convert to UTC date object
-      // Check for overlapping worklogs
-      const overlappingWorklog = await this.worklogRepository.findOne({
+      // Check for overlapping worklogs using the actual worklog times
+      // Only check for overlaps on the same date to avoid false positives across different days
+      // Use Nepal time for date calculations
+      const worklogDate = moment(worklogStartTime).utcOffset('+05:45').format('YYYY-MM-DD');
+      const startOfDay = moment(worklogDate).utcOffset('+05:45').startOf('day').utc().toDate();
+      const endOfDay = moment(worklogDate).utcOffset('+05:45').endOf('day').utc().toDate();
+      
+      // Find all worklogs for the user on the same date
+      const existingWorklogs = await this.worklogRepository.find({
         where: {
           user: user.id,
-          startTime: LessThanOrEqual(endDate),  // Overlap if new startTime is before existing endTime
-          endTime: MoreThanOrEqual(startDate),
+          startTime: Between(startOfDay, endOfDay),
         },
       });
 
-      if (overlappingWorklog) {
-        throw new BadRequestException('Overlapping worklog found');
+      // Check for time overlaps within the same date
+      const hasOverlap = existingWorklogs.some(existingWorklog => {
+        const existingStart = new Date(existingWorklog.startTime);
+        const existingEnd = new Date(existingWorklog.endTime);
+        
+        // Check if the new worklog overlaps with any existing worklog
+        return (
+          (worklogStartTime < existingEnd && worklogEndTime > existingStart) ||
+          (worklogStartTime.getTime() === existingStart.getTime()) ||
+          (worklogEndTime.getTime() === existingEnd.getTime())
+        );
+      });
+
+      if (hasOverlap) {
+        throw new BadRequestException(`Overlapping worklog found on ${worklogDate}. Please check your existing worklogs for this date.`);
       }
 
-      // Create a new worklog instance
+      // Create a new worklog instance with the proper times
       const worklog = this.worklogRepository.create({
         ...worklogData,
         user,
         createdBy: user.id,
         task,
-        startTime,
-        endTime,
+        project, // Add project reference
+        startTime: worklogStartTime,
+        endTime: worklogEndTime,
         status:'requested'
       });
       worklogs.push(worklog);
-
-      if (createWorklogDto.approvalRequest) {
-        await this.notificationService.create({ message: `Worklog added for approval`, users: [project.projectLead.id] });
-      }
     }
 
     // Save all worklogs to the database at once
     const savedWorklogs = await this.worklogRepository.save(worklogs);
+    
+    // Send notification if approval is requested (check first worklog for approval request)
+    if (createWorklogDto.length > 0 && createWorklogDto[0].approvalRequest) {
+      // Get the project from the first worklog to send notification
+      const firstWorklog = savedWorklogs[0];
+      if (firstWorklog.project && firstWorklog.project.projectLead) {
+        await this.notificationService.create({ 
+          message: `Worklog added for approval`, 
+          users: [firstWorklog.project.projectLead.id] 
+        });
+      }
+    }
     
     // Log worklog addition in project timeline and update task status
     for (const worklog of savedWorklogs) {

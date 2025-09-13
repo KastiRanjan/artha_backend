@@ -40,6 +40,10 @@ export class CreateWorklogDto {
   @Type(() => String)
   taskId: string;
 
+  @IsOptional()
+  @Type(() => String)
+  projectId?: string;
+
 }
 
 
