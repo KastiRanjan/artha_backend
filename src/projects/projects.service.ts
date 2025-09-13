@@ -122,7 +122,23 @@ export class ProjectsService {
   async findOne(id: string) {
     const project = await this.projectRepository.findOne({
       where: { id },
-      relations: ['users', 'tasks', 'projectLead', 'projectManager', 'tasks.assignees', 'tasks.group', 'billing', 'customer', 'natureOfWork']
+      relations: [
+        'users', 
+        'tasks', 
+        'projectLead', 
+        'projectManager', 
+        'tasks.assignees', 
+        'tasks.group',
+        'tasks.subTasks',
+        'tasks.subTasks.assignees',
+        'tasks.subTasks.group', 
+        'tasks.parentTask',
+        'tasks.parentTask.assignees',
+        'tasks.parentTask.group',
+        'billing', 
+        'customer', 
+        'natureOfWork'
+      ]
     });
     
     if (!project) {

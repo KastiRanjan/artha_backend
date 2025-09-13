@@ -497,7 +497,18 @@ export class TasksService {
   findAll(status: 'open' | 'in_progress' | 'done') {
     return this.taskRepository.find({
       where: { status },
-      relations: ['worklogs', 'project', 'assignees', 'group', 'subTasks']
+      relations: [
+        'worklogs', 
+        'project', 
+        'assignees', 
+        'group', 
+        'subTasks',
+        'subTasks.assignees',
+        'subTasks.group',
+        'parentTask',
+        'parentTask.assignees',
+        'parentTask.group'
+      ]
     });
   }
 
@@ -511,19 +522,58 @@ export class TasksService {
     return task;
   }
   async findOneByProjectId(id: string) {
-    const task = await this.taskRepository.find({
+    const tasks = await this.taskRepository.find({
       where: { project: { id: id } },
-      relations: ['assignees', 'group', 'subTasks', 'project']
+      relations: [
+        'assignees', 
+        'group', 
+        'project', 
+        'parentTask'
+      ]
     });
-    if (!task) {
+    
+    if (!tasks) {
       throw new NotFoundException(`Task with project ID ${id} not found`);
     }
-    return task;
+
+    // Manually populate subTasks for each parent task
+    const tasksWithSubTasks = await Promise.all(
+      tasks.map(async (task) => {
+        if (task.taskType === 'story') {
+          // Find all subtasks that have this task as parent and belong to the same project
+          const subTasks = await this.taskRepository.find({
+            where: { 
+              parentTask: { id: task.id },
+              project: { id: id }
+            },
+            relations: ['assignees', 'group', 'project']
+          });
+          
+          return {
+            ...task,
+            subTasks: subTasks
+          };
+        }
+        return task;
+      })
+    );
+
+    return tasksWithSubTasks;
   }
   async findOneByProjectIdAndTaskId(projectId: string, taskId: string) {
     const task = await this.taskRepository.findOne({
       where: { project: { id: projectId }, id: taskId },
-      relations: ['assignees', 'group', 'subTasks', 'project']
+      relations: [
+        'assignees', 
+        'group', 
+        'subTasks',
+        'subTasks.assignees',
+        'subTasks.group',
+        'project', 
+        'parentTask',
+        'parentTask.assignees',
+        'parentTask.group'
+      ]
     });
     if (!task) {
       throw new NotFoundException(
