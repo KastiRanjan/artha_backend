@@ -689,6 +689,24 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             { path: '/tasks/:id', method: MethodList.DELETE }
           ]
+        },
+        {
+          name: 'Mark tasks complete',
+          route: [
+            { path: '/tasks/mark-complete', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'first-verify-task',
+          route: [
+            { path: '/tasks/first-verify', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'second-verify-task',
+          route: [
+            { path: '/tasks/second-verify', method: MethodList.PATCH }
+          ]
         }
       ]
     },

@@ -18,6 +18,9 @@ import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { ImportTaskDto } from './dto/import-task.dto';
 import { ImportTaskTemplateDto } from './dto/import-taskTemplate.dto';
 import { BulkUpdateTaskDto } from './dto/bulk-update-task.dto';
+import { MarkCompleteTaskDto } from './dto/mark-complete-task.dto';
+import { FirstVerifyTaskDto } from './dto/first-verify-task.dto';
+import { SecondVerifyTaskDto } from './dto/second-verify-task.dto';
 
 @ApiTags('tasks')
 @UseGuards(JwtTwoFactorGuard)
@@ -65,6 +68,21 @@ export class TasksController {
   bulkUpdate(@Body() bulkUpdateTaskDto: BulkUpdateTaskDto) {
     console.log(bulkUpdateTaskDto);
     return this.tasksService.bulkUpdate(bulkUpdateTaskDto);
+  }
+
+  @Patch('/mark-complete')
+  markComplete(@Body() markCompleteTaskDto: MarkCompleteTaskDto) {
+    return this.tasksService.markTasksComplete(markCompleteTaskDto);
+  }
+
+  @Patch('/first-verify')
+  firstVerify(@Body() firstVerifyTaskDto: FirstVerifyTaskDto) {
+    return this.tasksService.firstVerifyTasks(firstVerifyTaskDto);
+  }
+
+  @Patch('/second-verify')
+  secondVerify(@Body() secondVerifyTaskDto: SecondVerifyTaskDto) {
+    return this.tasksService.secondVerifyTasks(secondVerifyTaskDto);
   }
 
   @Patch(':id')

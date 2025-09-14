@@ -57,6 +57,23 @@ export class Task extends CustomBaseEntity {
   @Column({ nullable: true })
   last: boolean;
 
+  @Column({ nullable: true })
+  completedBy?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  completedAt?: Date;
+
+  @Column({ nullable: true })
+  firstVerifiedBy?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  firstVerifiedAt?: Date;
+
+  @Column({ nullable: true })
+  secondVerifiedBy?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  secondVerifiedAt?: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.tasks)
   manager: UserEntity;

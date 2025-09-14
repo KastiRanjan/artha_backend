@@ -6,11 +6,12 @@ import { Task } from './entities/task.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { ProjectsModule } from 'src/projects/projects.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Task, UserEntity, Project, TaskGroup]),
+    TypeOrmModule.forFeature([Task, UserEntity, Project, TaskGroup, Worklog]),
     ProjectsModule
   ],
   controllers: [TasksController],

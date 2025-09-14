@@ -1,14 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConflictException} from '@nestjs/common';
+import { ConflictException, BadRequestException} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isEmpty } from 'lodash';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { ProjectTimelineService } from 'src/projects/project-timeline.service';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Repository } from 'typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { MarkCompleteTaskDto } from './dto/mark-complete-task.dto';
+import { FirstVerifyTaskDto } from './dto/first-verify-task.dto';
+import { SecondVerifyTaskDto } from './dto/second-verify-task.dto';
 import { Task } from './entities/task.entity';
 import { In } from 'typeorm'; // Add this import
 import { BulkUpdateTaskDto } from './dto/bulk-update-task.dto';
@@ -23,6 +27,8 @@ export class TasksService {
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(TaskGroup)
     private taskGroupRepository: Repository<TaskGroup>,
+    @InjectRepository(Worklog)
+    private worklogRepository: Repository<Worklog>,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
 
@@ -731,6 +737,363 @@ export class TasksService {
       message: 'Task deleted successfully',
       taskId: id,
       projectId: projectId
+    };
+  }
+
+  async markTasksComplete(markCompleteTaskDto: MarkCompleteTaskDto): Promise<any> {
+    const { taskIds, completedBy } = markCompleteTaskDto;
+
+    // Verify user exists
+    const user = await this.userRepository.findOne({ where: { id: completedBy } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${completedBy} not found`);
+    }
+
+    // Get all tasks with their relations including project settings
+    const tasks = await this.taskRepository.find({
+      where: { id: In(taskIds) },
+      relations: ['worklogs', 'subTasks', 'parentTask', 'project'],
+    });
+
+    if (tasks.length !== taskIds.length) {
+      throw new NotFoundException('One or more tasks not found');
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const task of tasks) {
+      try {
+        // Get project to check allowSubtaskWorklog setting
+        const project = task.project;
+        if (!project) {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: 'Task has no associated project'
+          });
+          continue;
+        }
+
+        // Validation logic based on task type and project settings
+        if (task.taskType === 'story') {
+          // For story tasks (main tasks), always check if all subtasks are complete
+          if (task.subTasks && task.subTasks.length > 0) {
+            const incompleteSubtasks = task.subTasks.filter(subtask => subtask.status !== 'done');
+            if (incompleteSubtasks.length > 0) {
+              errors.push({
+                taskId: task.id,
+                taskName: task.name,
+                error: `Cannot complete story: ${incompleteSubtasks.length} subtask(s) are not complete`,
+                incompleteSubtasks: incompleteSubtasks.map(st => ({ id: st.id, name: st.name }))
+              });
+              continue;
+            }
+          }
+
+          // For story tasks, always check worklog requirement
+          const hasWorklogs = task.worklogs && task.worklogs.length > 0;
+          if (!hasWorklogs) {
+            errors.push({
+              taskId: task.id,
+              taskName: task.name,
+              error: 'Story task must have worklogs to be marked complete'
+            });
+            continue;
+          }
+        } else if (task.taskType === 'task') {
+          // For subtasks, validation depends on project allowSubtaskWorklog setting
+          if (project.allowSubtaskWorklog) {
+            // If project allows subtask worklog, subtask must have worklogs
+            const hasWorklogs = task.worklogs && task.worklogs.length > 0;
+            if (!hasWorklogs) {
+              errors.push({
+                taskId: task.id,
+                taskName: task.name,
+                error: 'Subtask must have worklogs to be marked complete (project allows subtask worklog)'
+              });
+              continue;
+            }
+          } else {
+            // If project doesn't allow subtask worklog, just check if it's in progress
+            // (indicating parent task has worklogs and work has been done)
+            if (task.status !== 'in_progress') {
+              errors.push({
+                taskId: task.id,
+                taskName: task.name,
+                error: 'Subtask must be in progress to be marked complete'
+              });
+              continue;
+            }
+          }
+        }
+
+        // Additional check: ensure task is in progress (has been worked on)
+        if (task.status !== 'in_progress') {
+          // Auto-update to in_progress if has worklogs but not in progress status
+          const hasWorklogs = task.worklogs && task.worklogs.length > 0;
+          if (hasWorklogs) {
+            task.status = 'in_progress';
+          } else {
+            errors.push({
+              taskId: task.id,
+              taskName: task.name,
+              error: 'Task must be in progress (have worklogs) to be marked complete'
+            });
+            continue;
+          }
+        }
+
+        // Mark task as complete
+        task.status = 'done';
+        task.completedBy = completedBy;
+        task.completedAt = new Date();
+
+        const savedTask = await this.taskRepository.save(task);
+
+        // Log completion in project timeline
+        await this.projectTimelineService.log({
+          projectId: project.id,
+          userId: completedBy,
+          action: 'task_completed',
+          details: `Task '${task.name}' marked as complete by ${user.name || user.username}.`
+        });
+
+        results.push({
+          taskId: task.id,
+          taskName: task.name,
+          taskType: task.taskType,
+          status: 'completed',
+          completedBy: completedBy,
+          completedAt: savedTask.completedAt,
+          projectAllowsSubtaskWorklog: project.allowSubtaskWorklog
+        });
+
+      } catch (error) {
+        errors.push({
+          taskId: task.id,
+          taskName: task.name,
+          error: error.message || 'Unknown error occurred'
+        });
+      }
+    }
+
+    return {
+      success: results,
+      errors: errors,
+      summary: {
+        total: taskIds.length,
+        completed: results.length,
+        failed: errors.length
+      },
+      message: `${results.length} task(s) marked complete${errors.length > 0 ? `, ${errors.length} failed` : ''}`
+    };
+  }
+
+  async firstVerifyTasks(firstVerifyTaskDto: FirstVerifyTaskDto): Promise<any> {
+    const { taskIds, firstVerifiedBy } = firstVerifyTaskDto;
+
+    // Verify user exists
+    const user = await this.userRepository.findOne({ where: { id: firstVerifiedBy } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${firstVerifiedBy} not found`);
+    }
+
+    // Get all tasks with their relations
+    const tasks = await this.taskRepository.find({
+      where: { id: In(taskIds) },
+      relations: ['project'],
+    });
+
+    if (tasks.length !== taskIds.length) {
+      throw new NotFoundException('One or more tasks not found');
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const task of tasks) {
+      try {
+        // Get project for timeline logging
+        const project = task.project;
+        if (!project) {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: 'Task has no associated project'
+          });
+          continue;
+        }
+
+        // Validation: Task must be completed to be verified
+        if (task.status !== 'done') {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: 'Task must be completed before it can be verified'
+          });
+          continue;
+        }
+
+        // Check if task is already first verified
+        if (task.firstVerifiedBy) {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: `Task already first verified by ${task.firstVerifiedBy}`
+          });
+          continue;
+        }
+
+        // Mark task as first verified
+        task.firstVerifiedBy = firstVerifiedBy;
+        task.firstVerifiedAt = new Date();
+
+        const savedTask = await this.taskRepository.save(task);
+
+        // Log first verification in project timeline
+        await this.projectTimelineService.log({
+          projectId: project.id,
+          userId: firstVerifiedBy,
+          action: 'task_first_verified',
+          details: `Task '${task.name}' first verified by ${user.name || user.username}.`
+        });
+
+        results.push({
+          taskId: task.id,
+          taskName: task.name,
+          taskType: task.taskType,
+          status: 'first_verified',
+          firstVerifiedBy: firstVerifiedBy,
+          firstVerifiedAt: savedTask.firstVerifiedAt
+        });
+
+      } catch (error) {
+        errors.push({
+          taskId: task.id,
+          taskName: task.name,
+          error: error.message || 'Unknown error occurred'
+        });
+      }
+    }
+
+    return {
+      success: results,
+      errors: errors,
+      summary: {
+        total: taskIds.length,
+        firstVerified: results.length,
+        failed: errors.length
+      },
+      message: `${results.length} task(s) first verified${errors.length > 0 ? `, ${errors.length} failed` : ''}`
+    };
+  }
+
+  async secondVerifyTasks(secondVerifyTaskDto: SecondVerifyTaskDto): Promise<any> {
+    const { taskIds, secondVerifiedBy } = secondVerifyTaskDto;
+
+    // Verify user exists
+    const user = await this.userRepository.findOne({ where: { id: secondVerifiedBy } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${secondVerifiedBy} not found`);
+    }
+
+    // Get all tasks with their relations
+    const tasks = await this.taskRepository.find({
+      where: { id: In(taskIds) },
+      relations: ['project'],
+    });
+
+    if (tasks.length !== taskIds.length) {
+      throw new NotFoundException('One or more tasks not found');
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const task of tasks) {
+      try {
+        // Get project for timeline logging
+        const project = task.project;
+        if (!project) {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: 'Task has no associated project'
+          });
+          continue;
+        }
+
+        // Validation: Task must be completed and first verified
+        if (task.status !== 'done') {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: 'Task must be completed before it can be second verified'
+          });
+          continue;
+        }
+
+        if (!task.firstVerifiedBy) {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: 'Task must be first verified before second verification'
+          });
+          continue;
+        }
+
+        // Check if task is already second verified
+        if (task.secondVerifiedBy) {
+          errors.push({
+            taskId: task.id,
+            taskName: task.name,
+            error: `Task already second verified by ${task.secondVerifiedBy}`
+          });
+          continue;
+        }
+
+        // Mark task as second verified
+        task.secondVerifiedBy = secondVerifiedBy;
+        task.secondVerifiedAt = new Date();
+
+        const savedTask = await this.taskRepository.save(task);
+
+        // Log second verification in project timeline
+        await this.projectTimelineService.log({
+          projectId: project.id,
+          userId: secondVerifiedBy,
+          action: 'task_second_verified',
+          details: `Task '${task.name}' second verified by ${user.name || user.username}.`
+        });
+
+        results.push({
+          taskId: task.id,
+          taskName: task.name,
+          taskType: task.taskType,
+          status: 'second_verified',
+          secondVerifiedBy: secondVerifiedBy,
+          secondVerifiedAt: savedTask.secondVerifiedAt
+        });
+
+      } catch (error) {
+        errors.push({
+          taskId: task.id,
+          taskName: task.name,
+          error: error.message || 'Unknown error occurred'
+        });
+      }
+    }
+
+    return {
+      success: results,
+      errors: errors,
+      summary: {
+        total: taskIds.length,
+        secondVerified: results.length,
+        failed: errors.length
+      },
+      message: `${results.length} task(s) second verified${errors.length > 0 ? `, ${errors.length} failed` : ''}`
     };
   }
 }
