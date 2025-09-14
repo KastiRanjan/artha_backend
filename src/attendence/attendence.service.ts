@@ -17,6 +17,8 @@ export class AttendenceService {
     private attendanceRepository: Repository<Attendance>,
     @InjectRepository(AttendanceHistory)
     private attendanceHistoryRepository: Repository<AttendanceHistory>,
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
     private readonly leaveService: LeaveService,
     private readonly holidayService: HolidayService,
   ) {}
@@ -104,6 +106,120 @@ export class AttendenceService {
     });
   }
 
+  async findAllUsersAttendance(user: UserEntity): Promise<any[]> {
+    // Check if user has super user permissions
+    const isSuperUser = await this.checkSuperUserPermission(user);
+    if (!isSuperUser) {
+      throw new ForbiddenException('You do not have permission to view all users attendance');
+    }
+
+    // Fetch attendance records
+    const attendanceRecords = await this.attendanceRepository.find({ 
+      relations: ['history']
+    });
+
+    // Fetch all users
+    const users = await this.userRepository.find();
+
+    // Create a map for quick user lookup
+    const userMap = new Map();
+    users.forEach(u => {
+      userMap.set(u.id, {
+        name: u.name,
+        email: u.email,
+        username: u.username
+      });
+    });
+
+    // Combine attendance with user data
+    const result = attendanceRecords.map(attendance => {
+      const userInfo = userMap.get(attendance.userId);
+      
+      return {
+        ...attendance,
+        user: userInfo || { 
+          name: 'Unknown User', 
+          email: 'N/A',
+          username: 'unknown'
+        }
+      };
+    });
+
+    return result;
+  }
+
+  async getTodayAllUsersAttendance(user: UserEntity): Promise<any[]> {
+    // Check if user has super user permissions
+    const isSuperUser = await this.checkSuperUserPermission(user);
+    if (!isSuperUser) {
+      throw new ForbiddenException('You do not have permission to view all users attendance');
+    }
+
+    const today = moment().format('YYYY-MM-DD').toString();
+    
+    // Fetch today's attendance records
+    const attendanceRecords = await this.attendanceRepository.find({ 
+      where: { date: today },
+      relations: ['history']
+    });
+
+    // Fetch all users
+    const users = await this.userRepository.find();
+
+    // Create a map for quick user lookup
+    const userMap = new Map();
+    users.forEach(u => {
+      userMap.set(u.id, {
+        name: u.name,
+        email: u.email,
+        username: u.username
+      });
+    });
+
+    // Combine attendance with user data
+    const result = attendanceRecords.map(attendance => {
+      const userInfo = userMap.get(attendance.userId);
+      
+      return {
+        ...attendance,
+        user: userInfo || { 
+          name: 'Unknown User', 
+          email: 'N/A',
+          username: 'unknown'
+        }
+      };
+    });
+
+    return result;
+  }
+
+  private async checkSuperUserPermission(user: UserEntity): Promise<boolean> {
+    // Fetch user with role and permission relations to ensure we have the complete information
+    const fullUser = await this.userRepository.findOne({
+      where: { id: user.id },
+      relations: ['role', 'role.permission']
+    });
+    
+    if (!fullUser || !fullUser.role) {
+      return false;
+    }
+    
+    // Check for super user role names (including the actual role name from your system)
+    const superUserRoles = ['super_user', 'admin', 'super-user', 'administrator', 'superuser'];
+    const isRoleSuperUser = superUserRoles.includes(fullUser.role.name?.toLowerCase());
+    
+    // Check for specific attendance permissions
+    const permissions = fullUser.role.permission || [];
+    const hasAttendancePermission = permissions.some(permission => 
+      permission.description === 'View All Users Attendance' ||
+      permission.description === 'View Today All Users Attendance' ||
+      permission.path?.includes('/attendance/all-users') ||
+      permission.path?.includes('/attendance/today-all-users')
+    );
+    
+    return isRoleSuperUser || hasAttendancePermission;
+  }
+
   async findOne(id: string): Promise<Attendance | null> {
     const attendance = await this.attendanceRepository.findOne({ 
       where: { id },
@@ -115,11 +231,29 @@ export class AttendenceService {
     return attendance;
   }
 
-  async findByUser(userId: string): Promise<Attendance[]> {
-    return await this.attendanceRepository.find({ 
+  async findByUser(userId: string): Promise<any[]> {
+    // Fetch attendance records for specific user
+    const attendanceRecords = await this.attendanceRepository.find({ 
       where: { userId },
       relations: ['history']
     });
+
+    // Fetch the specific user
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    // Combine attendance with user data
+    return attendanceRecords.map(attendance => ({
+      ...attendance,
+      user: user ? {
+        name: user.name,
+        email: user.email,
+        username: user.username
+      } : { 
+        name: 'Unknown User', 
+        email: 'N/A',
+        username: 'unknown'
+      }
+    }));
   }
 
   async getMyAttendence(user: UserEntity): Promise<Attendance[]> {

@@ -975,6 +975,24 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             }
           ]
         },
+        {
+          name: 'View All Users Attendance',
+          route: [
+            {
+              path: '/attendance/all-users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View Today All Users Attendance',
+          route: [
+            {
+              path: '/attendance/today-all-users',
+              method: MethodList.GET
+            }
+          ]
+        },
       ]
     },
     {

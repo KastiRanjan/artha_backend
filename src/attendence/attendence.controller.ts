@@ -39,6 +39,20 @@ export class AttendenceController {
   ) {
     return this.attendenceService.findAll(user);
   }
+
+  @Get('all-users')
+  findAllUsersAttendance(
+    @GetUser() user: UserEntity,
+  ) {
+    return this.attendenceService.findAllUsersAttendance(user);
+  }
+
+  @Get('today-all-users')
+  getTodayAllUsersAttendance(
+    @GetUser() user: UserEntity,
+  ) {
+    return this.attendenceService.getTodayAllUsersAttendance(user);
+  }
   
   @Get('today-attendence')
   getMyAttendence(@GetUser() user: UserEntity) {
