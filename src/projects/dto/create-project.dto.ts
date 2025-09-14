@@ -6,7 +6,8 @@ import {
   IsDate,
   IsArray,
   IsInt,
-  IsUUID
+  IsUUID,
+  IsBoolean
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -62,4 +63,8 @@ export class CreateProjectDto {
 
   @IsOptional()
   billing?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  allowSubtaskWorklog?: boolean;
 }

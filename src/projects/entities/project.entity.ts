@@ -75,4 +75,7 @@ export class Project extends CustomBaseEntity {
     nullable: true
   })
   billing: Billing;
+
+  @Column({ default: true })
+  allowSubtaskWorklog: boolean;
 }

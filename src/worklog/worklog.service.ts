@@ -33,7 +33,7 @@ export class WorklogService {
       const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
 
       // Fetch the associated entities
-      const task = await this.taskRepository.findOne({ where: { id: taskId }, relations: ['project'] });
+      const task = await this.taskRepository.findOne({ where: { id: taskId }, relations: ['project', 'parentTask'] });
       
       // Derive projectId from task if not provided
       const actualProjectId = projectId || task?.project?.id;
@@ -45,6 +45,20 @@ export class WorklogService {
       }
       if (!project) {
         throw new NotFoundException(`Project with ID ${actualProjectId} not found`);
+      }
+
+      // Check worklog permissions based on project settings
+      const isSubtask = task.parentTask !== null;
+      const isMainTask = task.taskType === 'story' && task.parentTask === null;
+
+      // If project doesn't allow subtask worklogs and this is a subtask, block it
+      if (!project.allowSubtaskWorklog && isSubtask) {
+        throw new BadRequestException('Worklog is not allowed for subtasks in this project. Only main tasks (stories) can have worklogs.');
+      }
+
+      // If project doesn't allow subtask worklogs, only main tasks (stories) can have worklogs
+      if (!project.allowSubtaskWorklog && !isMainTask) {
+        throw new BadRequestException('Only main tasks (stories) can have worklogs in this project.');
       }
 
       // Convert provided times to proper Date objects and handle timezone
@@ -234,7 +248,7 @@ export class WorklogService {
   async findByTaskId(id: string) {
     const worklogs = await this.worklogRepository.find({
       where: { task: { id } },
-      relations: ['user', 'task', 'task.project'],
+      relations: ['user', 'task', 'task.project', 'task.parentTask'],
       order: {
         createdAt: 'DESC'
       },
@@ -243,6 +257,39 @@ export class WorklogService {
       throw new NotFoundException(`No worklogs found for task ID ${id}`);
     }
     return worklogs;
+  }
+
+  async checkWorklogAllowed(taskId: string) {
+    const task = await this.taskRepository.findOne({ 
+      where: { id: taskId }, 
+      relations: ['project', 'parentTask'] 
+    });
+    
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${taskId} not found`);
+    }
+    
+    if (!task.project) {
+      throw new NotFoundException(`Project not found for task ID ${taskId}`);
+    }
+
+    const isSubtask = task.parentTask !== null;
+    const isMainTask = task.taskType === 'story' && task.parentTask === null;
+    
+    // Check if worklog is allowed based on project settings
+    const allowWorklog = task.project.allowSubtaskWorklog || isMainTask;
+    
+    return {
+      allowed: allowWorklog,
+      reason: allowWorklog 
+        ? 'Worklog is allowed for this task' 
+        : isSubtask 
+          ? 'Worklog is not allowed for subtasks in this project' 
+          : 'Only main tasks (stories) can have worklogs in this project',
+      isSubtask,
+      isMainTask,
+      projectAllowsSubtaskWorklog: task.project.allowSubtaskWorklog
+    };
   }
 
   async update(id: string, updateWorklogDto: UpdateWorklogDto) {

@@ -61,6 +61,11 @@ export class WorklogController {
     return this.worklogService.findByTaskId(id);
   }
 
+  @Get('task/:id/allowed')
+  checkWorklogAllowed(@Param('id') id: string) {
+    return this.worklogService.checkWorklogAllowed(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskDto: UpdateWorklogDto) {
     return this.worklogService.update(id, updateTaskDto);

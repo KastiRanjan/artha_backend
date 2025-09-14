@@ -56,6 +56,35 @@ export class TasksService {
       });
     }
 
+    // Get project with worklog settings
+    const project = await this.projectRepository.findOne({ where: { id: projectId } });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    let finalAssignees = assineeId ? await this.userRepository.find({ where: { id: In(assineeId) } }) : [];
+
+    // If this is a subtask and project doesn't allow subtask worklog, inherit parent's assignees
+    let parentTask = null;
+    if (parentTaskId) {
+      parentTask = await this.taskRepository.findOne({ 
+        where: { id: parentTaskId },
+        relations: ['assignees']
+      });
+      
+      if (parentTask && !project.allowSubtaskWorklog) {
+        // Auto-assign parent task assignees to subtask when subtask worklog is disabled
+        const parentAssignees = parentTask.assignees || [];
+        const combinedAssigneeIds = new Set([
+          ...finalAssignees.map(a => a.id),
+          ...parentAssignees.map(a => a.id)
+        ]);
+        finalAssignees = await this.userRepository.find({ 
+          where: { id: In(Array.from(combinedAssigneeIds)) } 
+        });
+      }
+    }
+
     // Create a new task instance
     const task = this.taskRepository.create({
       name,
@@ -63,9 +92,9 @@ export class TasksService {
       description,
       dueDate: dueDate ? new Date(dueDate) : null,
       group: groupId ? await this.taskGroupRepository.findOne({ where: { id: groupId } }) : null,
-      project: await this.projectRepository.findOne({ where: { id: projectId } }),
-      parentTask: parentTaskId ? await this.taskRepository.findOne({ where: { id: parentTaskId } }) : null,
-      assignees: assineeId ? await this.userRepository.find({ where: { id: In(assineeId) } }) : [],
+      project,
+      parentTask,
+      assignees: finalAssignees,
     });
 
     // Save the task to the database
@@ -419,7 +448,7 @@ export class TasksService {
         project: projectEntity,
         status: 'open',
         group: taskGroup,
-        assignees: [],
+        assignees: !projectEntity.allowSubtaskWorklog ? parentTask.assignees || [] : [],
         parentTask: parentTask
       });
 
@@ -477,7 +506,7 @@ export class TasksService {
             project: projectEntity,
             status: 'open',
             group: taskGroup,
-            assignees: [],
+            assignees: !projectEntity.allowSubtaskWorklog ? parentTask.assignees || [] : [],
             parentTask: parentTask
           });
 
