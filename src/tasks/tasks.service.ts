@@ -42,8 +42,7 @@ export class TasksService {
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { name, description, projectId, parentTaskId, groupId, dueDate, assineeId } = createTaskDto;
-
+  const { name, description, projectId, parentTaskId, groupId, dueDate, assineeId, taskType } = createTaskDto;
     // Check for existing task with the same name in the project
     const existingTask = await this.taskRepository.findOne({
       where: {
@@ -101,6 +100,7 @@ export class TasksService {
       project,
       parentTask,
       assignees: finalAssignees,
+      taskType,
     });
 
     // Save the task to the database

@@ -1,6 +1,11 @@
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsArray, IsBoolean } from 'class-validator';
 
+export enum TaskTypeEnum {
+  STORY = 'story',
+  TASK = 'task',
+}
+
 export class CreateTaskDto {
   @IsNotEmpty()
   @IsString()
@@ -50,4 +55,7 @@ export class CreateTaskDto {
   @IsOptional()
   @IsUUID('4')  // Assuming parentTaskId is a UUID
   parentTaskId?: string;
-}
+    @IsOptional()
+    @IsEnum(TaskTypeEnum)
+    taskType?: TaskTypeEnum;
+  }
