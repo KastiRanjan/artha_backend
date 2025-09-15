@@ -917,6 +917,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             { path: '/worklogs/:id', method: MethodList.PATCH }
           ]
         },
+          {
+            name: 'Edit worklog date',
+            route: [
+              { path: '/worklogs/:id/date', method: MethodList.PATCH }
+            ]
+          },
         {
           name: 'Delete worklog',
           route: [

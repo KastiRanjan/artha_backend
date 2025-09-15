@@ -80,8 +80,8 @@ export class WorklogController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTaskDto: UpdateWorklogDto) {
-    return this.worklogService.update(id, updateTaskDto);
+  update(@Param('id') id: string, @Body() updateTaskDto: UpdateWorklogDto, @GetUser() user: UserEntity) {
+    return this.worklogService.update(id, updateTaskDto, user);
   }
 
   @Delete(':id')

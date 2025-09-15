@@ -292,10 +292,34 @@ export class WorklogService {
     };
   }
 
-  async update(id: string, updateWorklogDto: UpdateWorklogDto) {
+  async update(id: string, updateWorklogDto: UpdateWorklogDto, user: UserEntity) {
     const worklog = await this.findOne(id);
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
+    }
+    // Permission check for editing worklog date
+    if (updateWorklogDto.date && worklog.startTime) {
+      // Check if user has permission for PATCH /worklogs/:id and 'edit_worklog_date'
+      const hasRoutePermission = user?.role?.permission?.some(
+        (perm: any) => perm.path === '/worklogs/:id' && perm.method === 'patch'
+      );
+      const hasEditDatePermission = user?.role?.permission?.some(
+        (perm: any) => perm.name === 'edit_worklog_date'
+      );
+      if (!hasRoutePermission || !hasEditDatePermission) {
+        throw new BadRequestException('You do not have permission to edit the worklog date.');
+      }
+      // If allowed, update the date (startTime/endTime)
+      const newDate = updateWorklogDto.date;
+      // Update startTime and endTime to new date, keeping time
+      const startTime = new Date(worklog.startTime);
+      const endTime = new Date(worklog.endTime);
+      const newStart = new Date(newDate);
+      newStart.setHours(startTime.getHours(), startTime.getMinutes(), startTime.getSeconds(), startTime.getMilliseconds());
+      const newEnd = new Date(newDate);
+      newEnd.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds(), endTime.getMilliseconds());
+      worklog.startTime = newStart;
+      worklog.endTime = newEnd;
     }
     // Handle taskId update
     if (updateWorklogDto.taskId) {
@@ -309,10 +333,13 @@ export class WorklogService {
       if (!user) throw new NotFoundException(`User with ID ${updateWorklogDto.userId} not found`);
       worklog.user = user;
     }
-    // Assign other fields
-    Object.assign(worklog, updateWorklogDto);
+    // Assign other fields except date
+    Object.keys(updateWorklogDto).forEach(key => {
+      if (key !== 'date') {
+        (worklog as any)[key] = (updateWorklogDto as any)[key];
+      }
+    });
     return this.worklogRepository.save(worklog);
-  return this.worklogRepository.save(worklog);
   }
 
   async findByUserAndDate(userId: string, date: string) {
