@@ -6,7 +6,8 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards
+  UseGuards,
+  Query
 } from '@nestjs/common';
 import { AttendenceService } from './attendence.service';
 import { CreateAttendanceDto } from './dto/create-attendence.dto';
@@ -52,6 +53,14 @@ export class AttendenceController {
     @GetUser() user: UserEntity,
   ) {
     return this.attendenceService.getTodayAllUsersAttendance(user);
+  }
+
+  @Get('date-wise-all-users')
+  getDateWiseAllUsersAttendance(
+    @GetUser() user: UserEntity,
+    @Query('date') date: string,
+  ) {
+    return this.attendenceService.getDateWiseAllUsersAttendance(user, date);
   }
   
   @Get('today-attendence')

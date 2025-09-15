@@ -315,6 +315,37 @@ export class WorklogService {
   return this.worklogRepository.save(worklog);
   }
 
+  async findByUserAndDate(userId: string, date: string) {
+    const startOfDay = moment(date).startOf('day').toDate();
+    const endOfDay = moment(date).endOf('day').toDate();
+    
+    return await this.worklogRepository.find({
+      where: {
+        user: { id: userId },
+        startTime: Between(startOfDay, endOfDay),
+      },
+      relations: ['user', 'task', 'task.project'],
+      order: {
+        startTime: 'ASC'
+      }
+    });
+  }
+
+  async findAllUsersByDate(date: string) {
+    const startOfDay = moment(date).startOf('day').toDate();
+    const endOfDay = moment(date).endOf('day').toDate();
+    
+    return await this.worklogRepository.find({
+      where: {
+        startTime: Between(startOfDay, endOfDay),
+      },
+      relations: ['user', 'task', 'task.project'],
+      order: {
+        startTime: 'ASC'
+      }
+    });
+  }
+
   async remove(id: string) {
     return this.worklogRepository.delete(id);
   }

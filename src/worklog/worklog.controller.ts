@@ -66,6 +66,19 @@ export class WorklogController {
     return this.worklogService.checkWorklogAllowed(id);
   }
 
+  @Get('user/:userId/date/:date')
+  findByUserAndDate(
+    @Param('userId') userId: string,
+    @Param('date') date: string
+  ) {
+    return this.worklogService.findByUserAndDate(userId, date);
+  }
+
+  @Get('date/:date/all-users')
+  findAllUsersByDate(@Param('date') date: string) {
+    return this.worklogService.findAllUsersByDate(date);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTaskDto: UpdateWorklogDto) {
     return this.worklogService.update(id, updateTaskDto);

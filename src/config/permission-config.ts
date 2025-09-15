@@ -922,6 +922,18 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             { path: '/worklogs/:id', method: MethodList.DELETE }
           ]
+        },
+        {
+          name: 'Get worklogs by user and date',
+          route: [
+            { path: '/worklogs/user/:userId/date/:date', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'Get all users worklogs by date',
+          route: [
+            { path: '/worklogs/date/:date/all-users', method: MethodList.GET }
+          ]
         }
       ]
     },
@@ -1007,6 +1019,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/attendance/today-all-users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View Date-wise All Users Attendance',
+          route: [
+            {
+              path: '/attendance/date-wise-all-users',
               method: MethodList.GET
             }
           ]

@@ -23,6 +23,7 @@ import { HolidayService } from 'src/holiday/holiday.service';
     LeaveModule
   ],
   controllers: [WorklogController],
-  providers: [WorklogService, NotificationService, HolidayService]
+  providers: [WorklogService, NotificationService, HolidayService],
+  exports: [WorklogService]
 })
 export class WorklogModule {}
