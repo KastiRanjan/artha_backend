@@ -15,7 +15,7 @@ export class TaskTemplateService {
     private readonly taskgroupRepository: Repository<TaskGroup>
   ) {}
   async create(createTaskTemplateDto: CreateTaskTemplateDto) {
-    const { name, description, groupId, parentTaskId, taskType } =
+    const { name, description, groupId, parentTaskId, taskType, budgetedHours, rank } =
       createTaskTemplateDto;
 
     // Validate name length
@@ -70,7 +70,9 @@ export class TaskTemplateService {
       description,
       taskType,
       group,
-      parentTask
+      parentTask,
+      budgetedHours: budgetedHours || 0,
+      rank: rank || 0
     });
 
     try {
@@ -128,7 +130,7 @@ export class TaskTemplateService {
   }
 
   async update(id: string, updateTaskTemplateDto: UpdateTaskTemplateDto) {
-    const { name, description, groupId, taskType, parentTaskId } =
+    const { name, description, groupId, taskType, parentTaskId, budgetedHours, rank } =
       updateTaskTemplateDto;
 
     // Validate name length if name is being updated
@@ -180,14 +182,16 @@ export class TaskTemplateService {
       throw new BadRequestException('Tasks must have a parent story');
     }
 
-    // Get task group if provided
-    let group = existingTask.group;
+    // Get task groupProject if provided 
+    // Note: The group field has been removed from Task entity
+    let groupProject = existingTask.groupProject;
     if (groupId) {
-      group = await this.taskgroupRepository.findOne({
+      // Here we need to look for a TaskGroupProject instead
+      groupProject = await this.taskGroupProjectRepository.findOne({
         where: { id: groupId }
       });
-      if (!group) {
-        throw new BadRequestException(`Task group with ID ${groupId} not found`);
+      if (!groupProject) {
+        throw new BadRequestException(`Task group project with ID ${groupId} not found`);
       }
     }
 
@@ -198,7 +202,9 @@ export class TaskTemplateService {
         description: description !== undefined ? description : existingTask.description,
         taskType: taskType || existingTask.taskType,
         group,
-        parentTask
+        parentTask,
+        budgetedHours: budgetedHours !== undefined ? budgetedHours : existingTask.budgetedHours,
+        rank: rank !== undefined ? rank : existingTask.rank
       });
 
       // Return the updated task with relations

@@ -13,7 +13,8 @@ import { ProjectsService } from './projects.service';
 import { ProjectTimelineService } from './project-timeline.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AddFromTemplatesDto } from './dto/add-from-templates.dto';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
@@ -65,5 +66,11 @@ export class ProjectsController {
   @Get('users/:uid')
   userProjects(@Param('uid') uid: string) {
     return this.projectsService.findByUserId(uid);
+  }
+
+  @Post('add-from-templates')
+  @ApiOperation({ summary: 'Add tasks to project from templates' })
+  addFromTemplates(@Body() addFromTemplatesDto: AddFromTemplatesDto) {
+    return this.projectsService.addFromTemplates(addFromTemplatesDto);
   }
 }

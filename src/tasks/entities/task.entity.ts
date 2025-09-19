@@ -1,6 +1,7 @@
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { TaskGroupProject } from 'src/task-groups/entities/task-group-project.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import {
@@ -26,6 +27,12 @@ export class Task extends CustomBaseEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   dueDate?: Date;
+
+  @Column({ nullable: true, default: 0 })
+  rank: number;
+
+  @Column({ nullable: true, type: 'float', default: 0 })
+  budgetedHours: number;
 
   @Column({
     type: 'enum',
@@ -96,10 +103,10 @@ export class Task extends CustomBaseEntity {
 
   @OneToMany(() => Worklog, (worklog) => worklog.task)
   worklogs: Worklog[];
-
-  @ManyToOne(() => TaskGroup, (taskGroup) => taskGroup.task, {
+  
+  @ManyToOne(() => TaskGroupProject, (taskGroupProject) => taskGroupProject.tasks, {
     onDelete: 'CASCADE',
     nullable: true
   })
-  group?: TaskGroup;
+  groupProject?: TaskGroupProject;
 }

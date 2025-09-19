@@ -67,6 +67,9 @@ export class UserEntity extends CustomBaseEntity {
 
   @Column()
   status: UserStatusEnum;
+  
+  @Column({ type: 'float', nullable: true, default: 50 })
+  hourlyRate: number;
 
   @Column({ nullable: true })
   @Exclude({

@@ -17,6 +17,12 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { BusinessSizeModule } from 'src/business-size/business-size.module';
 import { BusinessNatureModule } from 'src/business-nature/business-nature.module';
 import { LegalStatusModule } from 'src/legal-status/legal-status.module';
+import { TaskSuperProject } from 'src/task-super/entities/task-super-project.entity';
+import { TaskGroupProject } from 'src/task-groups/entities/task-group-project.entity';
+import { Task } from 'src/tasks/entities/task.entity';
+import { TaskSuper } from 'src/task-super/entities/task-super.entity';
+import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 
 @Module({
   imports: [
@@ -27,7 +33,13 @@ import { LegalStatusModule } from 'src/legal-status/legal-status.module';
       Notification, 
       Billing, 
       NatureOfWork,
-      Customer
+      Customer,
+      TaskSuperProject,
+      TaskGroupProject,
+      Task,
+      TaskSuper,
+      TaskGroup,
+      TaskTemplate
     ]),
     CustomersModule,
     BusinessSizeModule,

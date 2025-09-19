@@ -34,7 +34,7 @@ export class UsersService {
   ) {}
 
   async create(createUsersDto: CreateUsersDto) {
-    const { email, name, role } = createUsersDto;
+    const { email, name, role, hourlyRate } = createUsersDto;
 
     const user = await this.userRepository.findOne({ where: { email } });
     if (user) {
@@ -44,7 +44,8 @@ export class UsersService {
       email,
       name,
       username: name,
-      roleId: role
+      roleId: role,
+      hourlyRate: typeof hourlyRate === 'number' ? hourlyRate : 500
     });
 
     return savedUser;
@@ -123,7 +124,10 @@ export class UsersService {
       updateData.roleId = updateUserDto.role;
       delete updateData.role;
     }
-
+    // Always set hourlyRate if provided (including 0)
+    if (typeof updateUserDto.hourlyRate === 'number') {
+      updateData.hourlyRate = updateUserDto.hourlyRate;
+    }
     // Use the auth service's update method which has proper validation and role handling
     return await this.authService.update(id, updateData);
   }

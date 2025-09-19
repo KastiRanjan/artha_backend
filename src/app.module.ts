@@ -26,6 +26,7 @@ import { MailModule } from 'src/mail/mail.module';
 import { PermissionsModule } from 'src/permission/permissions.module';
 import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
 import { RolesModule } from 'src/role/roles.module';
+import { TaskSuperModule } from 'src/task-super/task-super.module';
 import { TwofaModule } from 'src/twofa/twofa.module';
 import { WorkhourModule } from 'src/workhour/workhour.module';
 import { AttendenceModule } from './attendence/attendence.module';
@@ -89,6 +90,7 @@ import { LegalStatusModule } from './legal-status/legal-status.module';
     ProjectsModule,
     TasksModule,
     TaskGroupsModule,
+    TaskSuperModule,
     WorklogModule,
     TaskTemplateModule,
     AttendenceModule,

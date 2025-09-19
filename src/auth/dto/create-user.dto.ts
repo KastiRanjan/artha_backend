@@ -1,5 +1,5 @@
 import { OmitType } from '@nestjs/swagger';
-import { IsIn, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
 
 import { RegisterUserDto } from 'src/auth/dto/register-user.dto';
 import { UserStatusEnum } from 'src/auth/user-status.enum';
@@ -23,4 +23,8 @@ export class CreateUserDto extends OmitType(RegisterUserDto, [
 
   @IsString()
   roleId: string;
+  
+  @IsOptional()
+  @IsNumber()
+  hourlyRate?: number;
 }

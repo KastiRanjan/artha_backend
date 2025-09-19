@@ -6,13 +6,14 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards
+  UseGuards,
+  Query
 } from '@nestjs/common';
 import { TaskGroupsService } from './task-groups.service';
 import { UpdateTaskGroupDto } from './dto/update-task-group.dto';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CreateTaskGroupDto } from './dto/create-task-group.dto';
 @ApiTags('task-group')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -27,8 +28,9 @@ export class TaskGroupsController {
   }
 
   @Get()
-  findAll() {
-    return this.taskGroupsService.findAll();
+  @ApiQuery({ name: 'taskSuperId', required: false })
+  findAll(@Query('taskSuperId') taskSuperId?: string) {
+    return this.taskGroupsService.findAll(taskSuperId);
   }
 
   @Get(':id')

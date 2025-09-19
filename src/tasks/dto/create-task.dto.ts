@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsArray, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID, IsEnum, IsArray, IsBoolean, IsNumber } from 'class-validator';
 
 export enum TaskTypeEnum {
   STORY = 'story',
@@ -29,6 +29,14 @@ export class CreateTaskDto {
   dueDate?: Date;
 
   @IsOptional()
+  @IsNumber()
+  rank?: number;
+
+  @IsOptional()
+  @IsNumber()
+  budgetedHours?: number;
+
+  @IsOptional()
   @IsUUID('4')  // Assuming groupId is a UUID
   groupId?: string;
 
@@ -55,7 +63,8 @@ export class CreateTaskDto {
   @IsOptional()
   @IsUUID('4')  // Assuming parentTaskId is a UUID
   parentTaskId?: string;
-    @IsOptional()
-    @IsEnum(TaskTypeEnum)
-    taskType?: TaskTypeEnum;
-  }
+  
+  @IsOptional()
+  @IsEnum(TaskTypeEnum)
+  taskType?: TaskTypeEnum;
+}

@@ -19,6 +19,12 @@ export class TaskTemplate extends CustomBaseEntity {
   @Column('text', { nullable: true })
   description?: string;
 
+  @Column({ nullable: true, default: 0 })
+  rank: number;
+
+  @Column({ nullable: true, type: 'float', default: 0 })
+  budgetedHours: number;
+
   @ManyToOne(() => TaskGroup, (taskGroup) => taskGroup.tasktemplate, {
     onDelete: 'CASCADE',
     nullable: true

@@ -9,9 +9,16 @@ import { NotificationService } from 'src/notification/notification.service';
 import { Repository } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { AddFromTemplatesDto } from './dto/add-from-templates.dto';
 import { Project } from './entities/project.entity';
 import { ProjectTimelineService } from './project-timeline.service';
 import { ProjectDateFormatter } from './utils/date-formatter.util';
+import { TaskSuperProject } from 'src/task-super/entities/task-super-project.entity';
+import { TaskGroupProject } from 'src/task-groups/entities/task-group-project.entity';
+import { Task } from 'src/tasks/entities/task.entity';
+import { TaskSuper } from 'src/task-super/entities/task-super.entity';
+import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 dotenv.config();
 
 @Injectable()
@@ -26,6 +33,18 @@ export class ProjectsService {
     private billingRepository: Repository<Billing>,
     @InjectRepository(NatureOfWork)
     private natureOfWorkRepository: Repository<NatureOfWork>,
+    @InjectRepository(TaskSuperProject)
+    private taskSuperProjectRepository: Repository<TaskSuperProject>,
+    @InjectRepository(TaskGroupProject)
+    private taskGroupProjectRepository: Repository<TaskGroupProject>,
+    @InjectRepository(Task)
+    private taskRepository: Repository<Task>,
+    @InjectRepository(TaskSuper)
+    private taskSuperRepository: Repository<TaskSuper>,
+    @InjectRepository(TaskGroup)
+    private taskGroupRepository: Repository<TaskGroup>,
+    @InjectRepository(TaskTemplate)
+    private taskTemplateRepository: Repository<TaskTemplate>,
     private readonly notificationService: NotificationService,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
@@ -128,13 +147,14 @@ export class ProjectsService {
         'projectLead', 
         'projectManager', 
         'tasks.assignees', 
-        'tasks.group',
+        'tasks.groupProject',
+        'tasks.groupProject.taskSuper',
         'tasks.subTasks',
         'tasks.subTasks.assignees',
-        'tasks.subTasks.group', 
+        'tasks.subTasks.groupProject', 
         'tasks.parentTask',
         'tasks.parentTask.assignees',
-        'tasks.parentTask.group',
+        'tasks.parentTask.groupProject',
         'billing', 
         'customer', 
         'natureOfWork'
@@ -268,5 +288,162 @@ export class ProjectsService {
     }
     
     return projects.map(project => ProjectDateFormatter.addNepaliDates(project));
+  }
+
+  async addFromTemplates(dto: AddFromTemplatesDto) {
+    // Find the project
+    const project = await this.projectRepository.findOne({
+      where: { id: dto.projectId },
+      relations: ['users']
+    });
+
+    if (!project) {
+      throw new Error(`Project with ID ${dto.projectId} not found`);
+    }
+
+    // Process each task super
+    const taskSuperProjectMap = new Map<string, TaskSuperProject>();
+    for (const taskSuperItem of dto.taskSupers || []) {
+      // Find the original task super
+      const taskSuper = await this.taskSuperRepository.findOne({
+        where: { id: taskSuperItem.id }
+      });
+
+      if (!taskSuper) {
+        throw new Error(`Task Super with ID ${taskSuperItem.id} not found`);
+      }
+
+      // Create task super project
+      const taskSuperProject = this.taskSuperProjectRepository.create({
+        name: taskSuperItem.name,
+        description: taskSuper.description || '',
+        rank: taskSuper.rank || 0,
+        project,
+        projectId: project.id,
+        originalTaskSuperId: taskSuperItem.id
+      });
+
+      const savedTaskSuperProject = await this.taskSuperProjectRepository.save(taskSuperProject);
+      taskSuperProjectMap.set(taskSuperItem.id, savedTaskSuperProject);
+    }
+
+    // Process each task group
+    const taskGroupProjectMap = new Map<string, TaskGroupProject>();
+    for (const taskGroupItem of dto.taskGroups || []) {
+      // Find the original task group
+      const taskGroup = await this.taskGroupRepository.findOne({
+        where: { id: taskGroupItem.id }
+      });
+
+      if (!taskGroup) {
+        throw new Error(`Task Group with ID ${taskGroupItem.id} not found`);
+      }
+
+      // Get parent task super project if exists
+      let taskSuperProject = null;
+      let taskSuperId = null;
+      if (taskGroupItem.taskSuperId && taskSuperProjectMap.has(taskGroupItem.taskSuperId)) {
+        taskSuperProject = taskSuperProjectMap.get(taskGroupItem.taskSuperId);
+        taskSuperId = taskSuperProject.id;
+      }
+
+      // Create task group project
+      const taskGroupProject = this.taskGroupProjectRepository.create({
+        name: taskGroupItem.name,
+        description: taskGroup.description || '',
+        rank: taskGroup.rank || 0,
+        project,
+        projectId: project.id,
+        taskSuper: taskSuperProject,
+        taskSuperId,
+        originalTaskGroupId: taskGroupItem.id
+      });
+
+      const savedTaskGroupProject = await this.taskGroupProjectRepository.save(taskGroupProject);
+      taskGroupProjectMap.set(taskGroupItem.id, savedTaskGroupProject);
+    }
+
+    // Process each task template
+    const taskMap = new Map<string, Task>();
+    for (const templateItem of dto.taskTemplates || []) {
+      // Find the original task template
+      const template = await this.taskTemplateRepository.findOne({
+        where: { id: templateItem.id },
+        relations: ['taskGroup']
+      });
+
+      if (!template) {
+        throw new Error(`Task Template with ID ${templateItem.id} not found`);
+      }
+
+      // Get parent task group project
+      let groupProject = null;
+      if (templateItem.taskGroupId && taskGroupProjectMap.has(templateItem.taskGroupId)) {
+        groupProject = taskGroupProjectMap.get(templateItem.taskGroupId);
+      }
+
+      // Create task from template
+      const task = this.taskRepository.create({
+        name: templateItem.name,
+        description: template.description || '',
+        budgetedHours: templateItem.budgetedHours,
+        project,
+        groupProject,
+        status: 'open',
+        priority: 'medium',
+        taskType: template.taskType || 'story',
+        rank: template.rank || 0,
+        dueDate: project.endingDate
+      });
+
+      const savedTask = await this.taskRepository.save(task);
+      taskMap.set(templateItem.id, savedTask);
+    }
+
+    // Process each subtask
+    for (const subtaskItem of dto.subtasks || []) {
+      // Find the parent task
+      let parentTask = null;
+      if (subtaskItem.parentId && taskMap.has(subtaskItem.parentId)) {
+        parentTask = taskMap.get(subtaskItem.parentId);
+      }
+
+      if (!parentTask) {
+        throw new Error(`Parent task for subtask ${subtaskItem.id} not found`);
+      }
+
+      // Create subtask
+      const subtask = this.taskRepository.create({
+        name: subtaskItem.name,
+        description: '',
+        budgetedHours: subtaskItem.budgetedHours,
+        project,
+        groupProject: parentTask.groupProject,
+        status: 'open',
+        priority: 'medium',
+        taskType: 'task',
+        rank: 0,
+        dueDate: project.endingDate,
+        parentTask
+      });
+
+      await this.taskRepository.save(subtask);
+    }
+
+    // Log in timeline
+    await this.projectTimelineService.log({
+      projectId: project.id,
+      action: 'tasks_added_from_templates',
+      details: `Tasks added from templates: ${dto.taskTemplates?.length || 0} templates, ${dto.subtasks?.length || 0} subtasks`
+    });
+
+    // Return success message
+    return {
+      message: 'Templates successfully added to project',
+      taskSupers: dto.taskSupers?.length || 0,
+      taskGroups: dto.taskGroups?.length || 0,
+      tasks: dto.taskTemplates?.length || 0,
+      subtasks: dto.subtasks?.length || 0
+    };
   }
 }

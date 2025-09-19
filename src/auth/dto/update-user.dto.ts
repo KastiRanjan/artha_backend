@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsString, ValidateIf } from 'class-validator';
+import { IsEmail, IsIn, IsNumber, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 import { UserStatusEnum } from 'src/auth/user-status.enum';
@@ -47,4 +47,9 @@ export class UpdateUserDto {
   @ApiPropertyOptional()
   @ValidateIf((object, value) => value)
   roleId: string;
+  
+  @ApiPropertyOptional()
+  @ValidateIf((object, value) => value)
+  @IsNumber()
+  hourlyRate?: number;
 }

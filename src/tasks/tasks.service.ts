@@ -5,7 +5,10 @@ import { isEmpty } from 'lodash';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { ProjectTimelineService } from 'src/projects/project-timeline.service';
+import { TaskGroupProject } from 'src/task-groups/entities/task-group-project.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
+import { TaskSuperProject } from 'src/task-super/entities/task-super-project.entity';
+import { TaskSuper } from 'src/task-super/entities/task-super.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Repository } from 'typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -27,6 +30,12 @@ export class TasksService {
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(TaskGroup)
     private taskGroupRepository: Repository<TaskGroup>,
+    @InjectRepository(TaskGroupProject)
+    private taskGroupProjectRepository: Repository<TaskGroupProject>,
+    @InjectRepository(TaskSuper)
+    private taskSuperRepository: Repository<TaskSuper>,
+    @InjectRepository(TaskSuperProject)
+    private taskSuperProjectRepository: Repository<TaskSuperProject>,
     @InjectRepository(Worklog)
     private worklogRepository: Repository<Worklog>,
     private readonly projectTimelineService: ProjectTimelineService
@@ -41,8 +50,69 @@ export class TasksService {
     return newCode.toString();
   }
 
+  // Helper method to create a project-specific TaskSuperProject
+  private async createProjectTaskSuper(
+    originalTaskSuper: TaskSuper, 
+    projectId: string
+  ): Promise<TaskSuperProject> {
+    // Check if a project-specific TaskSuper already exists
+    const existingTaskSuper = await this.taskSuperProjectRepository.findOne({
+      where: {
+        originalTaskSuperId: originalTaskSuper.id,
+        projectId: projectId
+      }
+    });
+
+    if (existingTaskSuper) {
+      return existingTaskSuper;
+    }
+
+    // Create a new TaskSuperProject for this project
+    const projectTaskSuper = this.taskSuperProjectRepository.create({
+      name: originalTaskSuper.name,
+      description: originalTaskSuper.description || '',
+      rank: originalTaskSuper.rank,
+      projectId: projectId,
+      originalTaskSuperId: originalTaskSuper.id
+    });
+
+    return await this.taskSuperProjectRepository.save(projectTaskSuper);
+  }
+
+  // Helper method to create a project-specific TaskGroupProject
+  private async createProjectTaskGroup(
+    originalTaskGroup: TaskGroup,
+    projectTaskSuper: TaskSuperProject,
+    projectId: string
+  ): Promise<TaskGroupProject> {
+    // Check if a project-specific TaskGroup already exists
+    const existingTaskGroup = await this.taskGroupProjectRepository.findOne({
+      where: {
+        originalTaskGroupId: originalTaskGroup.id,
+        projectId: projectId
+      }
+    });
+
+    if (existingTaskGroup) {
+      return existingTaskGroup;
+    }
+
+    // Create a new TaskGroupProject for this project
+    const projectTaskGroup = this.taskGroupProjectRepository.create({
+      name: originalTaskGroup.name,
+      description: originalTaskGroup.description || '',
+      rank: originalTaskGroup.rank,
+      taskSuper: projectTaskSuper,
+      taskSuperId: projectTaskSuper.id,
+      projectId: projectId,
+      originalTaskGroupId: originalTaskGroup.id
+    });
+
+    return await this.taskGroupProjectRepository.save(projectTaskGroup);
+  }
+
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-  const { name, description, projectId, parentTaskId, groupId, dueDate, assineeId, taskType } = createTaskDto;
+  const { name, description, projectId, parentTaskId, groupId, dueDate, assineeId, taskType, rank, budgetedHours } = createTaskDto;
     // Check for existing task with the same name in the project
     const existingTask = await this.taskRepository.findOne({
       where: {
@@ -90,17 +160,38 @@ export class TasksService {
       }
     }
 
+    // Check for both group and groupProject
+    let group = null;
+    let groupProject = null;
+    
+    if (groupId) {
+      // First check if it's a template group
+      group = await this.taskGroupRepository.findOne({ 
+        where: { id: groupId }
+      });
+      
+      // If not found, check if it's a project-specific group
+      if (!group) {
+        groupProject = await this.taskGroupProjectRepository.findOne({
+          where: { id: groupId }
+        });
+      }
+    }
+
     // Create a new task instance
     const task = this.taskRepository.create({
       name,
       tcode: await this.generateTaskCode(projectId),
       description,
       dueDate: dueDate ? new Date(dueDate) : null,
-      group: groupId ? await this.taskGroupRepository.findOne({ where: { id: groupId } }) : null,
+      group,
+      groupProject,
       project,
       parentTask,
       assignees: finalAssignees,
       taskType,
+      rank: rank || 0,
+      budgetedHours: budgetedHours || 0
     });
 
     // Save the task to the database
@@ -124,41 +215,86 @@ export class TasksService {
   }
   async addBulk(importTaskDto: any): Promise<any> {
     const { project, tasks } = importTaskDto;
-    const projectEntity = await this.projectRepository.findOne(project);
+    const projectEntity = await this.projectRepository.findOne({
+      where: { id: project }
+    });
 
+    if (!projectEntity) {
+      throw new NotFoundException(`Project with ID ${project} not found`);
+    }
+
+    // Map to track original group ID to project-specific group
+    const projectTaskGroupMap = new Map<string, TaskGroupProject>();
+    
     const savedTasks = await Promise.all(
-      tasks.map(async (task) => {
-        const taskGroup = await this.taskGroupRepository.findOne({
-          where: {
-            id: task
-          },
+      tasks.map(async (taskGroupId) => {
+        // Get the original TaskGroup with its TaskSuper
+        const originalTaskGroup = await this.taskGroupRepository.findOne({
+          where: { id: taskGroupId },
           relations: [
+            'taskSuper',
             'tasktemplate',
             'tasktemplate.parentTask',
             'tasktemplate.subTasks'
           ]
         });
 
-        if (!taskGroup) {
+        if (!originalTaskGroup) {
           throw new NotFoundException(
-            `Task Group with ID ${task.id} not found`
-          );
-        }
-        if (taskGroup && taskGroup.tasktemplate) {
-          taskGroup.tasktemplate = taskGroup.tasktemplate.filter(
-            (template) => template.parentTask === null
+            `Task Group with ID ${taskGroupId} not found`
           );
         }
 
-        const newTasks = await Promise.all(
-          taskGroup.tasktemplate.map(async (template) => {
-            const existingTask = await this.taskRepository.findOne({
-              where: {
-                name: template.name,
-                project: projectEntity
+        // Create project-specific copies of TaskSuper and TaskGroup in separate tables
+        let projectTaskSuper: TaskSuperProject;
+        if (originalTaskGroup.taskSuper) {
+          projectTaskSuper = await this.createProjectTaskSuper(
+            originalTaskGroup.taskSuper,
+            projectEntity.id
+          );
+        } else {
+          // If no TaskSuper, create a default one for this project
+          projectTaskSuper = await this.taskSuperProjectRepository.save(
+            this.taskSuperProjectRepository.create({
+              name: `Project ${projectEntity.name} TaskSuper`,
+              description: `Auto-generated TaskSuper for project ${projectEntity.id}`,
+              rank: 1,
+              projectId: projectEntity.id,
+              originalTaskSuperId: null
+            })
+          );
+        }
+
+        // Create a project-specific TaskGroup in the separate table
+        const projectTaskGroup = await this.createProjectTaskGroup(
+          originalTaskGroup,
+          projectTaskSuper,
+          projectEntity.id
+        );
+
+        // Store the mapping from original to project-specific TaskGroup
+        projectTaskGroupMap.set(originalTaskGroup.id, projectTaskGroup);
+
+        if (originalTaskGroup.tasktemplate) {
+          // Filter parent tasks (those without a parent)
+          const parentTemplates = originalTaskGroup.tasktemplate.filter(
+            (template) => template.parentTask === null
+          );
+
+          const newTasks = await Promise.all(
+            parentTemplates.map(async (template) => {
+              const existingTask = await this.taskRepository.findOne({
+                where: {
+                  name: template.name,
+                  project: projectEntity
+                }
+              });
+              
+              if (existingTask) {
+                return null; // Skip existing tasks
               }
-            });
-            if (!existingTask) {
+
+              // Create parent task
               const newTask = await this.taskRepository.save(
                 this.taskRepository.create({
                   name: template.name,
@@ -166,12 +302,15 @@ export class TasksService {
                   description: template.description,
                   taskType: template.taskType,
                   project: projectEntity,
-                  parentTask: template.parentTask,
-                  group: taskGroup
+                  parentTask: null, // This is a parent task
+                  groupProject: projectTaskGroup, // Use the project-specific TaskGroup
+                  rank: template.rank,
+                  budgetedHours: template.budgetedHours
                 })
               );
-              if (!isEmpty(template.subTasks)) {
-                // Process subtasks sequentially to ensure proper creation
+
+              // Process subtasks
+              if (template.subTasks && template.subTasks.length > 0) {
                 await Promise.all(
                   template.subTasks.map(async (subTaskTemplate) => {
                     const existingSubTask = await this.taskRepository.findOne({
@@ -181,30 +320,36 @@ export class TasksService {
                       }
                     });
                     
-                    if (!existingSubTask) {
-                      const subTask = this.taskRepository.create({
-                        name: subTaskTemplate.name,
-                        tcode: await this.generateTaskCode(project),
-                        description: subTaskTemplate.description,
-                        taskType: subTaskTemplate.taskType,
-                        project: projectEntity,
-                        parentTask: newTask,
-                        group: taskGroup
-                      });
-                      return await this.taskRepository.save(subTask);
+                    if (existingSubTask) {
+                      return null; // Skip existing subtasks
                     }
-                    return null;
+
+                    // Create subtask
+                    const subTask = this.taskRepository.create({
+                      name: subTaskTemplate.name,
+                      tcode: await this.generateTaskCode(project),
+                      description: subTaskTemplate.description,
+                      taskType: subTaskTemplate.taskType,
+                      project: projectEntity,
+                      parentTask: newTask, // Link to the parent task
+                      groupProject: projectTaskGroup, // Use the project-specific TaskGroup
+                      rank: subTaskTemplate.rank,
+                      budgetedHours: subTaskTemplate.budgetedHours
+                    });
+                    
+                    return await this.taskRepository.save(subTask);
                   })
                 );
               }
+              
               return newTask;
-            } else {
-              return null;
-            }
-          })
-        );
+            })
+          );
 
-        return newTasks.filter((task) => task !== null);
+          return newTasks.filter((task) => task !== null);
+        }
+        
+        return [];
       })
     );
 
@@ -213,23 +358,6 @@ export class TasksService {
       tasks: savedTasks,
       message: 'Successfully added tasks to project'
     };
-
-    // const savedTasks = await Promise.all(
-    //   importTaskDto.tasks.map(async (task) => {
-    //     const newTask = this.taskRepository.create({
-    //       name: task.name,
-    //       tcode: await this.generateTaskCode(importTaskDto.project),
-    //       description: task.description,
-    //       project: await this.projectRepository.findOne(importTaskDto.project),
-    //     });
-    //     return this.taskRepository.save(newTask);
-    //   })
-    // );
-    // return {
-    //   project: importTaskDto.project,
-    //   tasks: savedTasks,
-    //   message: 'Successfully added tasks to project',
-    // };
   }
 
   async addBulkList(importTaskTemplateDto: any): Promise<any> {
@@ -244,13 +372,56 @@ export class TasksService {
     }
   
     // Validate task groups (tasks field contains task group IDs)
-    const taskGroups = await this.taskGroupRepository.find({
+    const originalTaskGroups = await this.taskGroupRepository.find({
       where: { id: In(tasks) }, // Use In operator for array of IDs
-      relations: ['tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks']
+      relations: ['taskSuper', 'tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks']
     });
   
-    if (!taskGroups.length) {
+    if (!originalTaskGroups.length) {
       throw new NotFoundException(`No valid task groups found for IDs: ${tasks}`);
+    }
+
+    // Map to track original group ID to project-specific group
+    const projectTaskGroupMap = new Map<string, TaskGroupProject>();
+    const projectTaskSuperMap = new Map<string, TaskSuperProject>();
+    
+    // Create project-specific TaskSuper and TaskGroup entities in separate tables
+    for (const originalGroup of originalTaskGroups) {
+      // Create project-specific copy of TaskSuper if it exists
+      let projectTaskSuper: TaskSuperProject;
+      if (originalGroup.taskSuper) {
+        // Check if we've already created a copy for this TaskSuper
+        if (projectTaskSuperMap.has(originalGroup.taskSuper.id)) {
+          projectTaskSuper = projectTaskSuperMap.get(originalGroup.taskSuper.id);
+        } else {
+          projectTaskSuper = await this.createProjectTaskSuper(
+            originalGroup.taskSuper,
+            projectEntity.id
+          );
+          projectTaskSuperMap.set(originalGroup.taskSuper.id, projectTaskSuper);
+        }
+      } else {
+        // If no TaskSuper, create a default one for this project
+        projectTaskSuper = await this.taskSuperProjectRepository.save(
+          this.taskSuperProjectRepository.create({
+            name: `Project ${projectEntity.name} TaskSuper`,
+            description: `Auto-generated TaskSuper for project ${projectEntity.id}`,
+            rank: 1,
+            projectId: projectEntity.id,
+            originalTaskSuperId: null
+          })
+        );
+      }
+
+      // Create a project-specific TaskGroup in the separate table
+      const projectTaskGroup = await this.createProjectTaskGroup(
+        originalGroup,
+        projectTaskSuper,
+        projectEntity.id
+      );
+
+      // Store the mapping from original to project-specific TaskGroup
+      projectTaskGroupMap.set(originalGroup.id, projectTaskGroup);
     }
   
     // Parse tasklist to extract individual template IDs and determine explicit selections
@@ -311,7 +482,7 @@ export class TasksService {
     console.log('Compound selections:', Object.fromEntries(compoundSelections));
     
     // Filter task templates based on parsed template IDs
-    const templatesToProcess = taskGroups
+    const templatesToProcess = originalTaskGroups
       .flatMap(group => group.tasktemplate || [])
       .filter(template => individualTemplateIds.includes(template.id));
   
@@ -332,9 +503,19 @@ export class TasksService {
     console.log('Parent templates:', parentTemplates.map(t => ({ id: t.id, name: t.name })));
     console.log('Child templates:', childTemplates.map(t => ({ id: t.id, name: t.name, parentId: t.parentTask?.id })));
     
-    // Create a map to track created parent tasks
+    // Create a map to track created parent tasks and template ID to original group ID
     const createdParentTasks = new Map();
+    const templateToGroupMap = new Map<string, string>();
     const allSuccessfulTasks = [];
+    
+    // Build a map of template ID to original group ID for lookup
+    originalTaskGroups.forEach(group => {
+      if (group.tasktemplate) {
+        group.tasktemplate.forEach(template => {
+          templateToGroupMap.set(template.id, group.id);
+        });
+      }
+    });
   
     // Process parent templates first
     for (const template of parentTemplates) {
@@ -351,10 +532,19 @@ export class TasksService {
         continue; // Skip existing tasks
       }
 
-      // Find the task group for this template
-      const taskGroup = taskGroups.find(group => 
-        group.tasktemplate.some(t => t.id === template.id)
-      );
+      // Find the original group for this template
+      const originalGroupId = templateToGroupMap.get(template.id);
+      if (!originalGroupId) {
+        console.warn(`Could not find original group for template ${template.id}`);
+        continue;
+      }
+      
+      // Use the project-specific TaskGroup
+      const projectTaskGroup = projectTaskGroupMap.get(originalGroupId);
+      if (!projectTaskGroup) {
+        console.warn(`Could not find project-specific group for original group ${originalGroupId}`);
+        continue;
+      }
 
       // Create new parent task from template
       const newTask = this.taskRepository.create({
@@ -364,9 +554,11 @@ export class TasksService {
         taskType: template.taskType,
         project: projectEntity,
         status: 'open',
-        group: taskGroup,
+        groupProject: projectTaskGroup, // Use project-specific TaskGroup from separate table
         assignees: [],
-        parentTask: null
+        parentTask: null,
+        rank: template.rank || 0,
+        budgetedHours: template.budgetedHours || 0
       });
 
       const savedTask = await this.taskRepository.save(newTask);
@@ -375,7 +567,6 @@ export class TasksService {
     }
 
     // Process child templates - only if parent wasn't explicitly selected
-    // Track which child tasks we've created to avoid duplicates later
     const createdChildTasks = new Set<string>();
     
     for (const template of childTemplates) {
@@ -385,7 +576,6 @@ export class TasksService {
         .includes(template.id);
       
       if (isPartOfCompoundSelection) {
-        // Add to createdChildTasks to track that this will be handled by parent processing
         createdChildTasks.add(template.id);
         continue; // Skip this child as it will be handled by parent processing
       }
@@ -419,9 +609,18 @@ export class TasksService {
       // If parent still doesn't exist, create it first
       if (!parentTask) {
         const parentTemplate = template.parentTask;
-        const taskGroup = taskGroups.find(group => 
-          group.tasktemplate.some(t => t.id === parentTemplate.id)
-        );
+        const originalGroupId = templateToGroupMap.get(parentTemplate.id);
+        if (!originalGroupId) {
+          console.warn(`Could not find original group for parent template ${parentTemplate.id}`);
+          continue;
+        }
+        
+        // Use the project-specific TaskGroup
+        const projectTaskGroup = projectTaskGroupMap.get(originalGroupId);
+        if (!projectTaskGroup) {
+          console.warn(`Could not find project-specific group for original group ${originalGroupId}`);
+          continue;
+        }
 
         const newParentTask = this.taskRepository.create({
           name: parentTemplate.name,
@@ -430,9 +629,11 @@ export class TasksService {
           taskType: parentTemplate.taskType,
           project: projectEntity,
           status: 'open',
-          group: taskGroup,
+          groupProject: projectTaskGroup, // Use project-specific TaskGroup from separate table
           assignees: [],
-          parentTask: null
+          parentTask: null,
+          rank: parentTemplate.rank || 0,
+          budgetedHours: parentTemplate.budgetedHours || 0
         });
 
         parentTask = await this.taskRepository.save(newParentTask);
@@ -440,10 +641,19 @@ export class TasksService {
         allSuccessfulTasks.push(parentTask);
       }
 
-      // Find the task group for this template
-      const taskGroup = taskGroups.find(group => 
-        group.tasktemplate.some(t => t.id === template.id)
-      );
+      // Find the original group for this template
+      const originalGroupId = templateToGroupMap.get(template.id);
+      if (!originalGroupId) {
+        console.warn(`Could not find original group for template ${template.id}`);
+        continue;
+      }
+      
+      // Use the project-specific TaskGroup
+      const projectTaskGroup = projectTaskGroupMap.get(originalGroupId);
+      if (!projectTaskGroup) {
+        console.warn(`Could not find project-specific group for original group ${originalGroupId}`);
+        continue;
+      }
 
       // Create new child task from template
       const newTask = this.taskRepository.create({
@@ -453,9 +663,11 @@ export class TasksService {
         taskType: template.taskType,
         project: projectEntity,
         status: 'open',
-        group: taskGroup,
+        groupProject: projectTaskGroup, // Use project-specific TaskGroup from separate table
         assignees: !projectEntity.allowSubtaskWorklog ? parentTask.assignees || [] : [],
-        parentTask: parentTask
+        parentTask: parentTask,
+        rank: template.rank || 0,
+        budgetedHours: template.budgetedHours || 0
       });
 
       const savedTask = await this.taskRepository.save(newTask);
@@ -469,7 +681,7 @@ export class TasksService {
       if (!parentTask) continue;
 
       // Get all subtasks for this parent from the template
-      const parentTemplateWithSubtasks = taskGroups
+      const parentTemplateWithSubtasks = originalTaskGroups
         .flatMap(group => group.tasktemplate || [])
         .find(t => t.id === parentTemplate.id);
 
@@ -498,10 +710,19 @@ export class TasksService {
             continue; // Skip existing subtasks
           }
 
-          // Find the task group for this subtask template
-          const taskGroup = taskGroups.find(group => 
-            group.tasktemplate.some(t => t.id === subTaskTemplate.id)
-          );
+          // Find the original group for this subtask template
+          const originalGroupId = templateToGroupMap.get(subTaskTemplate.id);
+          if (!originalGroupId) {
+            console.warn(`Could not find original group for subtask template ${subTaskTemplate.id}`);
+            continue;
+          }
+          
+          // Use the project-specific TaskGroup
+          const projectTaskGroup = projectTaskGroupMap.get(originalGroupId);
+          if (!projectTaskGroup) {
+            console.warn(`Could not find project-specific group for original group ${originalGroupId}`);
+            continue;
+          }
 
           // Create subtask
           const newSubTask = this.taskRepository.create({
@@ -511,9 +732,11 @@ export class TasksService {
             taskType: subTaskTemplate.taskType,
             project: projectEntity,
             status: 'open',
-            group: taskGroup,
+            groupProject: projectTaskGroup, // Use project-specific TaskGroup from separate table
             assignees: !projectEntity.allowSubtaskWorklog ? parentTask.assignees || [] : [],
-            parentTask: parentTask
+            parentTask: parentTask,
+            rank: subTaskTemplate.rank || 0,
+            budgetedHours: subTaskTemplate.budgetedHours || 0
           });
 
           const savedSubTask = await this.taskRepository.save(newSubTask);
@@ -536,32 +759,44 @@ export class TasksService {
         'worklogs', 
         'project', 
         'assignees', 
-        'group', 
+        'group',
+        'groupProject',
+        'groupProject.taskSuper',
         'subTasks',
         'subTasks.assignees',
         'subTasks.group',
+        'subTasks.groupProject',
         'parentTask',
         'parentTask.assignees',
-        'parentTask.group'
+        'parentTask.group',
+        'parentTask.groupProject'
       ]
     });
   }
 
   async findOne(id: string): Promise<Task> {
     const task = await this.taskRepository.findOne({
-      where: { id }
+      where: { id },
+      relations: [
+        'group',
+        'groupProject',
+        'groupProject.taskSuper'
+      ]
     });
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
     return task;
   }
+  
   async findOneByProjectId(id: string) {
     const tasks = await this.taskRepository.find({
       where: { project: { id: id } },
       relations: [
         'assignees', 
-        'group', 
+        'group',
+        'groupProject',
+        'groupProject.taskSuper',
         'project', 
         'parentTask'
       ]
@@ -581,7 +816,7 @@ export class TasksService {
               parentTask: { id: task.id },
               project: { id: id }
             },
-            relations: ['assignees', 'group', 'project']
+            relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
           });
           
           return {
@@ -600,14 +835,18 @@ export class TasksService {
       where: { project: { id: projectId }, id: taskId },
       relations: [
         'assignees', 
-        'group', 
+        'group',
+        'groupProject',
+        'groupProject.taskSuper',
         'subTasks',
         'subTasks.assignees',
         'subTasks.group',
+        'subTasks.groupProject',
         'project', 
         'parentTask',
         'parentTask.assignees',
-        'parentTask.group'
+        'parentTask.group',
+        'parentTask.groupProject'
       ]
     });
     if (!task) {
@@ -625,18 +864,42 @@ export class TasksService {
     task.name = updateTaskDto.name ?? task.name;
     task.status = updateTaskDto.status ?? task.status;
     task.description = updateTaskDto.description ?? task.description;
-    task.dueDate = updateTaskDto.dueDate
+    task.dueDate = updateTaskDto.dueDate ?? task.dueDate;
     task.first = updateTaskDto.first !== undefined ? updateTaskDto.first : task.first;
     task.last = updateTaskDto.last !== undefined ? updateTaskDto.last : task.last;
-    task.group = updateTaskDto.groupId
-      ? await this.taskGroupRepository.findOne({ where: { id: updateTaskDto.groupId } })
-      : task.group;
+    task.rank = updateTaskDto.rank !== undefined ? updateTaskDto.rank : task.rank;
+    task.budgetedHours = updateTaskDto.budgetedHours !== undefined ? updateTaskDto.budgetedHours : task.budgetedHours;
+    
+    // Update task group if provided
+    if (updateTaskDto.groupId) {
+      // First check if it's a template group
+      const group = await this.taskGroupRepository.findOne({ 
+        where: { id: updateTaskDto.groupId }
+      });
+      
+      // If found, set it
+      if (group) {
+        task.group = group;
+        task.groupProject = null; // Reset the other relation
+      } else {
+        // If not found, check if it's a project-specific group
+        const groupProject = await this.taskGroupProjectRepository.findOne({
+          where: { id: updateTaskDto.groupId }
+        });
+        
+        if (groupProject) {
+          task.groupProject = groupProject;
+        }
+      }
+    }
+    
     task.parentTask = updateTaskDto.parentTaskId
       ? await this.taskRepository.findOne({
           where: { id: updateTaskDto.parentTaskId }
         })
       : task.parentTask;
     task.taskType = updateTaskDto.taskType ?? task.taskType;
+    
     // Track previous assignees for logging
     const prevAssigneeIds = (task.assignees || []).map(u => u.id);
     const newAssignees = updateTaskDto.assineeId

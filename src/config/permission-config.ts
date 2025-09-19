@@ -1,5 +1,5 @@
-// Import removed since modules now directly defined in this file
-// import { businessSizePermissions, businessNaturePermissions } from './business-permissions';
+// All permissions are now directly defined in this file
+// No imports needed for permissions
 
 interface PermissionConfigInterface {
   roles: Array<rolePayload>;
@@ -174,6 +174,225 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     }
   ],
   modules: [
+    {
+      name: 'Task Super Project Management',
+      resource: 'task-super-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super projects',
+          route: [
+            {
+              path: '/task-super-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super project',
+          route: [
+            {
+              path: '/task-super-project',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super project',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super project by id',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super project by id',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get task super projects by project id',
+          route: [
+            {
+              path: '/task-super-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Group Project Management',
+      resource: 'task-group-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task group projects',
+          route: [
+            {
+              path: '/task-group-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task group project',
+          route: [
+            {
+              path: '/task-group-project',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task group project',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task group project by id',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task group project by id',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by project id',
+          route: [
+            {
+              path: '/task-group-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by task super project id',
+          route: [
+            {
+              path: '/task-group-project/task-super-project/:taskSuperProjectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Ranking Management',
+      resource: 'task-ranking',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Super Management',
+      resource: 'task-super',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Add task super to project',
+          route: [
+            {
+              path: '/task-super/add-to-project',
+              method: MethodList.POST
+            }
+          ]
+        }
+      ]
+    },
+    
+    
     {
       name: 'User management',
       resource: 'user',
@@ -593,6 +812,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id',
               method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Add tasks from templates',
+          route: [
+            {
+              path: '/projects/add-from-templates',
+              method: MethodList.POST
             }
           ]
         }
@@ -1849,6 +2077,214 @@ export const PermissionConfiguration: PermissionConfigInterface = {
   ],
   projectmanagerPermission: [
     {
+      name: 'Task Super Project Management',
+      resource: 'task-super-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super projects',
+          route: [
+            {
+              path: '/task-super-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super project',
+          route: [
+            {
+              path: '/task-super-project',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super project',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super project by id',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super project by id',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get task super projects by project id',
+          route: [
+            {
+              path: '/task-super-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Group Project Management',
+      resource: 'task-group-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task group projects',
+          route: [
+            {
+              path: '/task-group-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task group project',
+          route: [
+            {
+              path: '/task-group-project',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task group project',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task group project by id',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task group project by id',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by project id',
+          route: [
+            {
+              path: '/task-group-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by task super project id',
+          route: [
+            {
+              path: '/task-group-project/task-super-project/:taskSuperProjectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Ranking Management',
+      resource: 'task-ranking',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Super Management',
+      resource: 'task-super',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    {
       name: 'User management',
       resource: 'user',
       hasSubmodules: false,
@@ -2762,6 +3198,160 @@ export const PermissionConfiguration: PermissionConfigInterface = {
   ],
   auditseniorPermission: [
     {
+      name: 'Task Super Project Management',
+      resource: 'task-super-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super projects',
+          route: [
+            {
+              path: '/task-super-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task super project by id',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task super projects by project id',
+          route: [
+            {
+              path: '/task-super-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Group Project Management',
+      resource: 'task-group-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task group projects',
+          route: [
+            {
+              path: '/task-group-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group project by id',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by project id',
+          route: [
+            {
+              path: '/task-group-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by task super project id',
+          route: [
+            {
+              path: '/task-group-project/task-super-project/:taskSuperProjectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Ranking Management',
+      resource: 'task-ranking',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Super Management',
+      resource: 'task-super',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+    {
       name: 'User management',
       resource: 'user',
       hasSubmodules: false,
@@ -2931,6 +3521,83 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     }
   ],
   administratorPermission: [
+    {
+      name: 'Task Ranking Management',
+      resource: 'task-ranking',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Super Management',
+      resource: 'task-super',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
     {
       name: 'User management',
       resource: 'user',
@@ -3979,6 +4646,160 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     }
   ],
   auditjuniorPermission: [
+    {
+      name: 'Task Super Project Management',
+      resource: 'task-super-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super projects',
+          route: [
+            {
+              path: '/task-super-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task super project by id',
+          route: [
+            {
+              path: '/task-super-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task super projects by project id',
+          route: [
+            {
+              path: '/task-super-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Group Project Management',
+      resource: 'task-group-project',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task group projects',
+          route: [
+            {
+              path: '/task-group-project',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group project by id',
+          route: [
+            {
+              path: '/task-group-project/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by project id',
+          route: [
+            {
+              path: '/task-group-project/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get task group projects by task super project id',
+          route: [
+            {
+              path: '/task-group-project/task-super-project/:taskSuperProjectId',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Ranking Management',
+      resource: 'task-ranking',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update task rankings',
+          route: [
+            {
+              path: '/tasks/ranking',
+              method: MethodList.PATCH
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Task Super Management',
+      resource: 'task-super',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Add task super',
+          route: [
+            {
+              path: '/task-super',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Edit task super',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Get task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Delete task super by id',
+          route: [
+            {
+              path: '/task-super/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
     {
       name: 'User management',
       resource: 'user',

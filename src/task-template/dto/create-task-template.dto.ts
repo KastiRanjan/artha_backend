@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateTaskTemplateDto {
   @IsNotEmpty({ message: 'Task template name is required' })
@@ -11,6 +11,14 @@ export class CreateTaskTemplateDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  rank?: number;
+
+  @IsOptional()
+  @IsNumber()
+  budgetedHours?: number;
 
   @IsNotEmpty()
   @Type(() => String)
