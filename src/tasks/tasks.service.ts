@@ -184,8 +184,8 @@ export class TasksService {
       tcode: await this.generateTaskCode(projectId),
       description,
       dueDate: dueDate ? new Date(dueDate) : null,
-      group,
-      groupProject,
+      // group property doesn't exist on Task entity anymore
+      groupProject, // This is the correct relationship
       project,
       parentTask,
       assignees: finalAssignees,
@@ -196,6 +196,7 @@ export class TasksService {
 
     // Save the task to the database
     const savedTask = await this.taskRepository.save(task);
+    
     // Ensure project relation is loaded
     let taskWithProject = savedTask;
     if (!taskWithProject.project) {
@@ -204,6 +205,7 @@ export class TasksService {
         relations: ['project']
       });
     }
+    
     // Log task addition in project timeline
     await this.projectTimelineService.log({
       projectId: taskWithProject.project.id,
@@ -211,6 +213,7 @@ export class TasksService {
       action: 'task_added',
       details: `Task '${name}' added to project.`
     });
+    
     return savedTask;
   }
   async addBulk(importTaskDto: any): Promise<any> {
@@ -759,16 +762,16 @@ export class TasksService {
         'worklogs', 
         'project', 
         'assignees', 
-        'group',
+        // 'group', // Removed non-existent relation
         'groupProject',
         'groupProject.taskSuper',
         'subTasks',
         'subTasks.assignees',
-        'subTasks.group',
+        // 'subTasks.group', // Removed non-existent relation
         'subTasks.groupProject',
         'parentTask',
         'parentTask.assignees',
-        'parentTask.group',
+        // 'parentTask.group', // Removed non-existent relation
         'parentTask.groupProject'
       ]
     });
@@ -778,7 +781,7 @@ export class TasksService {
     const task = await this.taskRepository.findOne({
       where: { id },
       relations: [
-        'group',
+        // 'group', // Removed non-existent relation
         'groupProject',
         'groupProject.taskSuper'
       ]
@@ -794,7 +797,6 @@ export class TasksService {
       where: { project: { id: id } },
       relations: [
         'assignees', 
-        'group',
         'groupProject',
         'groupProject.taskSuper',
         'project', 
@@ -835,17 +837,14 @@ export class TasksService {
       where: { project: { id: projectId }, id: taskId },
       relations: [
         'assignees', 
-        'group',
         'groupProject',
         'groupProject.taskSuper',
         'subTasks',
         'subTasks.assignees',
-        'subTasks.group',
         'subTasks.groupProject',
         'project', 
         'parentTask',
         'parentTask.assignees',
-        'parentTask.group',
         'parentTask.groupProject'
       ]
     });
@@ -877,10 +876,11 @@ export class TasksService {
         where: { id: updateTaskDto.groupId }
       });
       
-      // If found, set it
+      // TaskGroup is no longer directly related to Task, only via groupProject
+      // If found, don't try to set task.group as it no longer exists
       if (group) {
-        task.group = group;
-        task.groupProject = null; // Reset the other relation
+        // Clear the groupProject since we're no longer associating with a group
+        task.groupProject = null;
       } else {
         // If not found, check if it's a project-specific group
         const groupProject = await this.taskGroupProjectRepository.findOne({

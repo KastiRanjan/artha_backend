@@ -182,16 +182,15 @@ export class TaskTemplateService {
       throw new BadRequestException('Tasks must have a parent story');
     }
 
-    // Get task groupProject if provided 
-    // Note: The group field has been removed from Task entity
-    let groupProject = existingTask.groupProject;
+    // Get task group if provided
+    let group = existingTask.group;
     if (groupId) {
-      // Here we need to look for a TaskGroupProject instead
-      groupProject = await this.taskGroupProjectRepository.findOne({
+      // Find the TaskGroup by ID
+      group = await this.taskgroupRepository.findOne({
         where: { id: groupId }
       });
-      if (!groupProject) {
-        throw new BadRequestException(`Task group project with ID ${groupId} not found`);
+      if (!group) {
+        throw new BadRequestException(`Task group with ID ${groupId} not found`);
       }
     }
 
@@ -201,7 +200,7 @@ export class TaskTemplateService {
         name: name || existingTask.name,
         description: description !== undefined ? description : existingTask.description,
         taskType: taskType || existingTask.taskType,
-        group,
+        group: group, // Use the group variable we defined above
         parentTask,
         budgetedHours: budgetedHours !== undefined ? budgetedHours : existingTask.budgetedHours,
         rank: rank !== undefined ? rank : existingTask.rank

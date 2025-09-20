@@ -28,9 +28,4 @@ export class TaskGroup extends CustomBaseEntity {
     nullable: true
   })
   tasktemplate?: TaskTemplate[];
-
-  @OneToMany(() => Task, (task) => task.group, {
-    nullable: true
-  })
-  task?: Task[];
 }
