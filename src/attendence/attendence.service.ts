@@ -136,17 +136,19 @@ export class AttendenceService {
     });
 
     // Fetch all users
-    const users = await this.userRepository.find();
+      let users = await this.userRepository.find();
+      // Sort users alphabetically by name
+      users = users.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Create a map for quick user lookup
-    const userMap = new Map();
-    users.forEach(u => {
-      userMap.set(u.id, {
-        name: u.name,
-        email: u.email,
-        username: u.username
+      // Create a map for quick user lookup
+      const userMap = new Map();
+      users.forEach(u => {
+        userMap.set(u.id, {
+          name: u.name,
+          email: u.email,
+          username: u.username
+        });
       });
-    });
 
     // Combine attendance with user data
     const result = attendanceRecords.map(attendance => {

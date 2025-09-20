@@ -72,6 +72,9 @@ export class ProjectsService {
     // Use either customer or client property (frontend sends client, backend uses customer)
     const customerId = customer || client;
     const clientEntity = customerId ? await this.customerRepository.findOne({ where: { id: customerId } }) : null;
+    if (clientEntity && clientEntity.status === 'suspended') {
+      throw new Error('Cannot create project for suspended client');
+    }
     const billingEntity = billing ? await this.billingRepository.findOne({ where: { id: billing } }) : null;
     const natureOfWorkEntity = await this.natureOfWorkRepository.findOne({ where: { id: natureOfWorkId } });
     

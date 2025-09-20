@@ -71,6 +71,7 @@ export class CreateCustomerDto {
   @Length(1, 15)
   panNo: string;
 
+  @IsOptional()
   @IsDateString()
   registeredDate?: Date; // Optional, handled by server if not provided
 
