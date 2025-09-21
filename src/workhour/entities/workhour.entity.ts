@@ -20,6 +20,12 @@ export class Workhour {
   @Column({ type: 'varchar', length: 10, nullable: true })
   endTime?: string; // e.g., "17:00"
 
+  @Column({ type: 'date', nullable: true })
+  validFrom?: Date;
+
+  @Column({ type: 'date', nullable: true })
+  validTo?: Date;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
