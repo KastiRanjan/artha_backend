@@ -47,6 +47,8 @@ import { NatureOfWorkModule } from './nature-of-work/nature-of-work.module';
 import { BusinessSizeModule } from './business-size/business-size.module';
 import { BusinessNatureModule } from './business-nature/business-nature.module';
 import { LegalStatusModule } from './legal-status/legal-status.module';
+import { NoticeBoardModule } from './notice-board/notice-board.module';
+import { UploadModule } from './upload/upload.module';
 
 // const appConfig = config.get('app');
 
@@ -75,9 +77,9 @@ import { LegalStatusModule } from './legal-status/legal-status.module';
       ]
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public')
-      // exclude: ['/api*']
-      // serveRoot:'/public÷'
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/',
+      exclude: ['/api*']
     }),
     AuthModule,
     RolesModule,
@@ -108,7 +110,9 @@ import { LegalStatusModule } from './legal-status/legal-status.module';
     LegalStatusModule,
     BillingModule,
     TodoTaskModule,
-    TaskTypeModule
+    TaskTypeModule,
+    NoticeBoardModule,
+    UploadModule
   ],
   providers: [
     {

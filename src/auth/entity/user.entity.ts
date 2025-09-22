@@ -28,6 +28,7 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
+import { NoticeBoard } from 'src/notice-board/entities/notice-board.entity';
 import { UserEducationDetailEntity } from 'src/users/entities/user.educationdetail.entity';
 
 /**
@@ -193,6 +194,9 @@ export class UserEntity extends CustomBaseEntity {
     }
   })
   projects: Project[];
+
+  @ManyToMany(() => NoticeBoard, noticeBoard => noticeBoard.users)
+  notices: NoticeBoard[];
 
   @OneToMany(() => Worklog, (worklog) => worklog.user)
   worklogs: Worklog[];

@@ -2062,6 +2062,95 @@ export const PermissionConfiguration: PermissionConfigInterface = {
         }
       ]
     },
+    // Notice Board Management
+    {
+      name: 'Notice Board Management',
+      resource: 'notice-board',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all notices',
+          route: [
+            {
+              path: '/notice-board',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View my notices',
+          route: [
+            {
+              path: '/notice-board/my-notices',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create notice',
+          route: [
+            {
+              path: '/notice-board',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Upload notice image',
+          route: [
+            {
+              path: '/notice-board/upload-image',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View notice by id',
+          route: [
+            {
+              path: '/notice-board/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get notice read statistics',
+          route: [
+            {
+              path: '/notice-board/:id/statistics',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update notice',
+          route: [
+            {
+              path: '/notice-board/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Mark notice as read',
+          route: [
+            {
+              path: '/notice-board/:id/mark-as-read',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete notice',
+          route: [
+            {
+              path: '/notice-board/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
     // Portal Credentials Management
     {
       name: 'Portal Credentials Management',
@@ -5592,6 +5681,94 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/calendar/convert/bs-to-ad',
               method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Notice Board Management',
+      resource: 'notice-board',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all notices',
+          route: [
+            {
+              path: '/notice-board',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View my notices',
+          route: [
+            {
+              path: '/notice-board/my-notices',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create notice',
+          route: [
+            {
+              path: '/notice-board',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Upload notice image',
+          route: [
+            {
+              path: '/notice-board/upload-image',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View notice by id',
+          route: [
+            {
+              path: '/notice-board/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Get notice read statistics',
+          route: [
+            {
+              path: '/notice-board/:id/statistics',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update notice',
+          route: [
+            {
+              path: '/notice-board/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Mark notice as read',
+          route: [
+            {
+              path: '/notice-board/:id/mark-as-read',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete notice',
+          route: [
+            {
+              path: '/notice-board/:id',
+              method: MethodList.DELETE
             }
           ]
         }

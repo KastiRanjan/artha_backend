@@ -17,18 +17,18 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function bootstrap() {
-  // const serverConfig = config.get('server');
   const port = process.env.PORT || 7777;
   const app = await NestFactory.create(AppModule);
 
-  // app.use(helmet({ crossOriginResourcePolicy: false }));
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  // const apiConfig = config.get('app');
-  // if (process.env.NODE_ENV === 'development') {
+  // Setup CORS
   app.enableCors({
-    origin: ['http://192.168.18.58:5173', 'http://localhost:5173', 'https://artha.sarojkasti.com.np'],
-    credentials: true
+    origin: ['http://192.168.18.58:5173', 'http://localhost:5173', 'https://artha.sarojkasti.com.np', 'http://localhost:3000', '*'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
+
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Artha API')
@@ -48,23 +48,7 @@ async function bootstrap() {
     customCss:
       'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css'
   });
-  // } else {
-  //   const whitelist = [apiConfig.get<string>('frontendUrl')];
-  //   app.enableCors({
-  //     origin: true,
-  //     credentials: true
-  //   });
-  // app.enableCors({
-  //   origin: function (origin, callback) {
-  //     if (!origin || whitelist.indexOf(origin) !== -1) {
-  //       callback(null, true);
-  //     } else {
-  //       callback(new Error('Not allowed by CORS'));
-  //     }
-  //   },
-  //   credentials: true
-  // });
-  // }
+
   useContainer(app.select(AppModule), {
     fallbackOnErrors: true
   });
@@ -77,6 +61,9 @@ async function bootstrap() {
   );
 
   app.use(cookieParser());
+  
+  // Add debug logging for better troubleshooting
+  console.log(`Starting NestJS server on port: ${port}`);
   await app.listen(port);
   console.log(`Application listening in port: ${port}`);
 }

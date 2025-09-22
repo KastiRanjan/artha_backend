@@ -1,0 +1,20 @@
+extends layouts/email-layout
+
+block content
+  h1 Notice: #{noticeTitle}
+  p Hello #{name},
+  
+  p A new notice has been posted that requires your attention.
+  
+  h2 #{noticeTitle}
+  
+  div(style="margin: 20px 0;")
+    p #{noticeDescription}
+  
+  if imageUrl
+    div(style="margin: 20px 0;")
+      img(src=imageUrl, alt="Notice Image", style="max-width: 100%; height: auto; border: 1px solid #eaeaea; border-radius: 4px;")
+
+  p Please log in to your account to view this notice in detail.
+  
+  include partials/footer
