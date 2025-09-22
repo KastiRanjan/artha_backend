@@ -37,4 +37,8 @@ export class UpdateTodoTaskDto {
   @IsOptional()
   @IsEnum(TodoTaskStatus)
   status?: TodoTaskStatus;
+
+  @IsOptional()
+  @IsString()
+  dueDate?: string;
 }

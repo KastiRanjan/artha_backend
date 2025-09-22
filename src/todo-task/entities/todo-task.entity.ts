@@ -36,6 +36,9 @@ export class TodoTask extends CustomBaseEntity {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdTimestamp: Date;
 
+  @Column({ nullable: true, type: 'timestamp' })
+  dueDate: Date;
+
   @Column()
   assignedToId: string;
 

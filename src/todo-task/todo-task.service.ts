@@ -334,12 +334,7 @@ export class TodoTaskService {
     return query.orderBy('todoTask.createdTimestamp', 'DESC').getMany();
   }
   
-  async findByAssignedUser(userId: string, user: UserEntity, status?: TodoTaskStatus): Promise<TodoTask[]> {
-    // Print debug info
-    console.log('Fetching tasks for assigned user:', userId);
-    console.log('Current user:', user.email, user.id);
-    console.log('User permissions:', user.role?.permission.map(p => `${p.method}:${p.resource}`).join(', '));
-    
+  async findByAssignedUser(userId: string, user: UserEntity, status?: TodoTaskStatus): Promise<TodoTask[]> {    
     // Check if user has permission to view other users' tasks
     const hasViewAllPermission = user.role?.permission.some(
       (p: any) => 
