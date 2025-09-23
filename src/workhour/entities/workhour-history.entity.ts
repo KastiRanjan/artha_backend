@@ -1,14 +1,15 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity('workhours')
-export class Workhour {
+@Entity('workhour_history')
+export class WorkhourHistory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid', nullable: false })
+  @Column({ type: 'uuid' })
   roleId: string;
 
-  // Removed userId field as per requirement #2 (workhour is role-based only)
+  @Column({ type: 'uuid', nullable: true })
+  previousWorkHourId: string;
 
   @Column({ type: 'int', default: 8 })
   workHours: number;
@@ -19,13 +20,11 @@ export class Workhour {
   @Column({ type: 'varchar', length: 10, nullable: true })
   endTime?: string; // e.g., "17:00"
 
-  @Column({ type: 'date', nullable: false })
+  @Column({ type: 'date', nullable: true })
   validFrom: Date;
 
-  // Removed validTo field as per requirement #1 (only validFrom is needed)
-
-  @Column({ type: 'boolean', default: true })
-  isActive: boolean;  // To mark current active workhour for a role
+  @Column({ type: 'date', nullable: true })
+  validUntil: Date;  // When a new workhour is created, the previous one's validUntil is set
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

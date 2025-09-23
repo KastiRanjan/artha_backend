@@ -30,7 +30,7 @@ export class WorklogService {
   async create(createWorklogDto: any, user: UserEntity) {
     const worklogs = [];
     for (const worklogDto of createWorklogDto) {
-      const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
+      const { projectId, taskId, startTime, endTime, requestTo, ...worklogData } = worklogDto;
 
       // Fetch the associated entities
       const task = await this.taskRepository.findOne({ where: { id: taskId }, relations: ['project', 'parentTask'] });
@@ -137,6 +137,7 @@ export class WorklogService {
       }
 
       // Create a new worklog instance with the proper times
+      const now = new Date();
       const worklog = this.worklogRepository.create({
         ...worklogData,
         user,
@@ -145,7 +146,9 @@ export class WorklogService {
         project, // Add project reference
         startTime: worklogStartTime,
         endTime: worklogEndTime,
-        status:'requested'
+        status: 'requested',
+        requestedAt: now,
+        requestTo: requestTo // Use the requestTo field from the request
       });
       worklogs.push(worklog);
     }
@@ -297,6 +300,22 @@ export class WorklogService {
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
     }
+    
+    // Update status timestamp based on status
+    if (updateWorklogDto.status) {
+      const now = new Date();
+      if (updateWorklogDto.status === 'approved') {
+        worklog.approvedAt = now;
+        worklog.approvedBy = user.id;
+      } else if (updateWorklogDto.status === 'rejected') {
+        worklog.rejectedAt = now;
+        worklog.rejectedRemark = updateWorklogDto.rejectedRemark || worklog.rejectedRemark;
+        worklog.rejectBy = user.id;
+      } else if (updateWorklogDto.status === 'requested') {
+        worklog.requestedAt = now;
+      }
+    }
+    
     // Permission check for editing worklog date
     if (updateWorklogDto.date && worklog.startTime) {
       // Check if user has permission for PATCH /worklogs/:id and 'edit_worklog_date'
@@ -321,24 +340,33 @@ export class WorklogService {
       worklog.startTime = newStart;
       worklog.endTime = newEnd;
     }
+    
     // Handle taskId update
     if (updateWorklogDto.taskId) {
       const task = await this.taskRepository.findOne({ where: { id: updateWorklogDto.taskId } });
       if (!task) throw new NotFoundException(`Task with ID ${updateWorklogDto.taskId} not found`);
       worklog.task = task;
     }
+    
     // Handle userId update
     if (updateWorklogDto.userId) {
       const user = await this.userRepository.findOne({ where: { id: updateWorklogDto.userId } });
       if (!user) throw new NotFoundException(`User with ID ${updateWorklogDto.userId} not found`);
       worklog.user = user;
     }
+    
+    // Handle requestTo update
+    if (updateWorklogDto.requestTo) {
+      worklog.requestTo = updateWorklogDto.requestTo;
+    }
+    
     // Assign other fields except date
     Object.keys(updateWorklogDto).forEach(key => {
       if (key !== 'date') {
         (worklog as any)[key] = (updateWorklogDto as any)[key];
       }
     });
+    
     return this.worklogRepository.save(worklog);
   }
 
@@ -369,6 +397,36 @@ export class WorklogService {
       relations: ['user', 'task', 'task.project'],
       order: {
         startTime: 'ASC'
+      }
+    });
+  }
+  
+  async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string) {
+    const whereCondition: any = {};
+    
+    if (status) {
+      whereCondition.status = status;
+    }
+    
+    if (userId) {
+      whereCondition.user = { id: userId };
+    }
+    
+    if (projectId) {
+      whereCondition.project = { id: projectId };
+    }
+    
+    if (date) {
+      const startOfDay = moment(date).startOf('day').toDate();
+      const endOfDay = moment(date).endOf('day').toDate();
+      whereCondition.startTime = Between(startOfDay, endOfDay);
+    }
+    
+    return await this.worklogRepository.find({
+      relations: ['user', 'task', 'task.project', 'project'],
+      where: whereCondition,
+      order: {
+        createdAt: 'DESC'
       }
     });
   }

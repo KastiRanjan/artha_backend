@@ -36,3 +36,6 @@ dump.rdb
 !.vscode/extensions.json
 .env
 .vercel
+
+
+/public/document/

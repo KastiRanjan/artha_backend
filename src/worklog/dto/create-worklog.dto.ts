@@ -28,10 +28,34 @@ export class CreateWorklogDto {
   @IsOptional()
   @Type(() => String)
   approvedBy: string;
+  
+  @IsOptional()
+  @Type(() => String)
+  requestTo: string;
+  
+  @IsOptional()
+  @Type(() => String)
+  rejectBy: string;
 
   @IsOptional()
   @IsString()
   remark?: string;
+  
+  @IsOptional()
+  @IsString()
+  rejectedRemark?: string;
+  
+  @IsOptional()
+  @IsDateString()
+  requestedAt?: Date;
+  
+  @IsOptional()
+  @IsDateString()
+  approvedAt?: Date;
+  
+  @IsOptional()
+  @IsDateString()
+  rejectedAt?: Date;
 
   @IsOptional()
   status: 'open' | 'approved' | 'rejected' | 'pending' | 'requested';
@@ -43,7 +67,6 @@ export class CreateWorklogDto {
   @IsOptional()
   @Type(() => String)
   projectId?: string;
-
 }
 
 

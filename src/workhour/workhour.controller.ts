@@ -13,8 +13,8 @@ export class WorkhourController {
   }
 
   @Get()
-  findAll(@Query('roleId') roleId?: string, @Query('userId') userId?: string) {
-    return this.workhourService.findAll(roleId, userId);
+  findAll(@Query('roleId') roleId?: string) {
+    return this.workhourService.findAll(roleId);
   }
 
   @Get(':id')
@@ -32,9 +32,15 @@ export class WorkhourController {
     return this.workhourService.remove(id);
   }
 
-  // Get resolved work hours for a user (role default or override)
+  // Get resolved work hours for a user (based on role)
   @Get('resolve/:userId')
   resolveForUser(@Param('userId') userId: string, @Query('roleId') roleId?: string) {
     return this.workhourService.resolveForUser(userId, roleId);
+  }
+  
+  // Get workhour history for a role
+  @Get('history/:roleId')
+  getWorkhourHistory(@Param('roleId') roleId: string) {
+    return this.workhourService.getWorkhourHistory(roleId);
   }
 }

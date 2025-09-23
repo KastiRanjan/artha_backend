@@ -24,9 +24,27 @@ export class Worklog extends CustomBaseEntity {
 
   @Column({ nullable: true })
   approvedBy?: string;
+  
+  @Column({ nullable: true })
+  requestTo?: string;
+  
+  @Column({ nullable: true })
+  rejectBy?: string;
 
   @Column('text', { nullable: true })
   remark?: string;
+  
+  @Column('text', { nullable: true })
+  rejectedRemark?: string;
+  
+  @Column({ type: 'timestamp', nullable: true })
+  requestedAt?: Date;
+  
+  @Column({ type: 'timestamp', nullable: true })
+  approvedAt?: Date;
+  
+  @Column({ type: 'timestamp', nullable: true })
+  rejectedAt?: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.worklogs, {
     nullable: false

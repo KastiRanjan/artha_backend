@@ -27,7 +27,6 @@ export class WorklogController {
   constructor(private readonly worklogService: WorklogService) { }
 
   @Post()
-
   create(@GetUser()
   user: UserEntity, @Body() createWorklogDto: any) {
     return this.worklogService.create(createWorklogDto, user);
@@ -49,6 +48,16 @@ export class WorklogController {
     @Query('status') status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
   ) {
     return this.worklogService.findAll(user, status);
+  }
+
+  @Get('allworklog')
+  findAllWorklog(
+    @Query('status') status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+    @Query('date') date?: string,
+    @Query('userId') userId?: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.worklogService.findAllWorklog(status, date, userId, projectId);
   }
 
   @Get(':id')

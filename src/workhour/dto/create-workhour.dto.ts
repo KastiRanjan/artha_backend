@@ -1,13 +1,9 @@
-import { IsInt, IsOptional, IsString, Min, IsDateString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, IsDateString, Min } from 'class-validator';
 
 export class CreateWorkhourDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  roleId?: string;
-
-  @IsOptional()
-  @IsString()
-  userId?: string;
+  roleId: string;
 
   @IsInt()
   @Min(1)
@@ -21,11 +17,7 @@ export class CreateWorkhourDto {
   @IsString()
   endTime?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDateString()
-  validFrom?: string;
-
-  @IsOptional()
-  @IsDateString()
-  validTo?: string;
+  validFrom: string;
 }
