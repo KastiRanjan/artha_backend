@@ -5,10 +5,11 @@ export class WorkhourSerializer {
     return {
       id: workhour.id,
       roleId: workhour.roleId,
-      userId: workhour.userId,
       workHours: workhour.workHours,
       startTime: workhour.startTime,
       endTime: workhour.endTime,
+      validFrom: workhour.validFrom,
+      isActive: workhour.isActive,
       createdAt: workhour.createdAt,
       updatedAt: workhour.updatedAt,
     };
