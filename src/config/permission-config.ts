@@ -1272,7 +1272,16 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             { path: '/worklogs/date/:date/all-users', method: MethodList.GET }
           ]
-        }
+        },
+        {
+  name: 'Get all worklogs (admin view)',
+  route: [
+    {
+      path: '/worklogs/allworklog',
+      method: MethodList.GET
+    }
+  ]
+}
       ]
     },
     {
