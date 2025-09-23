@@ -385,9 +385,9 @@ export class ProjectsService {
         groupProject = taskGroupProjectMap.get(templateItem.taskGroupId);
       }
 
-      // Create task from template
+      // Create task from template - using the exact name provided from frontend
       const task = this.taskRepository.create({
-        name: templateItem.name,
+        name: templateItem.name, // This name already has the suffix applied from frontend
         description: template.description || '',
         budgetedHours: templateItem.budgetedHours,
         project,
@@ -415,9 +415,9 @@ export class ProjectsService {
         throw new Error(`Parent task for subtask ${subtaskItem.id} not found`);
       }
 
-      // Create subtask
+      // Create subtask - using the exact name provided from frontend
       const subtask = this.taskRepository.create({
-        name: subtaskItem.name,
+        name: subtaskItem.name, // This name already has the suffix applied from frontend
         description: '',
         budgetedHours: subtaskItem.budgetedHours,
         project,
