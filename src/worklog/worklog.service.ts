@@ -28,130 +28,85 @@ export class WorklogService {
   ) { }
 
   async create(createWorklogDto: any, user: UserEntity) {
-    const worklogs = [];
-    for (const worklogDto of createWorklogDto) {
-      const { projectId, taskId, startTime, endTime, requestTo, ...worklogData } = worklogDto;
-
-      // Fetch the associated entities
-      const task = await this.taskRepository.findOne({ where: { id: taskId }, relations: ['project', 'parentTask'] });
-      
-      // Derive projectId from task if not provided
-      const actualProjectId = projectId || task?.project?.id;
-      
-      const project = await this.projectRepository.findOne({ where: { id: actualProjectId }, relations: ['projectLead'] });
-
-      if (!task) {
-        throw new NotFoundException(`Task with ID ${taskId} not found`);
-      }
-      if (!project) {
-        throw new NotFoundException(`Project with ID ${actualProjectId} not found`);
-      }
-
-      // Check worklog permissions based on project settings
-      const isSubtask = task.parentTask !== null;
-      const isMainTask = task.taskType === 'story' && task.parentTask === null;
-
-      // If project doesn't allow subtask worklogs and this is a subtask, block it
-      if (!project.allowSubtaskWorklog && isSubtask) {
-        throw new BadRequestException('Worklog is not allowed for subtasks in this project. Only main tasks (stories) can have worklogs.');
-      }
-
-      // If project doesn't allow subtask worklogs, only main tasks (stories) can have worklogs
-      if (!project.allowSubtaskWorklog && !isMainTask) {
-        throw new BadRequestException('Only main tasks (stories) can have worklogs in this project.');
-      }
-
-      // Convert provided times to proper Date objects and handle timezone
-      let worklogStartTime: Date;
-      let worklogEndTime: Date;
-      
-      if (startTime && endTime) {
-        // Use the provided times as-is if they're already proper datetime strings
-        worklogStartTime = new Date(startTime);
-        worklogEndTime = new Date(endTime);
-      } else {
-        // Fallback to current time if no times provided (shouldn't happen in normal flow)
-        const now = new Date();
-        worklogStartTime = now;
-        worklogEndTime = now;
-      }
-
-      // Block if user is on approved leave for any part of the worklog date range
-      const leaves = await this.leaveService.findAll('approved');
-      const worklogStart = moment(worklogStartTime).utcOffset('+05:45').format('YYYY-MM-DD');
-      const worklogEnd = moment(worklogEndTime).utcOffset('+05:45').format('YYYY-MM-DD');
-      const onLeave = leaves.some(leave => {
-        return leave.user.id === user.id && worklogStart <= leave.endDate && worklogEnd >= leave.startDate;
-      });
-      if (onLeave) {
-        throw new BadRequestException('You are on leave during this worklog period. Worklog is not allowed.');
-      }
-
-      // Block if any day in the worklog range is a holiday
-      const holidays = await this.holidayService.findAll();
-      const holidayDates = holidays.map(h => h.date);
-      let isHoliday = false;
-      let current = moment(worklogStart).utcOffset('+05:45');
-      const end = moment(worklogEnd).utcOffset('+05:45');
-      while (current.isSameOrBefore(end)) {
-        if (holidayDates.includes(current.format('YYYY-MM-DD'))) {
-          isHoliday = true;
-          break;
-        }
-        current.add(1, 'day');
-      }
-      if (isHoliday) {
-        throw new BadRequestException('Worklog is not allowed on holidays.');
-      }
-
-      // Check for overlapping worklogs using the actual worklog times
-      // Only check for overlaps on the same date to avoid false positives across different days
-      // Use Nepal time for date calculations
-      const worklogDate = moment(worklogStartTime).utcOffset('+05:45').format('YYYY-MM-DD');
-      const startOfDay = moment(worklogDate).utcOffset('+05:45').startOf('day').utc().toDate();
-      const endOfDay = moment(worklogDate).utcOffset('+05:45').endOf('day').utc().toDate();
-      
-      // Find all worklogs for the user on the same date
-      const existingWorklogs = await this.worklogRepository.find({
-        where: {
-          user: user.id,
-          startTime: Between(startOfDay, endOfDay),
-        },
-      });
-
-      // Check for time overlaps within the same date
-      const hasOverlap = existingWorklogs.some(existingWorklog => {
-        const existingStart = new Date(existingWorklog.startTime);
-        const existingEnd = new Date(existingWorklog.endTime);
-        
-        // Check if the new worklog overlaps with any existing worklog
-        return (
-          (worklogStartTime < existingEnd && worklogEndTime > existingStart) ||
-          (worklogStartTime.getTime() === existingStart.getTime()) ||
-          (worklogEndTime.getTime() === existingEnd.getTime())
-        );
-      });
-
-      if (hasOverlap) {
-        throw new BadRequestException(`Overlapping worklog found on ${worklogDate}. Please check your existing worklogs for this date.`);
-      }
-
-      // Create a new worklog instance with the proper times
-      const now = new Date();
-      const worklog = this.worklogRepository.create({
-        ...worklogData,
-        user,
-        createdBy: user.id,
-        task,
-        project, // Add project reference
-        startTime: worklogStartTime,
-        endTime: worklogEndTime,
-        status: 'requested',
-        requestedAt: now,
-        requestTo: requestTo // Use the requestTo field from the request
-      });
-      worklogs.push(worklog);
-    }
+	const worklogs = [];
+	for (const worklogDto of createWorklogDto) {
+	  const { projectId, taskId, startTime, endTime, ...worklogData } = worklogDto;
+	  // Fetch the associated entities
+	  const task = await this.taskRepository.findOne({ where: { id: taskId }, relations: ['project', 'parentTask'] });
+	  // Derive projectId from task if not provided
+	  const actualProjectId = projectId || task?.project?.id;
+	  const project = await this.projectRepository.findOne({ where: { id: actualProjectId }, relations: ['projectLead'] });
+	  if (!task) throw new NotFoundException(`Task with ID ${taskId} not found`);
+	  if (!project) throw new NotFoundException(`Project with ID ${actualProjectId} not found`);
+	  // Check worklog permissions based on project settings
+	  const isSubtask = task.parentTask !== null;
+	  const isMainTask = task.taskType === 'story' && task.parentTask === null;
+	  if (!project.allowSubtaskWorklog && isSubtask) throw new BadRequestException('Worklog is not allowed for subtasks in this project. Only main tasks (stories) can have worklogs.');
+	  if (!project.allowSubtaskWorklog && !isMainTask) throw new BadRequestException('Only main tasks (stories) can have worklogs in this project.');
+	  // Convert provided times to proper Date objects and handle timezone
+	  let worklogStartTime: Date;
+	  let worklogEndTime: Date;
+	  if (startTime && endTime) {
+	    worklogStartTime = new Date(startTime);
+	    worklogEndTime = new Date(endTime);
+	  } else {
+	    const now = new Date();
+	    worklogStartTime = now;
+	    worklogEndTime = now;
+	  }
+	  // Block if user is on approved leave for any part of the worklog date range
+	  const leaves = await this.leaveService.findAll('approved');
+	  const worklogStart = moment(worklogStartTime).utcOffset('+05:45').format('YYYY-MM-DD');
+	  const worklogEnd = moment(worklogEndTime).utcOffset('+05:45').format('YYYY-MM-DD');
+	  const onLeave = leaves.some(leave => leave.user.id === user.id && worklogStart <= leave.endDate && worklogEnd >= leave.startDate);
+	  if (onLeave) throw new BadRequestException('You are on leave during this worklog period. Worklog is not allowed.');
+	  // Block if any day in the worklog range is a holiday
+	  const holidays = await this.holidayService.findAll();
+	  const holidayDates = holidays.map(h => h.date);
+	  let isHoliday = false;
+	  let current = moment(worklogStart).utcOffset('+05:45');
+	  const end = moment(worklogEnd).utcOffset('+05:45');
+	  while (current.isSameOrBefore(end)) {
+	    if (holidayDates.includes(current.format('YYYY-MM-DD'))) {
+	      isHoliday = true;
+	      break;
+	    }
+	    current.add(1, 'day');
+	  }
+	  if (isHoliday) throw new BadRequestException('Worklog is not allowed on holidays.');
+	  // Check for overlapping worklogs using the actual worklog times
+	  const worklogDate = moment(worklogStartTime).utcOffset('+05:45').format('YYYY-MM-DD');
+	  const startOfDay = moment(worklogDate).utcOffset('+05:45').startOf('day').utc().toDate();
+	  const endOfDay = moment(worklogDate).utcOffset('+05:45').endOf('day').utc().toDate();
+	  const existingWorklogs = await this.worklogRepository.find({
+	    where: { user: user.id, startTime: Between(startOfDay, endOfDay) },
+	  });
+	  const hasOverlap = existingWorklogs.some(existingWorklog => {
+	    const existingStart = new Date(existingWorklog.startTime);
+	    const existingEnd = new Date(existingWorklog.endTime);
+	    return (
+	      (worklogStartTime < existingEnd && worklogEndTime > existingStart) ||
+	      (worklogStartTime.getTime() === existingStart.getTime()) ||
+	      (worklogEndTime.getTime() === existingEnd.getTime())
+	    );
+	  });
+	  if (hasOverlap) throw new BadRequestException(`Overlapping worklog found on ${worklogDate}. Please check your existing worklogs for this date.`);
+	  // Create a new worklog instance with the proper times
+	  const now = new Date();
+	  const worklog = this.worklogRepository.create({
+	    ...worklogData,
+	    user,
+	    createdBy: user.id,
+	    task,
+	    project,
+	    startTime: worklogStartTime,
+	    endTime: worklogEndTime,
+	    status: 'requested',
+	    requestedAt: now,
+	    requestTo: worklogDto.requestTo || null // Always set requestTo from DTO
+	  });
+	  worklogs.push(worklog);
+	}
 
     // Save all worklogs to the database at once
     const savedWorklogs = await this.worklogRepository.save(worklogs);
@@ -210,30 +165,53 @@ export class WorklogService {
     if (status) {
       whereCondition.status = status;
     }
-    
-    return await this.worklogRepository.find({
+    const worklogs = await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
       where: whereCondition,
       order: {
         createdAt: 'DESC'
       }
     });
+    // Populate approvedBy, requestTo, rejectBy with user objects
+    for (const worklog of worklogs) {
+      if (worklog.approvedBy) {
+        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+      }
+      if (worklog.requestTo) {
+        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+      }
+      if (worklog.rejectBy) {
+        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
+      }
+    }
+    return worklogs;
   }
 
   
   async findRequest(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
-    const whereCondition: any = { approvedBy: user.id };
+    const whereCondition: any = { requestTo: user.id };
     if (status) {
       whereCondition.status = status;
     }
-    
-    return await this.worklogRepository.find({
+    const worklogs = await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
       where: whereCondition,
       order: {
         createdAt: 'DESC'
       }
     });
+    for (const worklog of worklogs) {
+      if (worklog.approvedBy) {
+        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+      }
+      if (worklog.requestTo) {
+        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+      }
+      if (worklog.rejectBy) {
+        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
+      }
+    }
+    return worklogs;
   }
 
   async findOne(id: string) {
@@ -243,6 +221,15 @@ export class WorklogService {
     });
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
+    }
+    if (worklog.approvedBy) {
+      (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+    }
+    if (worklog.requestTo) {
+      (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+    }
+    if (worklog.rejectBy) {
+      (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
     }
     return worklog;
   }
@@ -258,6 +245,17 @@ export class WorklogService {
     });
     if (!worklogs || worklogs.length === 0) {
       throw new NotFoundException(`No worklogs found for task ID ${id}`);
+    }
+    for (const worklog of worklogs) {
+      if (worklog.approvedBy) {
+        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+      }
+      if (worklog.requestTo) {
+        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+      }
+      if (worklog.rejectBy) {
+        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
+      }
     }
     return worklogs;
   }
@@ -309,7 +307,7 @@ export class WorklogService {
         worklog.approvedBy = user.id;
       } else if (updateWorklogDto.status === 'rejected') {
         worklog.rejectedAt = now;
-        worklog.rejectedRemark = updateWorklogDto.rejectedRemark || worklog.rejectedRemark;
+        worklog.rejectedRemark = updateWorklogDto.rejectedRemark || '';
         worklog.rejectBy = user.id;
       } else if (updateWorklogDto.status === 'requested') {
         worklog.requestedAt = now;
@@ -373,8 +371,7 @@ export class WorklogService {
   async findByUserAndDate(userId: string, date: string) {
     const startOfDay = moment(date).startOf('day').toDate();
     const endOfDay = moment(date).endOf('day').toDate();
-    
-    return await this.worklogRepository.find({
+    const worklogs = await this.worklogRepository.find({
       where: {
         user: { id: userId },
         startTime: Between(startOfDay, endOfDay),
@@ -384,13 +381,24 @@ export class WorklogService {
         startTime: 'ASC'
       }
     });
+    for (const worklog of worklogs) {
+      if (worklog.approvedBy) {
+        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+      }
+      if (worklog.requestTo) {
+        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+      }
+      if (worklog.rejectBy) {
+        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
+      }
+    }
+    return worklogs;
   }
 
   async findAllUsersByDate(date: string) {
     const startOfDay = moment(date).startOf('day').toDate();
     const endOfDay = moment(date).endOf('day').toDate();
-    
-    return await this.worklogRepository.find({
+    const worklogs = await this.worklogRepository.find({
       where: {
         startTime: Between(startOfDay, endOfDay),
       },
@@ -399,36 +407,55 @@ export class WorklogService {
         startTime: 'ASC'
       }
     });
+    for (const worklog of worklogs) {
+      if (worklog.approvedBy) {
+        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+      }
+      if (worklog.requestTo) {
+        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+      }
+      if (worklog.rejectBy) {
+        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
+      }
+    }
+    return worklogs;
   }
   
   async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string) {
     const whereCondition: any = {};
-    
     if (status) {
       whereCondition.status = status;
     }
-    
     if (userId) {
       whereCondition.user = { id: userId };
     }
-    
     if (projectId) {
       whereCondition.project = { id: projectId };
     }
-    
     if (date) {
       const startOfDay = moment(date).startOf('day').toDate();
       const endOfDay = moment(date).endOf('day').toDate();
       whereCondition.startTime = Between(startOfDay, endOfDay);
     }
-    
-    return await this.worklogRepository.find({
+    const worklogs = await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project', 'project'],
       where: whereCondition,
       order: {
         createdAt: 'DESC'
       }
     });
+    for (const worklog of worklogs) {
+      if (worklog.approvedBy) {
+        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
+      }
+      if (worklog.requestTo) {
+        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
+      }
+      if (worklog.rejectBy) {
+        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
+      }
+    }
+    return worklogs;
   }
 
   async remove(id: string) {
