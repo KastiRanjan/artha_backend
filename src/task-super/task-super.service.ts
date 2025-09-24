@@ -395,7 +395,7 @@ export class TaskSuperService {
         
         // Create the task
         const taskProject = {
-          name: template.name + (suffixTaskTemplate || ''),
+          name: template.name, // Use name as provided (already suffixed if needed)
           description: template.description || '',
           budgetedHours: template.budgetedHours || 0,
           rank: template.rank || 0,
@@ -455,7 +455,7 @@ export class TaskSuperService {
         
         // Create the subtask
         const taskProject = {
-          name: subtask.name + (suffixTaskTemplate || ''),
+          name: subtask.name, // Use name as provided (already suffixed if needed)
           description: subtask.description || '',
           budgetedHours: subtask.budgetedHours || 0,
           rank: subtask.rank || 0,
@@ -537,7 +537,7 @@ export class TaskSuperService {
             
             // Create the implicit subtask
             const taskProject = {
-              name: childTemplate.name + (suffixTaskTemplate || ''),
+              name: childTemplate.name, // Use name as provided (already suffixed if needed)
               description: childTemplate.description || '',
               budgetedHours: childTemplate.budgetedHours || 0,
               rank: childTemplate.rank || 0,
