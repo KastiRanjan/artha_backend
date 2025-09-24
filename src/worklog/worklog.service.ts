@@ -190,10 +190,8 @@ export class WorklogService {
   
   async findRequest(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
     let whereCondition: any = {};
-    if (status === 'approved') {
-      whereCondition = { approvedBy: user.id, requestTo: user.id, status: 'approved' };
-    } else if (status === 'rejected') {
-      whereCondition = { rejectBy: user.id, requestTo: user.id, status: 'rejected' };
+    if (status === 'approved' || status === 'rejected') {
+      whereCondition = { requestTo: user.id, status };
     } else {
       // default to requested and others
       whereCondition = { requestTo: user.id };
