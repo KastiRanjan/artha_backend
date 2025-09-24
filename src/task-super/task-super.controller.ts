@@ -19,6 +19,8 @@ import { PermissionGuard } from 'src/common/guard/permission.guard';
 import { Permissions } from 'src/permission/decorators/permissions.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ValidationExceptionFilter } from 'src/common/exception/validation-exception.filter';
+import { ValidationPipe } from '@nestjs/common';
+import { TaskSuperRankingDto } from './dto/task-super-ranking.dto';
 
 @ApiTags('task-super')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -43,6 +45,13 @@ export class TaskSuperController {
     return this.taskSuperService.findOne(id);
   }
 
+  @Patch('rankings')
+  updateGlobalRankings(
+    @Body() rankings: TaskSuperRankingDto[]
+  ) {
+    return this.taskSuperService.updateGlobalRankings(rankings);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -55,7 +64,7 @@ export class TaskSuperController {
   remove(@Param('id') id: string) {
     return this.taskSuperService.remove(id);
   }
-  
+
   @Post('add-to-project')
   addToProject(@Body() addToProjectDto: AddToProjectDto | AddToProjectNewFormatDto | HierarchicalProjectAssignDto) {
     // Check for hierarchical format

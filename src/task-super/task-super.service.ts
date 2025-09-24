@@ -33,6 +33,32 @@ export class TaskSuperService {
     private connection: Connection,
   ) {}
 
+
+  async updateGlobalRankings(rankings: { id: string; rank: number }[]) {
+    // Validate UUIDs and ranks
+    const isValidUUID = (id: any): boolean => {
+      if (!id || typeof id !== 'string') return false;
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    };
+
+    const validRankings = rankings.filter(({ id }) => isValidUUID(id));
+    if (validRankings.length === 0) {
+      return { success: false, message: 'No valid TaskSuper IDs to update' };
+    }
+
+    // Update each TaskSuper's rank
+    const updatePromises = validRankings.map(({ id, rank }) => {
+      return this.taskSuperRepository.createQueryBuilder()
+        .update(TaskSuper)
+        .set({ rank })
+        .where('id = :id', { id })
+        .execute();
+    });
+
+    await Promise.all(updatePromises);
+    return { success: true, message: 'TaskSuper rankings updated successfully' };
+  }
+
   async create(createTaskSuperDto: CreateTaskSuperDto): Promise<TaskSuper> {
     const taskSuper = this.taskSuperRepository.create(createTaskSuperDto);
     return this.taskSuperRepository.save(taskSuper);

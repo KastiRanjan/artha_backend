@@ -440,6 +440,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.POST
             }
           ]
+        },
+        {
+          name: 'Update task super rankings',
+          route: [
+            {
+              path: '/task-super/rankings',
+              method: MethodList.PATCH
+            }
+          ]
         }
       ]
     },
@@ -1645,6 +1654,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/leave/:id',
               method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Approve leave (any)',
+          route: [
+            {
+              path: '/leave/:id/approve',
+              method: MethodList.PATCH
             }
           ]
         },
