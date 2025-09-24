@@ -189,9 +189,17 @@ export class WorklogService {
 
   
   async findRequest(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
-    const whereCondition: any = { requestTo: user.id };
-    if (status) {
-      whereCondition.status = status;
+    let whereCondition: any = {};
+    if (status === 'approved') {
+      whereCondition = { approvedBy: user.id, requestTo: user.id, status: 'approved' };
+    } else if (status === 'rejected') {
+      whereCondition = { rejectBy: user.id, requestTo: user.id, status: 'rejected' };
+    } else {
+      // default to requested and others
+      whereCondition = { requestTo: user.id };
+      if (status) {
+        whereCondition.status = status;
+      }
     }
     const worklogs = await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
