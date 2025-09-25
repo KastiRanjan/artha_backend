@@ -74,8 +74,17 @@ export class AuthController {
       userLoginDto,
       refreshTokenPayload
     );
+    // Extract JWT token from Authentication cookie
+    let token = null;
+    if (cookiePayload && cookiePayload.length > 0) {
+      const authCookie = cookiePayload.find((c) => c.startsWith('Authentication='));
+      if (authCookie) {
+        // Authentication=<token>; ...
+        token = authCookie.split('=')[1].split(';')[0];
+      }
+    }
     response.setHeader('Set-Cookie', cookiePayload);
-    return response.status(HttpStatus.NO_CONTENT).json({});
+    return response.status(HttpStatus.OK).json({ token });
   }
 
   @Post('/refresh')

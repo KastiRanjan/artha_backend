@@ -49,6 +49,7 @@ import { BusinessNatureModule } from './business-nature/business-nature.module';
 import { LegalStatusModule } from './legal-status/legal-status.module';
 import { NoticeBoardModule } from './notice-board/notice-board.module';
 import { UploadModule } from './upload/upload.module';
+// import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
 
@@ -79,54 +80,55 @@ import { UploadModule } from './upload/upload.module';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/',
-      exclude: ['/api*']
+      exclude: ['/api*', '/socket.io*']
     }),
-    AuthModule,
-    RolesModule,
-    PermissionsModule,
-    MailModule,
-    EmailTemplateModule,
-    RefreshTokenModule,
-    TwofaModule,
-    DashboardModule,
-    UsersModule,
-    CustomersModule,
-    ProjectsModule,
-    TasksModule,
-    TaskGroupsModule,
-    TaskSuperModule,
-    WorklogModule,
-    TaskTemplateModule,
-    AttendenceModule,
-    NotificationModule,
-    CalendarModule,
-    HolidayModule,
-    LeaveModule,
-    LeaveTypeModule,
-    WorkhourModule,
-    NatureOfWorkModule,
-    BusinessSizeModule,
-    BusinessNatureModule,
-    LegalStatusModule,
-    BillingModule,
-    TodoTaskModule,
-    TaskTypeModule,
-    NoticeBoardModule,
-    UploadModule
+  AuthModule,
+  RolesModule,
+  PermissionsModule,
+  MailModule,
+  EmailTemplateModule,
+  RefreshTokenModule,
+  TwofaModule,
+  DashboardModule,
+  UsersModule,
+  CustomersModule,
+  ProjectsModule,
+  TasksModule,
+  TaskGroupsModule,
+  TaskSuperModule,
+  WorklogModule,
+  TaskTemplateModule,
+  AttendenceModule,
+  NotificationModule,
+  CalendarModule,
+  HolidayModule,
+  LeaveModule,
+  LeaveTypeModule,
+  WorkhourModule,
+  NatureOfWorkModule,
+  BusinessSizeModule,
+  BusinessNatureModule,
+  LegalStatusModule,
+  BillingModule,
+  TodoTaskModule,
+  TaskTypeModule,
+  NoticeBoardModule,
+  UploadModule
   ],
   providers: [
     {
       provide: APP_PIPE,
       useClass: CustomValidationPipe
     },
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: CustomThrottlerGuard
-    // },
+  // {
+  //   provide: APP_GUARD,
+  //   useClass: CustomThrottlerGuard
+  // },
     {
       provide: APP_FILTER,
       useClass: I18nExceptionFilterPipe
-    }
+    },
+  // SocketTestGateway
   ],
   controllers: [AppController]
 })

@@ -6,6 +6,7 @@ import { ProjectTimeline } from './entities/project-timeline.entity';
 import { ProjectTimelineService } from './project-timeline.service';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { NotificationModule } from 'src/notification/notification.module';
 import { Notification } from 'src/notification/entities/notification.entity';
 import { ProjectsService } from './projects.service';
 import { Billing } from 'src/billing/entities/billing.entity';
@@ -26,6 +27,7 @@ import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 
 @Module({
   imports: [
+    NotificationModule,
     TypeOrmModule.forFeature([
       Project, 
       ProjectTimeline, 

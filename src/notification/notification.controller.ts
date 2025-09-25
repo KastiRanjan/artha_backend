@@ -1,33 +1,44 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('notification')
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) { }
+  constructor(private readonly notificationService: NotificationService) {}
 
+  // Create notification (to all or selected users)
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {
     return this.notificationService.create(createNotificationDto);
   }
 
-  @Get()
-  findAll() {
-    return this.notificationService.findAll();
+  // Get notifications for a user
+  @Get('user/:userId')
+  getUserNotifications(@Param('userId') userId: string) {
+    return this.notificationService.getUserNotifications(userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.notificationService.findOne(id);
+  // Mark notification as read for a user
+  @Patch('read/:userId/:notificationId')
+  markAsRead(@Param('userId') userId: string, @Param('notificationId') notificationId: string) {
+    return this.notificationService.markAsRead(userId, notificationId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string) {
-    return this.notificationService.markNotificationAsReadupdate(id);
+  // Mark notification as unread for a user
+  @Patch('unread/:userId/:notificationId')
+  markAsUnread(@Param('userId') userId: string, @Param('notificationId') notificationId: string) {
+    return this.notificationService.markAsUnread(userId, notificationId);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.notificationService.remove(+id);
+  // Archive notification for a user
+  @Patch('archive/:userId/:notificationId')
+  archive(@Param('userId') userId: string, @Param('notificationId') notificationId: string) {
+    return this.notificationService.archive(userId, notificationId);
+  }
+
+  // Delete notification for a user
+  @Delete('user/:userId/:notificationId')
+  remove(@Param('userId') userId: string, @Param('notificationId') notificationId: string) {
+    return this.notificationService.remove(userId, notificationId);
   }
 }

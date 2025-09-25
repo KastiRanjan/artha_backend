@@ -28,6 +28,7 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
+import { UserNotification } from 'src/notification/entities/user-notification.entity';
 import { NoticeBoard } from 'src/notice-board/entities/notice-board.entity';
 import { UserEducationDetailEntity } from 'src/users/entities/user.educationdetail.entity';
 
@@ -148,19 +149,8 @@ export class UserEntity extends CustomBaseEntity {
   @OneToMany(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
   bank_detail: UserBankDetailEntity[];
 
-  @ManyToMany(() => Notification, notification => notification.users)
-  @JoinTable({
-    name: 'user_notification',
-    joinColumn: {
-      name: 'notificationId',
-      referencedColumnName: 'id'
-    },
-    inverseJoinColumn: {
-      name: 'userId',
-      referencedColumnName: 'id'
-    }
-  })
-  notifications: Notification[];
+  @OneToMany(() => UserNotification, userNotification => userNotification.user)
+  userNotifications: UserNotification[];
 
   @ManyToMany(() => Task, (task) => task.assignees)
   @JoinTable({

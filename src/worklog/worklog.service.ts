@@ -103,7 +103,7 @@ export class WorklogService {
 	    endTime: worklogEndTime,
 	    status: 'requested',
 	    requestedAt: now,
-	    requestTo: worklogDto.requestTo || null // Always set requestTo from DTO
+	    requestTo: worklogDto.requestTo || null 
 	  });
 	  worklogs.push(worklog);
 	}
@@ -111,15 +111,15 @@ export class WorklogService {
     // Save all worklogs to the database at once
     const savedWorklogs = await this.worklogRepository.save(worklogs);
     
-    // Send notification if approval is requested (check first worklog for approval request)
-    if (createWorklogDto.length > 0 && createWorklogDto[0].approvalRequest) {
-      // Get the project from the first worklog to send notification
-      const firstWorklog = savedWorklogs[0];
-      if (firstWorklog.project && firstWorklog.project.projectLead) {
-        await this.notificationService.create({ 
-          message: `Worklog added for approval`, 
-          users: [firstWorklog.project.projectLead.id] 
-        });
+    // Send notification to requestTo user for each worklog if present
+    for (let i = 0; i < savedWorklogs.length; i++) {
+      const worklog = savedWorklogs[i];
+      console.log(`Worklog notification debug: index=${i}, requestTo=`, worklog.requestTo);
+      if (worklog.requestTo) {
+          await this.notificationService.create({
+            message: `Worklog has been requested by user ${user.name}`,
+            users: [worklog.requestTo]
+          });
       }
     }
     
@@ -300,7 +300,14 @@ export class WorklogService {
   }
 
   async update(id: string, updateWorklogDto: UpdateWorklogDto, user: UserEntity) {
-    const worklog = await this.findOne(id);
+    // Always load user relation for notification
+    const worklog = await this.worklogRepository.findOne({
+      where: { id },
+      relations: ['user']
+    });
+    if (!worklog) {
+      throw new NotFoundException(`Worklog with ID ${id} not found`);
+    }
     if (!worklog) {
       throw new NotFoundException(`Worklog with ID ${id} not found`);
     }
@@ -311,10 +318,26 @@ export class WorklogService {
       if (updateWorklogDto.status === 'approved') {
         worklog.approvedAt = now;
         worklog.approvedBy = user.id;
+        // Send notification to requester
+        if (worklog.requestTo) {
+          const approver = await this.userRepository.findOne({ where: { id: user.id } });
+          await this.notificationService.create({
+            message: `Worklog has been approved by user ${approver?.name || user.id}`,
+            users: [worklog.user.id]
+          });
+        }
       } else if (updateWorklogDto.status === 'rejected') {
         worklog.rejectedAt = now;
         worklog.rejectedRemark = updateWorklogDto.rejectedRemark || '';
         worklog.rejectBy = user.id;
+        // Send notification to requester
+        if (worklog.requestTo) {
+          const rejector = await this.userRepository.findOne({ where: { id: user.id } });
+          await this.notificationService.create({
+            message: `Worklog has been rejected by user ${rejector?.name || user.id}`,
+            users: [worklog.user.id]
+          });
+        }
       } else if (updateWorklogDto.status === 'requested') {
         worklog.requestedAt = now;
       }

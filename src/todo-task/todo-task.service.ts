@@ -41,10 +41,11 @@ export class TodoTaskService {
     
     const savedTask = await this.todoTaskRepository.save(todoTask);
     
-    // Send notification to assigned user
+    // Format due date for notification
+    let dueDateStr = createTodoTaskDto.dueDate ? new Date(createTodoTaskDto.dueDate).toLocaleString() : 'No due date';
     await this.notificationService.create({
       users: [createTodoTaskDto.assignedToId],
-      message: `You have been assigned a new task: ${createTodoTaskDto.title} by ${user.name || user.email}`,
+      message: `Task "${createTodoTaskDto.title}" has been assigned to you with due date ${dueDateStr}.`,
       link: `/todotask/${savedTask.id}`
     });
     
@@ -53,10 +54,7 @@ export class TodoTaskService {
 
   async findAll(user: UserEntity, status?: TodoTaskStatus, assignedToId?: string): Promise<TodoTask[]> {
     // Print debug info
-    console.log('Finding all tasks with params:', { status, assignedToId });
-    console.log('Current user:', user.email, user.id);
-    console.log('User permissions:', user.role?.permission.map(p => `${p.method}:${p.resource}`).join(', '));
-    
+  
     const query = this.todoTaskRepository.createQueryBuilder('todoTask')
       .leftJoinAndSelect('todoTask.taskType', 'taskType')
       .leftJoinAndSelect('todoTask.createdByUser', 'createdBy')
@@ -69,33 +67,25 @@ export class TodoTaskService {
         (p.resource === 'todo-task' && (p.method === 'view-all' || p.method === 'get' || p.method === 'manage'))
     );
     
-    console.log('Has view all permission:', hasViewAllPermission);
     
     if (!hasViewAllPermission) {
       // If no view-all permission, only show tasks assigned to this user
-      console.log('User does not have view-all permission, restricting to their own tasks');
       query.where('todoTask.assignedToId = :userId', { userId: user.id });
     } else {
-      console.log('User has view-all permission, applying filters');
       // Apply filters if provided
       if (status && assignedToId) {
-        console.log('Filtering by both status and assignedToId:', { status, assignedToId });
         query.where('todoTask.status = :status AND todoTask.assignedToId = :assignedToId', { 
           status, assignedToId 
         });
       } else if (status) {
-        console.log('Filtering by status only:', status);
         query.where('todoTask.status = :status', { status });
       } else if (assignedToId) {
-        console.log('Filtering by assignedToId only:', assignedToId);
         query.where('todoTask.assignedToId = :assignedToId', { assignedToId });
       } else {
-        console.log('No filters applied, fetching all tasks');
       }
     }
     
     const tasks = await query.orderBy('todoTask.createdTimestamp', 'DESC').getMany();
-    console.log(`Found ${tasks.length} tasks`);
     return tasks;
   }
 
@@ -341,11 +331,8 @@ export class TodoTaskService {
         (p.resource === 'todo-task' && (p.method === 'view-all' || p.method === 'get' || p.method === 'manage'))
     );
     
-    console.log('Has view all permission:', hasViewAllPermission);
     
-    // If user doesn't have view-all permission and is trying to view another user's tasks
     if (!hasViewAllPermission && userId !== user.id) {
-      console.log('Permission denied: User cannot view other users tasks');
       throw new ForbiddenException('You do not have permission to view other users\' tasks');
     }
     
@@ -361,27 +348,20 @@ export class TodoTaskService {
     }
     
     const tasks = await query.orderBy('todoTask.createdTimestamp', 'DESC').getMany();
-    console.log(`Found ${tasks.length} tasks for user ${userId}`);
     return tasks;
   }
   
   async findByCreatedUser(userId: string, user: UserEntity, status?: TodoTaskStatus): Promise<TodoTask[]> {
     // Print debug info
-    console.log('Fetching tasks for created user:', userId);
-    console.log('Current user:', user.email, user.id);
-    console.log('User permissions:', user.role?.permission.map(p => `${p.method}:${p.resource}`).join(', '));
-    
     // Check if user has permission to view other users' tasks
     const hasViewAllPermission = user.role?.permission.some(
       (p: any) => 
         (p.resource === 'todo-task' && (p.method === 'view-all' || p.method === 'get' || p.method === 'manage'))
     );
     
-    console.log('Has view all permission:', hasViewAllPermission);
     
     // If user doesn't have view-all permission and is trying to view another user's tasks
     if (!hasViewAllPermission && userId !== user.id) {
-      console.log('Permission denied: User cannot view other users tasks');
       throw new ForbiddenException('You do not have permission to view other users\' tasks');
     }
     
@@ -397,7 +377,6 @@ export class TodoTaskService {
     }
     
     const tasks = await query.orderBy('todoTask.createdTimestamp', 'DESC').getMany();
-    console.log(`Found ${tasks.length} tasks created by user ${userId}`);
     return tasks;
   }
 }
