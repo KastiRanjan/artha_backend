@@ -49,6 +49,7 @@ import { BusinessNatureModule } from './business-nature/business-nature.module';
 import { LegalStatusModule } from './legal-status/legal-status.module';
 import { NoticeBoardModule } from './notice-board/notice-board.module';
 import { UploadModule } from './upload/upload.module';
+import { DepartmentModule } from './department/department.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -113,7 +114,8 @@ import { UploadModule } from './upload/upload.module';
   TodoTaskModule,
   TaskTypeModule,
   NoticeBoardModule,
-  UploadModule
+  UploadModule,
+  DepartmentModule
   ],
   providers: [
     {

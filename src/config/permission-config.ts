@@ -688,9 +688,79 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.PATCH
             }
           ]
+        },
+                {
+          name: 'Get user history',
+          route: [
+            {
+              path: '/users/:id/history',
+              method: MethodList.GET
+            }
+          ]
         }
       ]
     },
+    {
+  name: 'Department Management',
+  resource: 'department',
+  hasSubmodules: false,
+  permissions: [
+    {
+      name: 'View all departments',
+      route: [
+        {
+          path: '/department',
+          method: MethodList.GET
+        }
+      ]
+    },
+    {
+      name: 'View department by id',
+      route: [
+        {
+          path: '/department/:id',
+          method: MethodList.GET
+        }
+      ]
+    },
+    {
+      name: 'Create department',
+      route: [
+        {
+          path: '/department',
+          method: MethodList.POST
+        }
+      ]
+    },
+    {
+      name: 'Update department',
+      route: [
+        {
+          path: '/department/:id',
+          method: MethodList.PATCH
+        }
+      ]
+    },
+    {
+      name: 'Toggle department active status',
+      route: [
+        {
+          path: '/department/:id/toggle-active',
+          method: MethodList.PATCH
+        }
+      ]
+    },
+    {
+      name: 'Delete department',
+      route: [
+        {
+          path: '/department/:id',
+          method: MethodList.DELETE
+        }
+      ]
+    }
+  ]
+},
     {
       name: 'Role management',
       resource: 'role',

@@ -15,8 +15,11 @@ import { UserContractEntity } from './entities/user.contractdocument.entity';
 import { UserTrainningEntity } from './entities/user.trainingcertificate.entity';
 import { UserDocumentEntity } from './entities/user.document.entity';
 import { UserEducationDetailEntity } from './entities/user.educationdetail.entity';
+import { UserHistoryEntity } from './entities/user.history.entity';
+import { UserHistoryService } from './services/user-history.service';
 import { MailModule } from 'src/mail/mail.module';
 import { EmailTemplateModule } from 'src/email-template/email-template.module';
+import { DepartmentModule } from 'src/department/department.module';
 
 @Module({
   imports: [
@@ -29,11 +32,13 @@ import { EmailTemplateModule } from 'src/email-template/email-template.module';
       UserTrainningEntity,
       UserDocumentEntity,
       UserEducationDetailEntity,
+      UserHistoryEntity,
       RefreshTokenRepository
     ]),
     AuthModule,
     MailModule,
-    EmailTemplateModule
+    EmailTemplateModule,
+    DepartmentModule
   ],
   controllers: [UsersController],
   providers: [
@@ -41,6 +46,7 @@ import { EmailTemplateModule } from 'src/email-template/email-template.module';
     AuthService,
     MailService,
     RefreshTokenService,
+    UserHistoryService,
     LoginThrottleFactory
   ],
   exports: [UsersService]

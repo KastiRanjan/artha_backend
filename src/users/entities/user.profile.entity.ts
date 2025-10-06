@@ -1,7 +1,8 @@
-import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { DepartmentEntity } from 'src/department/entities/department.entity';
 
 /**
  * User profile Entity
@@ -10,12 +11,15 @@ import { UserEntity } from 'src/auth/entity/user.entity';
   name: 'user_profile'
 })
 export class UserProfileEntity extends CustomBaseEntity {
-  @Column({
-    type: 'enum',
-    enum: ['operations', 'accounts', 'administration'],
-    nullable: true
-  })
-  department: string;
+  @ManyToOne(() => DepartmentEntity, { nullable: true })
+  @JoinColumn({ name: 'departmentId' })
+  department: DepartmentEntity;
+
+  @Column({ nullable: true })
+  departmentId: string;
+
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth: Date;
 
   @Column({ length: 100, nullable: true })
   location: string;
@@ -103,27 +107,12 @@ export class UserProfileEntity extends CustomBaseEntity {
   @Column({ length: 254, nullable: true })
   personalEmail: string;
 
-  // Leave fields
-  @Column({ default: 0 })
-  casualLeaves: number;
-
-  @Column({ default: 0 })
-  examLeaves: number;
-
-  @Column({ default: 0 })
-  maternityLeaves: number;
-
-  @Column({ default: 0 })
-  paternityLeaves: number;
-
-  @Column({ default: 0 })
-  otherLeaves: number;
+  // Leave fields removed; managed by leave manager
 
   // Benefit section
-  @Column({ default: false })
-  pf: boolean;
+  // pf removed; managed elsewhere
 
-  // Salary & allowance section
+  // Salary & allowance sectio
   @Column({ type: 'float', default: 0.0 })
   hourlyCostRate: number;
 

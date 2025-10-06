@@ -144,7 +144,7 @@ export class UserEntity extends CustomBaseEntity {
     () => UserTrainningEntity,
     (trainning_detail) => trainning_detail.user
   )
-  trainning_detail: UserBankDetailEntity[];
+  trainning_detail: UserTrainningEntity[];
 
   @OneToMany(() => UserBankDetailEntity, (bank_detail) => bank_detail.user)
   bank_detail: UserBankDetailEntity[];

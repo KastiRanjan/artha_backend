@@ -271,6 +271,7 @@ export class AuthService {
         'profile',
         'education_detail',
         'trainning_detail',
+        'contract_detail',
         'document'
       ],
       {

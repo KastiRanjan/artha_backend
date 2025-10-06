@@ -35,6 +35,18 @@ export class UserDocumentEntity extends CustomBaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   documentFile: string;
+  
+  @Column({ type: 'varchar', nullable: true })
+  filename: string;
+
+  @Column({ type: 'boolean', default: false })
+  isVerified: boolean;
+  
+  @Column({ nullable: true })
+  verifiedById: string;
+  
+  @Column({ type: 'timestamp', nullable: true })
+  verifiedAt: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.document)
   user: UserEntity;

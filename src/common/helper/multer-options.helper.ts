@@ -9,18 +9,22 @@ import { StatusCodesList } from 'src/common/constants/status-codes-list.constant
 
 export const multerOptionsHelper = (
   destinationPath: string,
-  maxFileSize: number
+  maxFileSize: number,
+  allowedFileTypes: string[] = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']
 ) => ({
   limits: {
     fileSize: +maxFileSize
   },
   fileFilter: (req: any, file: any, cb: any) => {
-    if (file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+    // Create a regex pattern from allowed file types
+    const pattern = new RegExp(`\\/(${allowedFileTypes.join('|')})$`, 'i');
+    
+    if (file.mimetype.match(pattern)) {
       cb(null, true);
     } else {
       cb(
         new CustomHttpException(
-          'unsupportedFileType',
+          `unsupportedFileType. Allowed types: ${allowedFileTypes.join(', ')}`,
           HttpStatus.BAD_REQUEST,
           StatusCodesList.UnsupportedFileType
         ),
@@ -30,9 +34,9 @@ export const multerOptionsHelper = (
   },
   storage: diskStorage({
     destination: (req: any, file: any, cb: any) => {
-      // Create folder if doesn't exist
+      // Create folder if doesn't exist (recursively)
       if (!existsSync(destinationPath)) {
-        mkdirSync(destinationPath);
+        mkdirSync(destinationPath, { recursive: true });
       }
       cb(null, destinationPath);
     },

@@ -97,6 +97,15 @@ export class NoticeBoardService {
       console.log('Not sending emails. sendEmail flag:', createNoticeBoardDto.sendEmail, 'User count:', savedNotice.users.length);
     }
 
+    // Send real-time notification to all relevant users
+    if (savedNotice.users && savedNotice.users.length > 0) {
+      await (this as any).notificationService.create({
+        users: savedNotice.users.map(u => u.id),
+          message: `A notice has been published: "${savedNotice.title}"`,
+        link: `/noticeboard/}`
+      });
+    }
+
     return savedNotice;
   }
 
@@ -208,6 +217,15 @@ export class NoticeBoardService {
       console.log('Email sending result:', emailResult);
     } else {
       console.log('Not sending emails for update. sendEmail flag:', updateNoticeBoardDto.sendEmail, 'User count:', noticeBoard.users.length);
+    }
+
+    // Send real-time notification to all relevant users on update
+    if (noticeBoard.users && noticeBoard.users.length > 0) {
+      await (this as any).notificationService.create({
+        users: noticeBoard.users.map(u => u.id),
+        message: `Notice updated: "${noticeBoard.title}"`,
+        link: `/noticeboard/${noticeBoard.id}`
+      });
     }
 
     const updatedNotice = await this.noticeBoardRepository.save(noticeBoard);
