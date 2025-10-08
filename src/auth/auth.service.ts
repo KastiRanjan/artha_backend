@@ -585,7 +585,7 @@ export class AuthService {
     const maxAge = 60 * 60 * 24; // 24 hours in seconds
     
     let tokenCookies = [
-      `Authentication=${accessToken}; HttpOnly; Path=/; ${sameSite} ${domain} Max-Age=${maxAge}`
+      `Authentication=${accessToken}; HttpOnly; Path=/; ${sameSite} ${domain}; Max-Age=${maxAge}`
     ];
     
     if (refreshToken) {
@@ -593,8 +593,8 @@ export class AuthService {
       expiration.setSeconds(expiration.getSeconds() + (60 * 60 * 24 * 30)); // 30 days for refresh token
       
       tokenCookies = tokenCookies.concat([
-        `Refresh=${refreshToken}; HttpOnly; Path=/; ${sameSite} ${domain} Max-Age=${60 * 60 * 24 * 30}`,
-        `ExpiresIn=${expiration.toISOString()}; Path=/; ${sameSite} ${domain} Max-Age=${60 * 60 * 24 * 30}`
+        `Refresh=${refreshToken}; HttpOnly; Path=/; ${sameSite} ${domain}; Max-Age=${60 * 60 * 24 * 30}`,
+        `ExpiresIn=${expiration.toISOString()}; Path=/; ${sameSite} ${domain}; Max-Age=${60 * 60 * 24 * 30}`
       ]);
     }
     
