@@ -3,11 +3,11 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   UnprocessableEntityException
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as config from 'config';
 import { existsSync, unlinkSync } from 'fs';
 import { SignOptions } from 'jsonwebtoken';
 import { DeepPartial, Not, ObjectLiteral } from 'typeorm';
@@ -44,32 +44,16 @@ import { UserRepository } from 'src/auth/user.repository';
 import { ValidationPayloadInterface } from 'src/common/interfaces/validation-error.interface';
 import { RefreshPaginateFilterDto } from 'src/refresh-token/dto/refresh-paginate-filter.dto';
 import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-token.serializer';
-import * as dotenv from 'dotenv';
 
-dotenv.config();
-
-// const throttleConfig = config.get('throttle.login');
-// const jwtConfig = config.get('jwt');
-// const appConfig = config.get('app');
+// Environment configuration
+const isDevelopment = process.env.NODE_ENV === 'development';
 const isSameSite = process.env.IS_SAME_SITE === 'true';
-
-dotenv.config();
-
-// const throttleConfig = config.get('throttle.login');
-// const jwtConfig = config.get('jwt');
-// const appConfig = config.get('app');
-// for heroku
-// const isSameSite =
-//   appConfig.sameSite !== null
-//     ? appConfig.sameSite
-//     : process.env.IS_SAME_SITE === 'true';
-// const BASE_OPTIONS: SignOptions = {
-//   issuer: appConfig.appUrl,
-//   audience: appConfig.frontendUrl
-// };
+const isCloudflareProxy = process.env.FRONTEND_URL?.includes('https://') && isDevelopment;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(UserRepository)
     private readonly userRepository: UserRepository,
@@ -95,20 +79,27 @@ export class AuthService {
     slug: string,
     linkLabel: string
   ) {
-    // Get the frontend URL from environment variable
-    const frontendUrl = process.env.FRONTEND_URL || 'https://artha.sarojkasti.com.np';
-        const mailData: MailJobInterface = {
-      to: user.email,
-      subject,
-      slug,
-      context: {
-        email: user.email,
-        link: `<a href="${frontendUrl}/${url}">${linkLabel} →</a>`,
-        username: user.username,
-        subject
-      }
-    };
-    await this.mailService.sendMail(mailData, 'system-mail');
+    try {
+      // Get the frontend URL from environment variable
+      const frontendUrl = process.env.FRONTEND_URL || 'https://artha.sarojkasti.com.np';
+      const mailData: MailJobInterface = {
+        to: user.email,
+        subject,
+        slug,
+        context: {
+          email: user.email,
+          link: `<a href="${frontendUrl}/${url}">${linkLabel} →</a>`,
+          username: user.username,
+          subject
+        }
+      };
+      
+      await this.mailService.sendMail(mailData, 'system-mail');
+      this.logger.log(`Email sent successfully to ${user.email} with subject: ${subject}`);
+    } catch (error) {
+      this.logger.error(`Failed to send email to ${user.email}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -165,47 +156,70 @@ export class AuthService {
     refreshTokenPayload: Partial<RefreshToken>
   ): Promise<string[]> {
     const usernameIPkey = `${userLoginDto.username}_${refreshTokenPayload.ip}`;
-    const resUsernameAndIP = await this.rateLimiter.get(usernameIPkey);
-    let retrySecs = 0;
-    // Check if user is already blocked
-    if (resUsernameAndIP !== null && resUsernameAndIP.consumedPoints > 100) {
-      retrySecs = Math.round(resUsernameAndIP.msBeforeNext / 1000) || 1;
-    }
-    if (retrySecs > 0) {
-      throw new CustomHttpException(
-        `tooManyRequest-{"second":"${String(retrySecs)}"}`,
-        HttpStatus.TOO_MANY_REQUESTS,
-        StatusCodesList.TooManyTries
-      );
-    }
-
-    const [user, error, code] = await this.userRepository.login(userLoginDto);
-    if (!user) {
-      const [result, throttleError] = await this.limitConsumerPromiseHandler(
-        usernameIPkey
-      );
-      if (!result) {
+    
+    try {
+      // Check rate limiting
+      const resUsernameAndIP = await this.rateLimiter.get(usernameIPkey);
+      let retrySecs = 0;
+      
+      if (resUsernameAndIP !== null && resUsernameAndIP.consumedPoints > 100) {
+        retrySecs = Math.round(resUsernameAndIP.msBeforeNext / 1000) || 1;
+      }
+      
+      if (retrySecs > 0) {
+        this.logger.warn(`Rate limit exceeded for user: ${userLoginDto.username}, IP: ${refreshTokenPayload.ip}`);
         throw new CustomHttpException(
-          `tooManyRequest-{"second":${String(
-            Math.round(throttleError.msBeforeNext / 1000) || 1
-          )}}`,
+          `tooManyRequest-{"second":"${String(retrySecs)}"}`,
           HttpStatus.TOO_MANY_REQUESTS,
           StatusCodesList.TooManyTries
         );
       }
-      throw new UnauthorizedException(error, code);
-    }
-    const accessToken = await this.generateAccessToken(user);
 
-    let refreshToken = null;
-    if (userLoginDto.remember) {
-      refreshToken = await this.refreshTokenService.generateRefreshToken(
-        user,
-        refreshTokenPayload
-      );
+      // Attempt login
+      const [user, error, code] = await this.userRepository.login(userLoginDto);
+      
+      if (!user) {
+        this.logger.warn(`Failed login attempt for user: ${userLoginDto.username}, IP: ${refreshTokenPayload.ip}`);
+        const [result, throttleError] = await this.limitConsumerPromiseHandler(usernameIPkey);
+        
+        if (!result) {
+          throw new CustomHttpException(
+            `tooManyRequest-{"second":${String(
+              Math.round(throttleError.msBeforeNext / 1000) || 1
+            )}}`,
+            HttpStatus.TOO_MANY_REQUESTS,
+            StatusCodesList.TooManyTries
+          );
+        }
+        throw new UnauthorizedException(error, code);
+      }
+
+      // Generate tokens
+      const accessToken = await this.generateAccessToken(user);
+      
+      // Always generate refresh token for persistent sessions
+      // Default to remember=true for better UX unless explicitly set to false
+      const shouldRemember = userLoginDto.remember !== false;
+      let refreshToken = null;
+      
+      if (shouldRemember) {
+        refreshToken = await this.refreshTokenService.generateRefreshToken(
+          user,
+          refreshTokenPayload
+        );
+        this.logger.debug(`Generated refresh token for user: ${user.username}`);
+      }
+
+      // Clear rate limiting on successful login
+      await this.rateLimiter.delete(usernameIPkey);
+      
+      this.logger.log(`Successful login for user: ${user.username}, IP: ${refreshTokenPayload.ip}`);
+      return this.buildResponsePayload(accessToken, refreshToken);
+      
+    } catch (error) {
+      this.logger.error(`Login error for user: ${userLoginDto.username}`, error.stack);
+      throw error;
     }
-    await this.rateLimiter.delete(usernameIPkey);
-    return this.buildResponsePayload(accessToken, refreshToken);
   }
 
   /**
@@ -217,18 +231,29 @@ export class AuthService {
     user: UserSerializer,
     isTwoFAAuthenticated = false
   ): Promise<string> {
-    const opts: SignOptions = {
-      issuer: process.env.APP_URL || process.env.BACKEND_URL,
-      audience: process.env.FRONTEND_URL,
-      subject: String(user.id)
-    };
-    return this.jwt.signAsync(
-      {
-        ...opts,
-        isTwoFAAuthenticated
-      },
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-    );
+    try {
+      const opts: SignOptions = {
+        issuer: process.env.APP_URL || process.env.BACKEND_URL,
+        audience: process.env.FRONTEND_URL,
+        subject: String(user.id)
+      };
+      
+      const token = await this.jwt.signAsync(
+        {
+          ...opts,
+          isTwoFAAuthenticated,
+          username: user.username,
+          email: user.email
+        },
+        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      );
+      
+      this.logger.debug(`Generated access token for user: ${user.username}`);
+      return token;
+    } catch (error) {
+      this.logger.error(`Failed to generate access token for user: ${user.username}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -484,31 +509,69 @@ export class AuthService {
    * @param length
    */
   async generateUniqueToken(length: number): Promise<string> {
-    const token = this.generateRandomCode(length);
-    const condition: ObjectLiteral = {
-      token
-    };
-    const tokenCount = await this.userRepository.countEntityByCondition(
-      condition
-    );
-    if (tokenCount > 0) {
-      await this.generateUniqueToken(length);
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      const token = this.generateRandomCode(length);
+      const condition: ObjectLiteral = {
+        token
+      };
+      const tokenCount = await this.userRepository.countEntityByCondition(
+        condition
+      );
+      
+      if (tokenCount === 0) {
+        return token;
+      }
+      
+      attempts++;
+      this.logger.warn(`Token collision detected, attempt ${attempts}/${maxAttempts}`);
     }
-    return token;
+
+    // If we still haven't found a unique token after max attempts, 
+    // generate a longer token to ensure uniqueness
+    this.logger.error(`Failed to generate unique token after ${maxAttempts} attempts, generating longer token`);
+    return this.generateRandomCode(length + 4);
+  }
+
+  /**
+   * Get cookie configuration for current environment
+   */
+  private getCookieConfig(): { domain: string; sameSite: string; secure: string } {
+    // For Cloudflare Tunnel: treat as production-like even in development
+    const useProductionCookies = isCloudflareProxy || !isDevelopment;
+    
+    const cookieDomain = useProductionCookies && process.env.COOKIE_DOMAIN 
+      ? `Domain=${process.env.COOKIE_DOMAIN};` 
+      : '';
+    
+    const sameSiteConfig = isSameSite 
+      ? 'SameSite=Lax;' 
+      : 'SameSite=None; Secure;';
+    
+    // Always use Secure flag for HTTPS (Cloudflare provides HTTPS)
+    const secureFlag = !isSameSite || isCloudflareProxy ? 'Secure;' : '';
+
+    this.logger.debug(`Cookie config - Domain: ${cookieDomain}, SameSite: ${sameSiteConfig}, Secure: ${secureFlag}`);
+
+    return {
+      domain: cookieDomain,
+      sameSite: sameSiteConfig,
+      secure: secureFlag
+    };
   }
 
   /**
    * Get cookie for logout action
    */
   getCookieForLogOut(): string[] {
-    const isLocalhost = process.env.NODE_ENV === 'development';
-    const cookieDomain = !isLocalhost && process.env.COOKIE_DOMAIN ? `Domain=${process.env.COOKIE_DOMAIN};` : '';
-    const sameSiteConfig = isSameSite ? 'SameSite=Lax;' : 'SameSite=None; Secure;';
+    const { domain, sameSite } = this.getCookieConfig();
     
     return [
-      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSiteConfig} ${cookieDomain}`,
-      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSiteConfig} ${cookieDomain}`,
-      `ExpiresIn=; Path=/; Max-Age=0; ${sameSiteConfig} ${cookieDomain}`
+      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSite} ${domain}`,
+      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSite} ${domain}`,
+      `ExpiresIn=; Path=/; Max-Age=0; ${sameSite} ${domain}`
     ];
   }
 
@@ -518,22 +581,24 @@ export class AuthService {
    * @param refreshToken
    */
   buildResponsePayload(accessToken: string, refreshToken?: string): string[] {
-    const isLocalhost = process.env.NODE_ENV === 'development';
-    const cookieDomain = !isLocalhost && process.env.COOKIE_DOMAIN ? `Domain=${process.env.COOKIE_DOMAIN};` : '';
-    const sameSiteConfig = isSameSite ? 'SameSite=Lax;' : 'SameSite=None; Secure;';
+    const { domain, sameSite } = this.getCookieConfig();
     const maxAge = 60 * 60 * 24; // 24 hours in seconds
     
     let tokenCookies = [
-      `Authentication=${accessToken}; HttpOnly; Path=/; ${sameSiteConfig} ${cookieDomain} Max-Age=${maxAge}`
+      `Authentication=${accessToken}; HttpOnly; Path=/; ${sameSite} ${domain} Max-Age=${maxAge}`
     ];
+    
     if (refreshToken) {
       const expiration = new Date();
-      expiration.setSeconds(expiration.getSeconds() + 50000);
+      expiration.setSeconds(expiration.getSeconds() + (60 * 60 * 24 * 30)); // 30 days for refresh token
+      
       tokenCookies = tokenCookies.concat([
-        `Refresh=${refreshToken}; HttpOnly; Path=/; ${sameSiteConfig} ${cookieDomain} Max-Age=${maxAge}`,
-        `ExpiresIn=${expiration}; Path=/; ${sameSiteConfig} ${cookieDomain} Max-Age=${maxAge}`
+        `Refresh=${refreshToken}; HttpOnly; Path=/; ${sameSite} ${domain} Max-Age=${60 * 60 * 24 * 30}`,
+        `ExpiresIn=${expiration.toISOString()}; Path=/; ${sameSite} ${domain} Max-Age=${60 * 60 * 24 * 30}`
       ]);
     }
+    
+    this.logger.debug(`Generated ${tokenCookies.length} authentication cookies`);
     return tokenCookies;
   }
 
@@ -654,7 +719,83 @@ export class AuthService {
     return this.userRepository.countEntityByCondition(condition);
   }
 
+  /**
+   * Get refresh token grouped data
+   * @param field
+   */
   async getRefreshTokenGroupedData(field: string) {
     return this.refreshTokenService.getRefreshTokenGroupedData(field);
+  }
+
+  /**
+   * Validate if user is authenticated based on JWT token
+   * This method can be used by controllers to check authentication status
+   * @param token - JWT token to validate
+   * @returns Promise<UserSerializer | null>
+   */
+  async validateAuthenticatedUser(token: string): Promise<UserSerializer | null> {
+    try {
+      const decoded = this.jwt.verify(token);
+      const userId = decoded.sub || decoded.subject;
+      
+      if (!userId) {
+        this.logger.warn('JWT token missing user ID');
+        return null;
+      }
+
+      const user = await this.findById(userId);
+      if (!user) {
+        this.logger.warn(`User not found for ID: ${userId}`);
+        return null;
+      }
+
+      if (user.status !== UserStatusEnum.ACTIVE) {
+        this.logger.warn(`User ${userId} is not active`);
+        return null;
+      }
+
+      return user;
+    } catch (error) {
+      this.logger.error('JWT validation failed', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get current authentication status from cookies
+   * Useful for frontend to check auth state
+   * @param cookies - Request cookies
+   * @returns Object with authentication status and user info
+   */
+  async getAuthenticationStatus(cookies: any): Promise<{
+    isAuthenticated: boolean;
+    user?: UserSerializer;
+    hasRefreshToken: boolean;
+  }> {
+    try {
+      const authToken = cookies?.Authentication;
+      const refreshToken = cookies?.Refresh;
+
+      if (!authToken) {
+        return {
+          isAuthenticated: false,
+          hasRefreshToken: !!refreshToken
+        };
+      }
+
+      const user = await this.validateAuthenticatedUser(authToken);
+      
+      return {
+        isAuthenticated: !!user,
+        user: user || undefined,
+        hasRefreshToken: !!refreshToken
+      };
+    } catch (error) {
+      this.logger.error('Failed to get authentication status', error.stack);
+      return {
+        isAuthenticated: false,
+        hasRefreshToken: false
+      };
+    }
   }
 }
