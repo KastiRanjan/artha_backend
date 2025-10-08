@@ -575,11 +575,46 @@ export class AuthService {
   getCookieForLogOut(): string[] {
     const { domain, sameSite } = this.getCookieConfig();
     
-    return [
+    // Clear cookies for current domain configuration
+    const currentDomainCookies = [
       `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSite} ${domain}`,
       `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSite} ${domain}`,
       `ExpiresIn=; Path=/; Max-Age=0; ${sameSite} ${domain}`
     ];
+
+    // Clear cookies without domain attribute (affects current subdomain specifically)
+    const subdomainCookies = [
+      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSite}`,
+      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSite}`,
+      `ExpiresIn=; Path=/; Max-Age=0; ${sameSite}`
+    ];
+
+    // For Cloudflare setup, also explicitly clear both .sarojkasti.com.np and backend.sarojkasti.com.np
+    const legacyCookies = [];
+    if (isCloudflareProxy) {
+      // Clear wildcard domain cookies
+      legacyCookies.push(
+        `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSite} Domain=.sarojkasti.com.np;`,
+        `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSite} Domain=.sarojkasti.com.np;`,
+        `ExpiresIn=; Path=/; Max-Age=0; ${sameSite} Domain=.sarojkasti.com.np;`
+      );
+      
+      // Clear specific subdomain cookies
+      legacyCookies.push(
+        `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSite} Domain=backend.sarojkasti.com.np;`,
+        `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSite} Domain=backend.sarojkasti.com.np;`,
+        `ExpiresIn=; Path=/; Max-Age=0; ${sameSite} Domain=backend.sarojkasti.com.np;`
+      );
+    }
+
+    const allCookies = [...currentDomainCookies, ...subdomainCookies, ...legacyCookies];
+    
+    this.logger.debug(`🗑️  Clearing ${allCookies.length} cookie variations for logout:`);
+    allCookies.forEach((cookie, index) => {
+      this.logger.debug(`   ${index + 1}: ${cookie}`);
+    });
+
+    return allCookies;
   }
 
   /**
