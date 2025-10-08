@@ -171,8 +171,13 @@ export class WorklogService {
         createdAt: 'DESC'
       }
     });
+    // Filter out worklogs whose project status is 'signed_off' or 'completed'
+    const filteredWorklogs = worklogs.filter(wl => {
+      const projectStatus = wl.task?.project?.status;
+      return projectStatus !== 'signed_off' && projectStatus !== 'completed';
+    });
     // Populate approvedBy, requestTo, rejectBy with user objects
-    for (const worklog of worklogs) {
+    for (const worklog of filteredWorklogs) {
       if (worklog.approvedBy) {
         (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
       }
@@ -183,7 +188,7 @@ export class WorklogService {
         (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
       }
     }
-    return worklogs;
+    return filteredWorklogs;
   }
 
   
