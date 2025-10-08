@@ -48,8 +48,8 @@ export class RefreshTokenService {
   ): Promise<string> {
     const token = await this.repository.createRefreshToken(user, refreshToken);
     const opts: SignOptions = {
-      issuer:'http://localhost:3000',
-      audience:'http://localhost:3000',
+      issuer: process.env.BACKEND_URL || 'http://localhost:7777',
+      audience: process.env.FRONTEND_URL || 'http://localhost:5173',
       subject: String(user.id),
       jwtid: String(token.id)
     };

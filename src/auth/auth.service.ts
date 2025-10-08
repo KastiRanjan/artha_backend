@@ -553,7 +553,14 @@ export class AuthService {
     // Always use Secure flag for HTTPS (Cloudflare provides HTTPS)
     const secureFlag = !isSameSite || isCloudflareProxy ? 'Secure;' : '';
 
-    this.logger.debug(`Cookie config - Domain: ${cookieDomain}, SameSite: ${sameSiteConfig}, Secure: ${secureFlag}`);
+    this.logger.debug(`🍪 Cookie Configuration:`);
+    this.logger.debug(`   Environment: ${isDevelopment ? 'development' : 'production'}`);
+    this.logger.debug(`   Cloudflare Proxy: ${isCloudflareProxy}`);
+    this.logger.debug(`   Use Production Cookies: ${useProductionCookies}`);
+    this.logger.debug(`   COOKIE_DOMAIN env: ${process.env.COOKIE_DOMAIN}`);
+    this.logger.debug(`   Final Domain: ${cookieDomain}`);
+    this.logger.debug(`   SameSite: ${sameSiteConfig}`);
+    this.logger.debug(`   Secure: ${secureFlag}`);
 
     return {
       domain: cookieDomain,
@@ -598,7 +605,10 @@ export class AuthService {
       ]);
     }
     
-    this.logger.debug(`Generated ${tokenCookies.length} authentication cookies`);
+    this.logger.debug(`Generated ${tokenCookies.length} authentication cookies:`);
+    tokenCookies.forEach((cookie, index) => {
+      this.logger.debug(`   Cookie ${index + 1}: ${cookie}`);
+    });
     return tokenCookies;
   }
 
