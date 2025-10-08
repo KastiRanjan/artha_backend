@@ -36,8 +36,6 @@ export class NotificationService {
       users = await this.userRepository.findByIds(createNotificationDto.users);
     }
     // Debug log
-    console.log('NotificationService.create users:', createNotificationDto.users);
-    console.log('NotificationService.create found users:', users.map(u => u.id));
     if (!users || users.length === 0) {
       console.warn('No valid users found for notification, skipping creation.');
       return savedNotification;

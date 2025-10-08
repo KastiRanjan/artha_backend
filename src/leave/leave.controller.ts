@@ -28,8 +28,12 @@ export class LeaveController {
   // New endpoints for enhanced leave management and static routes must be
   // declared before parameterized routes to avoid route collisions (e.g. ':id' matching 'my-leaves').
   @Get('approvals/pending')
-  getPendingApprovals(@GetUser() user: UserEntity) {
-    return this.leaveService.getLeavesForApproval(user.id);
+  async getPendingApprovals(@GetUser() user: UserEntity) {
+    const leaves = await this.leaveService.getLeavesForApproval(user.id);
+    
+    // Count pending leaves for approval
+    const pendingCount = leaves.filter(l => ['pending', 'approved_by_lead', 'approved_by_pm'].includes(l.status)).length;    
+    return leaves;
   }
 
   @Get('my-leaves')
@@ -88,14 +92,25 @@ export class LeaveController {
   }
 
   // Approval endpoints
+  /**
+   * @deprecated This endpoint is deprecated as team lead approval has been removed
+   */
   @Patch(':id/approve/lead')
   approveByLead(@Param('id') id: string, @Body('userId') userId: string) {
     return this.leaveService.approveByLead(id, userId);
   }
 
+  @Patch(':id/approve/manager')
+  approveByManager(@Param('id') id: string, @Body() body: { userId?: string; notifyAdmins?: string[] }, @GetUser() user: UserEntity) {
+    const userId = body.userId || user.id;
+    return this.leaveService.approveByPM(id, userId, body.notifyAdmins);
+  }
+  
+  // Keep for backward compatibility
   @Patch(':id/approve/pm')
-  approveByPM(@Param('id') id: string, @Body('userId') userId: string) {
-    return this.leaveService.approveByPM(id, userId);
+  approveByPM(@Param('id') id: string, @Body() body: { userId?: string; notifyAdmins?: string[] }, @GetUser() user: UserEntity) {
+    const userId = body.userId || user.id;
+    return this.leaveService.approveByPM(id, userId, body.notifyAdmins);
   }
 
   @Patch(':id/approve/admin')
@@ -105,27 +120,21 @@ export class LeaveController {
 
   // Generic approve endpoint that determines approval level based on user role
   @Patch(':id/approve')
-  approve(@Param('id') id: string, @GetUser() user: UserEntity) {
+  approve(@Param('id') id: string, @Body() body: { notifyAdmins?: string[] }, @GetUser() user: UserEntity) {
     if (!user || !user.id) {
       throw new BadRequestException('User not authenticated');
     }
-    return this.leaveService.approve(id, user.id);
+    return this.leaveService.approve(id, user.id, body.notifyAdmins);
   }
 
   @Patch(':id/reject')
-  reject(@Param('id') id: string, @Body('userId') userId: string) {
-    if (!userId) {
-      throw new BadRequestException('User ID is required');
-    }
-    return this.leaveService.reject(id, userId);
-  }
-
-  @Patch(':id/override')
-  override(@Param('id') id: string, @GetUser() user: UserEntity, @Body('newStatus') newStatus?: 'pending' | 'rejected') {
+  reject(@Param('id') id: string, @GetUser() user: UserEntity) {
     if (!user || !user.id) {
       throw new BadRequestException('User not authenticated');
     }
-    return this.leaveService.override(id, user.id, newStatus);
+    return this.leaveService.reject(id, user.id);
   }
+
+  // Override endpoint removed per requirements
   
 }

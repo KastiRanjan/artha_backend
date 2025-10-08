@@ -942,7 +942,6 @@ export class TasksService {
 
 
   async bulkUpdate(bulkUpdateTaskDto: BulkUpdateTaskDto): Promise<any> {
-    console.log(bulkUpdateTaskDto);
     const { taskIds, dueDate, assigneeIds } = bulkUpdateTaskDto;
 
     const tasks = await this.taskRepository.find({

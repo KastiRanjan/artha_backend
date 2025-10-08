@@ -72,6 +72,9 @@ export class UserEntity extends CustomBaseEntity {
   
   @Column({ type: 'float', nullable: true, default: 50 })
   hourlyRate: number;
+  
+  @Column({ type: 'timestamp', nullable: true })
+  lastActiveAt: Date;
 
   @Column({ nullable: true })
   @Exclude({

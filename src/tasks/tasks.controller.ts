@@ -66,7 +66,6 @@ export class TasksController {
 
   @Patch('/bulk-update')
   bulkUpdate(@Body() bulkUpdateTaskDto: BulkUpdateTaskDto) {
-    console.log(bulkUpdateTaskDto);
     return this.tasksService.bulkUpdate(bulkUpdateTaskDto);
   }
 

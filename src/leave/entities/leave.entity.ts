@@ -1,8 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { LeaveType } from 'src/leave-type/entities/leave-type.entity';
 
-export type LeaveStatus = 'pending' | 'approved_by_lead' | 'approved_by_pm' | 'approved' | 'rejected';
+export type LeaveStatus = 'pending' | 'approved_by_manager' | 'approved' | 'rejected';
 
 @Entity('leaves')
 export class Leave {
@@ -30,20 +30,39 @@ export class Leave {
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status: LeaveStatus;
 
-  @Column({ type: 'uuid', nullable: true })
-  leadApproverId?: string;
+  @Column({ type: 'boolean', default: false })
+  isCustomDates: boolean;
+
+  @Column({ type: 'json', nullable: true })
+  customDates?: string[];
 
   @Column({ type: 'uuid', nullable: true })
-  pmApproverId?: string;
+  requestedManagerId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  managerApproverId?: string;
 
   @Column({ type: 'uuid', nullable: true })
   adminApproverId?: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  overriddenBy?: string;
+  // Relations for displaying user names
+  @ManyToOne(() => UserEntity, { nullable: true })
+  @JoinColumn({ name: 'requestedManagerId' })
+  requestedManager?: UserEntity;
+
+  @ManyToOne(() => UserEntity, { nullable: true })
+  @JoinColumn({ name: 'managerApproverId' })
+  managerApprover?: UserEntity;
+
+  @ManyToOne(() => UserEntity, { nullable: true })
+  @JoinColumn({ name: 'adminApproverId' })
+  adminApprover?: UserEntity;
 
   @Column({ type: 'timestamp', nullable: true })
-  overriddenAt?: Date;
+  managerApprovalTime?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  adminApprovalTime?: Date;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

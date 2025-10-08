@@ -114,7 +114,6 @@ export class WorklogService {
     // Send notification to requestTo user for each worklog if present
     for (let i = 0; i < savedWorklogs.length; i++) {
       const worklog = savedWorklogs[i];
-      console.log(`Worklog notification debug: index=${i}, requestTo=`, worklog.requestTo);
       if (worklog.requestTo) {
           await this.notificationService.create({
             message: `Worklog has been requested by user ${user.name}`,

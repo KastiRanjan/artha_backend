@@ -51,8 +51,13 @@ dotenv.config();
 // const throttleConfig = config.get('throttle.login');
 // const jwtConfig = config.get('jwt');
 // const appConfig = config.get('app');
-// const isSameSite = process.env.IS_SAME_SITE || false;
-const isSameSite = true ;
+const isSameSite = process.env.IS_SAME_SITE === 'true';
+
+dotenv.config();
+
+// const throttleConfig = config.get('throttle.login');
+// const jwtConfig = config.get('jwt');
+// const appConfig = config.get('app');
 // for heroku
 // const isSameSite =
 //   appConfig.sameSite !== null
@@ -90,11 +95,9 @@ export class AuthService {
     slug: string,
     linkLabel: string
   ) {
-    // Get the frontend URL from environment variable (support both formats for backward compatibility)
-    const frontendUrl = process.env.FRONTEND_URL || process.env.frontendUrl || 'https://artha.sarojkasti.com.np';
-    console.log('Frontend URL for email:', frontendUrl); // Log for debugging
-    
-    const mailData: MailJobInterface = {
+    // Get the frontend URL from environment variable
+    const frontendUrl = process.env.FRONTEND_URL || 'https://artha.sarojkasti.com.np';
+        const mailData: MailJobInterface = {
       to: user.email,
       subject,
       slug,
@@ -215,8 +218,8 @@ export class AuthService {
     isTwoFAAuthenticated = false
   ): Promise<string> {
     const opts: SignOptions = {
-      issuer: 'http://localhost:3000',
-      audience: 'http://localhost:3000',
+      issuer: process.env.APP_URL || process.env.BACKEND_URL,
+      audience: process.env.FRONTEND_URL,
       subject: String(user.id)
     };
     return this.jwt.signAsync(
@@ -224,7 +227,7 @@ export class AuthService {
         ...opts,
         isTwoFAAuthenticated
       },
-      { expiresIn: 60 * 60 * 24 }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
   }
 
@@ -311,7 +314,8 @@ export class AuthService {
    */
   async update(
     id: string,
-    updateUserDto: DeepPartial<UserEntity>
+    updateUserDto: DeepPartial<UserEntity>,
+    modifierUser?: UserEntity
   ): Promise<UserSerializer> {
     const user = await this.userRepository.get(id, [], {
       groups: [
@@ -497,16 +501,14 @@ export class AuthService {
    * Get cookie for logout action
    */
   getCookieForLogOut(): string[] {
+    const isLocalhost = process.env.NODE_ENV === 'development';
+    const cookieDomain = !isLocalhost && process.env.COOKIE_DOMAIN ? `Domain=${process.env.COOKIE_DOMAIN};` : '';
+    const sameSiteConfig = isSameSite ? 'SameSite=Lax;' : 'SameSite=None; Secure;';
+    
     return [
-      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
-      }`,
-      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
-      }`,
-      `ExpiresIn=; Path=/; Max-Age=0; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ''
-      }`
+      `Authentication=; HttpOnly; Path=/; Max-Age=0; ${sameSiteConfig} ${cookieDomain}`,
+      `Refresh=; HttpOnly; Path=/; Max-Age=0; ${sameSiteConfig} ${cookieDomain}`,
+      `ExpiresIn=; Path=/; Max-Age=0; ${sameSiteConfig} ${cookieDomain}`
     ];
   }
 
@@ -516,21 +518,20 @@ export class AuthService {
    * @param refreshToken
    */
   buildResponsePayload(accessToken: string, refreshToken?: string): string[] {
+    const isLocalhost = process.env.NODE_ENV === 'development';
+    const cookieDomain = !isLocalhost && process.env.COOKIE_DOMAIN ? `Domain=${process.env.COOKIE_DOMAIN};` : '';
+    const sameSiteConfig = isSameSite ? 'SameSite=Lax;' : 'SameSite=None; Secure;';
+    const maxAge = 60 * 60 * 24; // 24 hours in seconds
+    
     let tokenCookies = [
-      `Authentication=${accessToken}; HttpOnly; Path=/; ${
-        !isSameSite ? 'SameSite=None; Secure;' : ' '
-      } Max-Age=${'24h'}`
+      `Authentication=${accessToken}; HttpOnly; Path=/; ${sameSiteConfig} ${cookieDomain} Max-Age=${maxAge}`
     ];
     if (refreshToken) {
       const expiration = new Date();
       expiration.setSeconds(expiration.getSeconds() + 50000);
       tokenCookies = tokenCookies.concat([
-        `Refresh=${refreshToken}; HttpOnly; Path=/; ${
-          !isSameSite ? 'SameSite=None; Secure;' : ''
-        } Max-Age=${60 * 60 * 24}`,
-        `ExpiresIn=${expiration}; Path=/; ${
-          !isSameSite ? 'SameSite=None; Secure;' : ''
-        } Max-Age=${60 * 60 * 24}`
+        `Refresh=${refreshToken}; HttpOnly; Path=/; ${sameSiteConfig} ${cookieDomain} Max-Age=${maxAge}`,
+        `ExpiresIn=${expiration}; Path=/; ${sameSiteConfig} ${cookieDomain} Max-Age=${maxAge}`
       ]);
     }
     return tokenCookies;

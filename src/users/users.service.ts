@@ -71,11 +71,18 @@ export class UsersService {
       filePath = `${publicPath}/${file.filename}`;
     }
 
+    // Conditionally include documentFile only for entities that support it
+    const entitiesWithDocumentFile = ['bank', 'contract', 'document', 'training', 'education'];
+    
     const dataToUpdate = {
       ...createUsersDto,
-      user: user, // Use the user entity relationship instead of userId
-      documentFile: filePath
+      user: user // Use the user entity relationship instead of userId
     };
+    
+    // Only add documentFile if this entity type supports it
+    if (filePath && entitiesWithDocumentFile.includes(option)) {
+      dataToUpdate['documentFile'] = filePath;
+    }
     
     const repository = {
       bank: this.bankRepository,
@@ -147,7 +154,11 @@ export class UsersService {
       }
       
       // Update existing record
-      const updateData = { ...createUsersDto, documentFile: filePath };
+      const updateData = { ...createUsersDto };
+      // Only add documentFile if this entity type supports it
+      if (filePath && entitiesWithDocumentFile.includes(option)) {
+        updateData['documentFile'] = filePath;
+      }
       await repo.update(existingRecord.id, updateData);
       savedData = await repo.findOne({ where: { id: existingRecord.id } });
     } else {
@@ -194,6 +205,33 @@ export class UsersService {
     });
   }
 
+  async findByRoles(roleNames: string[]) {
+    // Normalize role names for case-insensitive matching
+    const normalizedRoles = roleNames.map(name => name.toLowerCase());
+    
+    // Build a query to match exact roles or roles containing the name
+    // This handles both exact matches and cases like "projectmanager" when searching for "manager"
+    const queryBuilder = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role');
+    
+    // Build the WHERE conditions to match roles
+    const whereConditions = [];
+    const params = {};
+    
+    normalizedRoles.forEach((roleName, index) => {
+      // Add condition for exact match
+      whereConditions.push(`LOWER(role.name) = :exactRole${index}`);
+      params[`exactRole${index}`] = roleName;
+      
+      // Add condition for partial match (e.g., 'projectmanager' contains 'manager')
+      whereConditions.push(`LOWER(role.name) LIKE :partialRole${index}`);
+      params[`partialRole${index}`] = `%${roleName}%`;
+    });
+    
+    queryBuilder.where(`(${whereConditions.join(' OR ')})`).setParameters(params);    
+    return queryBuilder.getMany();
+  }
+
   async findOne(id: string) {
     const user = await this.userRepository.findOne({
       where: { id },
@@ -232,18 +270,18 @@ export class UsersService {
       
       const oldRoleName = oldRole && oldRole.name ? oldRole.name : 'unknown';
       const newRoleName = newRole && newRole.name ? newRole.name : 'unknown';
-      
-      if (modifierUser) {
-        await this.userHistoryService.createHistoryRecord(
-          user,
-          modifierUser,
-          HistoryActionType.ROLE_CHANGE,
-          'role',
-          oldRoleName,
-          newRoleName,
-          `User role changed from ${oldRoleName} to ${newRoleName}`
-        );
-      }
+            
+      // Always record role changes, even without a modifier user (use system as default)
+      const modifier = modifierUser || await this.findSystemUser();
+      await this.userHistoryService.createHistoryRecord(
+        user,
+        modifier,
+        HistoryActionType.ROLE_CHANGE,
+        'role',
+        oldRoleName,
+        newRoleName,
+        `User role changed from ${oldRoleName} to ${newRoleName} by ${modifier.name}`
+      );
       
       updateData.roleId = updateUserDto.role;
       delete updateData.role;
@@ -251,33 +289,141 @@ export class UsersService {
     
     // Track hourly rate changes
     if (typeof updateUserDto.hourlyRate === 'number' && user.hourlyRate !== updateUserDto.hourlyRate) {
-      if (modifierUser) {
-        await this.userHistoryService.createHistoryRecord(
-          user,
-          modifierUser,
-          HistoryActionType.OTHER,
-          'hourlyRate',
-          user.hourlyRate,
-          updateUserDto.hourlyRate,
-          `Hourly rate updated from ${user.hourlyRate} to ${updateUserDto.hourlyRate}`
-        );
-      }
+      const modifier = modifierUser || await this.findSystemUser();
+      await this.userHistoryService.createHistoryRecord(
+        user,
+        modifier,
+        HistoryActionType.OTHER,
+        'hourlyRate',
+        user.hourlyRate,
+        updateUserDto.hourlyRate,
+        `Hourly rate updated from ${user.hourlyRate} to ${updateUserDto.hourlyRate}`
+      );
       
       updateData.hourlyRate = updateUserDto.hourlyRate;
     }
     
+    // Track name changes
+    if (updateUserDto.name && user.name !== updateUserDto.name) {
+      const modifier = modifierUser || await this.findSystemUser();
+      await this.userHistoryService.createHistoryRecord(
+        user,
+        modifier,
+        HistoryActionType.PROFILE_UPDATE,
+        'name',
+        user.name,
+        updateUserDto.name,
+        `User name changed from ${user.name} to ${updateUserDto.name}`
+      );
+    }
+    
+    // Track email changes
+    if (updateUserDto.email && user.email !== updateUserDto.email) {
+      const modifier = modifierUser || await this.findSystemUser();
+      await this.userHistoryService.createHistoryRecord(
+        user,
+        modifier,
+        HistoryActionType.PROFILE_UPDATE,
+        'email',
+        user.email,
+        updateUserDto.email,
+        `User email changed from ${user.email} to ${updateUserDto.email}`
+      );
+    }
+    
     // Use the auth service's update method which has proper validation and role handling
-    return await this.authService.update(id, updateData);
+    // Pass along the modifier user for history tracking
+    return await this.authService.update(id, updateData, modifierUser);
   }
 
   remove(id: string) {
     return `This action removes a #${id} user`;
   }
   
+  /**
+   * Updates the user's last active timestamp
+   * @param userId The ID of the user
+   * @param timestamp The timestamp of the last activity
+   */
+  async updateLastActive(userId: string, timestamp: Date) {
+    try {
+      // Validate userId first to avoid unnecessary DB lookups
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.warn('Invalid userId provided for activity tracking');
+        return { affected: 0, success: false, message: 'Invalid user ID' };
+      }
+      // Try a more robust approach for TypeORM 0.2.x
+      let user;
+      try {
+        // First try the object syntax
+        user = await this.userRepository.findOne({ where: { id: userId } });
+      } catch (findError) {
+        try {
+          // Fall back to direct ID approach if the object syntax fails
+          user = await this.userRepository.findOne(userId);
+        } catch (secondError) {
+          console.error('Both findOne attempts failed:', secondError.message);
+          // Return success false but don't throw to prevent UI disruption
+          return { affected: 0, success: false, message: 'Failed to locate user record' };
+        }
+      }
+      
+      if (!user) {
+        console.warn(`User not found with ID: ${userId}`);
+        // Create a silent failure for activity tracking to avoid disrupting the user experience
+        return { affected: 0, success: false, message: 'User not found' };
+      }
+      
+      
+      try {
+        // Update only the lastActiveAt field
+        const updateResult = await this.userRepository.update(userId, {
+          lastActiveAt: timestamp
+        });
+        
+        return { ...updateResult, success: true };
+      } catch (updateError) {
+        console.error('Failed to update lastActiveAt:', updateError.message);
+        // Return success false but don't throw to prevent UI disruption
+        return { affected: 0, success: false, message: 'Failed to update activity time' };
+      }
+    } catch (error) {
+
+      return { affected: 0, success: false, message: error.message || 'Unknown error' };
+    }
+  }
+  
   async findUserDocument(userId: string, documentId: string) {
     return this.documentRepository.findOne({
       where: {
         id: documentId,
+        user: { id: userId }
+      }
+    });
+  }
+  
+  async findUserBankDetail(userId: string, bankDetailId: string) {
+    return this.bankRepository.findOne({
+      where: {
+        id: bankDetailId,
+        user: { id: userId }
+      }
+    });
+  }
+  
+  async findUserEducationDetail(userId: string, educationDetailId: string) {
+    return this.educationRepository.findOne({
+      where: {
+        id: educationDetailId,
+        user: { id: userId }
+      }
+    });
+  }
+  
+  async findUserTrainingCertificate(userId: string, trainingId: string) {
+    return this.trainingRepository.findOne({
+      where: {
+        id: trainingId,
         user: { id: userId }
       }
     });
@@ -381,5 +527,40 @@ export class UsersService {
     }
     
     return { [detailType]: repositories[detailType] };
+  }
+  
+  /**
+   * Get or create a system user for history tracking when no modifier is available
+   * This ensures history records always have a modifier, even for system-level changes
+   */
+  private async findSystemUser(): Promise<UserEntity> {
+    // First try to find the system user
+    const systemUser = await this.userRepository.findOne({ 
+      where: { email: 'system@artha.local' } 
+    });
+    
+    if (systemUser) {
+      return systemUser;
+    }
+    
+    // If system user doesn't exist, use the first admin user
+    const adminUser = await this.userRepository
+      .createQueryBuilder('user')
+      .innerJoin('user.role', 'role')
+      .where('role.name = :roleName', { roleName: 'Admin' })
+      .getOne();
+      
+    if (adminUser) {
+      return adminUser;
+    }
+    
+    // As a last resort, use the first user in the system
+    const firstUser = await this.userRepository.findOne({});
+    if (firstUser) {
+      return firstUser;
+    }
+    
+    // This should never happen in a production system
+    throw new Error('No users found in the system for history tracking');
   }
 }

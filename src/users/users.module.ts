@@ -5,6 +5,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { UserProfileEntity } from './entities/user.profile.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { UserActivityController } from './user-activity.controller';
 import { AuthModule, LoginThrottleFactory } from 'src/auth/auth.module';
 import { UserRepository } from 'src/auth/user.repository';
 import { MailService } from 'src/mail/mail.service';
@@ -40,7 +41,7 @@ import { DepartmentModule } from 'src/department/department.module';
     EmailTemplateModule,
     DepartmentModule
   ],
-  controllers: [UsersController],
+  controllers: [UserActivityController, UsersController],
   providers: [
     UsersService,
     AuthService,

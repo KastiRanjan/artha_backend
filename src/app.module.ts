@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WinstonModule } from 'nest-winston';
@@ -122,15 +122,10 @@ import { DepartmentModule } from './department/department.module';
       provide: APP_PIPE,
       useClass: CustomValidationPipe
     },
-  // {
-  //   provide: APP_GUARD,
-  //   useClass: CustomThrottlerGuard
-  // },
     {
       provide: APP_FILTER,
       useClass: I18nExceptionFilterPipe
     },
-  // SocketTestGateway
   ],
   controllers: [AppController]
 })

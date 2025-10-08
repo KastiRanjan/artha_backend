@@ -8,19 +8,28 @@ import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UserEntity } from '../auth/entity/user.entity';
 import { Project } from '../projects/entities/project.entity';
+import { NotificationService } from '../notification/notification.service';
 import * as moment from 'moment';
 
 @Injectable()
 export class LeaveService {
+  /**
+   * UPDATED: 2025-10-06
+   * - Fixed getLeavesForApproval to correctly return leaves requiring approval
+   * - Added more detailed logging to help diagnose permission issues
+   * - Added support for alternative role name formats (projectmanager/manager, teamlead/projectlead)
+   * - Removed override functionality as requested
+   */
   constructor(
     @InjectRepository(Leave)
     private readonly leaveRepository: Repository<Leave>,
     @InjectRepository(LeaveType)
     private readonly leaveTypeRepository: Repository<LeaveType>,
-  @InjectRepository(Project)
-  private readonly projectRepository: Repository<Project>,
-  @InjectRepository(Holiday)
-  private readonly holidayRepository: Repository<Holiday>,
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
+    @InjectRepository(Holiday)
+    private readonly holidayRepository: Repository<Holiday>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private createMoment(dateInput: any): moment.Moment {
@@ -28,13 +37,9 @@ export class LeaveService {
       console.error('createMoment: No date input provided');
       throw new BadRequestException('Date is required');
     }
-    
-    console.log('createMoment input:', dateInput, 'type:', typeof dateInput);
-    
+        
     try {
-      const m = moment(dateInput);
-      console.log('createMoment result:', m.format(), 'isValid:', m.isValid());
-      
+      const m = moment(dateInput);      
       if (!m.isValid()) {
         console.error('createMoment: Invalid moment object created from:', dateInput);
         throw new BadRequestException(`Invalid date: ${dateInput}`);
@@ -46,16 +51,13 @@ export class LeaveService {
     }
   }
 
-  private generateDateRange(startDate: string, endDate: string): string[] {
-    console.log('generateDateRange called with:', { startDate, endDate });
-    
+  private generateDateRange(startDate: string, endDate: string): string[] {    
     try {
       const start = this.createMoment(startDate);
       const end = this.createMoment(endDate);
       const days: string[] = [];
       
       const current = start.clone();
-      console.log('Starting date range generation, current:', current.format(), 'end:', end.format());
       
       while (current.isSameOrBefore(end)) {
         days.push(current.format('YYYY-MM-DD'));
@@ -68,30 +70,24 @@ export class LeaveService {
         }
       }
       
-      console.log('Generated date range:', days);
       return days;
     } catch (error) {
-      console.error('generateDateRange error:', error);
       throw error;
     }
   }
 
   private validateUUID(id: string, fieldName: string = 'ID'): void {
-    console.log(`Validating ${fieldName}:`, id, typeof id, `length:`, id?.length);
     
     // Handle null, undefined, or empty strings
     if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
-      console.log(`Validation failed for ${fieldName}: empty, null, or undefined value`);
       throw new BadRequestException(`${fieldName} is required`);
     }
     
     // Convert to string and trim whitespace
     const cleanId = id.toString().trim();
-    console.log(`Cleaned ID:`, cleanId, `length:`, cleanId.length);
     
     // Check for common invalid formats
     if (cleanId.includes('"') || cleanId.includes("'") || cleanId.includes(' ')) {
-      console.log(`Validation failed for ${fieldName}: contains invalid characters`);
       throw new BadRequestException(`Invalid ${fieldName} format - contains invalid characters`);
     }
     
@@ -99,15 +95,10 @@ export class LeaveService {
     // Allow simple numeric IDs as well for backward compatibility
     const isNumeric = /^\d+$/.test(cleanId);
     
-    console.log(`UUID regex test:`, uuidRegex.test(cleanId));
-    console.log(`Numeric test:`, isNumeric);
-    
     if (!uuidRegex.test(cleanId) && !isNumeric) {
-      console.log(`Validation failed for ${fieldName}: ${cleanId} - does not match UUID or numeric format`);
       throw new BadRequestException(`Invalid ${fieldName} format`);
     }
     
-    console.log(`Validation passed for ${fieldName}: ${cleanId}`);
   }
 
   async create(createLeaveDto: CreateLeaveDto, user: UserEntity): Promise<Leave> {
@@ -120,17 +111,54 @@ export class LeaveService {
       throw new BadRequestException(`Invalid or inactive leave type: ${createLeaveDto.type}`);
     }
 
-    // Calculate requested days
-    const startDate = this.createMoment(createLeaveDto.startDate);
-    const endDate = this.createMoment(createLeaveDto.endDate);
-    const requestedDays = endDate.diff(startDate, 'days') + 1;
+    let startDate: moment.Moment;
+    let endDate: moment.Moment;
+    let requestedDays: number;
+    let days: string[] = [];
+
+    if (createLeaveDto.isCustomDates && createLeaveDto.customDates) {
+      // Handle custom dates
+      if (!createLeaveDto.customDates.length) {
+        throw new BadRequestException('Custom dates cannot be empty');
+      }
+
+      // Validate and sort custom dates
+      const sortedDates = createLeaveDto.customDates
+        .map(date => this.createMoment(date))
+        .sort((a, b) => a.diff(b));
+
+      startDate = sortedDates[0];
+      endDate = sortedDates[sortedDates.length - 1];
+      requestedDays = createLeaveDto.customDates.length;
+      days = createLeaveDto.customDates;
+
+      // Validate no past dates
+      const pastDate = sortedDates.find(date => date.isBefore(moment(), 'day'));
+      if (pastDate) {
+        throw new BadRequestException('Cannot request leave for past dates');
+      }
+
+    } else {
+      // Handle date range
+      if (!createLeaveDto.startDate || !createLeaveDto.endDate) {
+        throw new BadRequestException('Start date and end date are required for range selection');
+      }
+
+      startDate = this.createMoment(createLeaveDto.startDate);
+      endDate = this.createMoment(createLeaveDto.endDate);
+      requestedDays = endDate.diff(startDate, 'days') + 1;
+      days = this.generateDateRange(createLeaveDto.startDate, createLeaveDto.endDate);
+    }
 
     // Prevent creating leave that overlaps an existing approved leave for the same user
     const overlappingApproved = await this.leaveRepository
       .createQueryBuilder('leave')
       .where('leave.user = :userId', { userId: user.id })
-      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_lead', 'approved_by_pm'] })
-      .andWhere('leave.startDate <= :endDate AND leave.endDate >= :startDate', { startDate: createLeaveDto.startDate, endDate: createLeaveDto.endDate })
+      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_pm'] })
+      .andWhere('leave.startDate <= :endDate AND leave.endDate >= :startDate', { 
+        startDate: startDate.format('YYYY-MM-DD'), 
+        endDate: endDate.format('YYYY-MM-DD') 
+      })
       .getCount();
 
     if (overlappingApproved > 0) {
@@ -138,8 +166,6 @@ export class LeaveService {
     }
 
     // Prevent creating leave on company/public holidays
-    const days = this.generateDateRange(createLeaveDto.startDate, createLeaveDto.endDate);
-
     const holidayCount = await this.holidayRepository
       .createQueryBuilder('holiday')
       .where('holiday.date IN (:...days)', { days })
@@ -161,9 +187,6 @@ export class LeaveService {
       }
     }
 
-    // Determine initial status based on user role hierarchy
-    let initialStatus: LeaveStatus = 'pending';
-    
     // Load user with role information
     const userWithRole = await this.leaveRepository.manager
       .getRepository(UserEntity)
@@ -172,35 +195,72 @@ export class LeaveService {
         relations: ['role']
       });
 
-    if (userWithRole?.role?.name) {
-      const roleName = userWithRole.role.name.toLowerCase();
+    if (!userWithRole?.role?.name) {
+      throw new BadRequestException('User role not found');
+    }
+
+    const userRole = userWithRole.role.name.toLowerCase();
+    let initialStatus: LeaveStatus = 'pending';
+    
+    // Validate manager selection based on user's role
+    if (createLeaveDto.requestedManagerId) {
+      // Verify the requested manager exists and has appropriate role
+      const requestedManager = await this.getUserDetails(createLeaveDto.requestedManagerId);
+      if (!requestedManager) {
+        throw new BadRequestException('Selected manager does not exist');
+      }
       
-      // Project Manager goes directly to admin approval
-      if (roleName === 'projectmanager') {
-        initialStatus = 'approved_by_pm';
-      }
-      // Team Lead skips to PM approval
-      else if (roleName === 'teamlead') {
-        initialStatus = 'approved_by_lead';
-      }
-      // Admin and Superuser requests skip to PM approval (need admin/superuser approval)
-      else if (roleName === 'admin' || roleName === 'superuser') {
-        initialStatus = 'approved_by_pm';
-      }
-      // Regular employees start with pending (goes to team lead first)
-      else {
+      const managerRole = requestedManager.role?.name?.toLowerCase() || '';
+      
+      // Check if user is selecting an appropriate manager based on their role
+      if (['projectmanager', 'manager', 'admin', 'administrator', 'superuser'].includes(userRole)) {
+        // Managers and above must select admin/superuser as approvers
+        if (!['admin', 'administrator', 'superuser'].includes(managerRole)) {
+          throw new BadRequestException('Managers must request leave approval from admin or superuser');
+        }
+        // Skip to manager approval level since they're already a manager
+        initialStatus = 'approved_by_manager';
+      } else {
+        // Regular users must select at least a manager as approver
+        if (!['projectmanager', 'manager', 'admin', 'administrator', 'superuser'].includes(managerRole)) {
+          throw new BadRequestException('Regular users must request approval from a manager or higher role');
+        }
+        // Regular user stays at pending status
         initialStatus = 'pending';
       }
+    } else {
+      throw new BadRequestException('You must select a manager for approval');
     }
 
     const leave = this.leaveRepository.create({ 
       ...createLeaveDto, 
+      startDate: startDate.format('YYYY-MM-DD'),
+      endDate: endDate.format('YYYY-MM-DD'),
       status: initialStatus,
       user,
       leaveType 
     });
     
-    return this.leaveRepository.save(leave);
+    const savedLeave = await this.leaveRepository.save(leave);
+    
+    // Send notification to the requested manager
+    if (createLeaveDto.requestedManagerId) {
+      const requestedManager = await this.getUserDetails(createLeaveDto.requestedManagerId);
+      
+      let dateInfo: string;
+      if (createLeaveDto.isCustomDates && createLeaveDto.customDates) {
+        dateInfo = `Custom dates: ${createLeaveDto.customDates.join(', ')}`;
+      } else {
+        dateInfo = `${createLeaveDto.startDate} to ${createLeaveDto.endDate}`;
+      }
+      
+      await this.notificationService.create({
+        message: `New leave request from ${user.name} for ${createLeaveDto.type} (${dateInfo}) - Requested to: ${requestedManager.name}`,
+        users: [createLeaveDto.requestedManagerId]
+      });
+    }
+    
+    return savedLeave;
   }
 
   private async getUsedLeavedays(user: UserEntity, type: string, year: number): Promise<number> {
@@ -211,7 +271,7 @@ export class LeaveService {
       .createQueryBuilder('leave')
       .where('leave.user = :userId', { userId: user.id })
       .andWhere('leave.type = :type', { type })
-      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_lead', 'approved_by_pm'] })
+      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_manager'] })
       .andWhere('leave.startDate <= :endOfYear', { endOfYear })
       .andWhere('leave.endDate >= :startOfYear', { startOfYear })
       .getMany();
@@ -280,12 +340,19 @@ export class LeaveService {
 
   async findAll(status?: string): Promise<Leave[]> {
     const where = status ? { status } : {};
-    return this.leaveRepository.find({ where });
+    return this.leaveRepository.find({ 
+      where,
+      relations: ['user', 'leaveType', 'requestedManager', 'managerApprover', 'adminApprover'],
+      order: { createdAt: 'DESC' }
+    });
   }
 
   async findOne(id: string): Promise<Leave> {
     this.validateUUID(id, 'Leave ID');
-    const leave = await this.leaveRepository.findOne({ where: { id } });
+    const leave = await this.leaveRepository.findOne({ 
+      where: { id },
+      relations: ['user', 'leaveType', 'requestedManager', 'managerApprover', 'adminApprover']
+    });
     if (!leave) throw new NotFoundException('Leave not found');
     return leave;
   }
@@ -302,103 +369,173 @@ export class LeaveService {
   }
 
   // Approval logic
+  /**
+   * @deprecated This method is deprecated as the team lead step has been removed from the workflow
+   * Kept for backwards compatibility with existing API endpoints
+   */
   async approveByLead(id: string, userId: string): Promise<Leave> {
     this.validateUUID(userId, 'User ID');
-    const leave = await this.findOne(id);
-    if (leave.status !== 'pending') throw new BadRequestException('Leave not pending');
-    leave.status = 'approved_by_lead';
-    leave.leadApproverId = userId;
-    return this.leaveRepository.save(leave);
+    // For compatibility, we'll treat this as a manager approval
+    console.warn('approveByLead is deprecated - using approveByPM instead');
+    return this.approveByPM(id, userId);
   }
 
-  async approveByPM(id: string, userId: string): Promise<Leave> {
+  async approveByPM(id: string, userId: string, notifyAdmins?: string[]): Promise<Leave> {
     this.validateUUID(userId, 'User ID');
-    const leave = await this.findOne(id);
-    if (leave.status !== 'approved_by_lead') throw new BadRequestException('Leave not approved by lead');
-    leave.status = 'approved_by_pm';
-    leave.pmApproverId = userId;
-    return this.leaveRepository.save(leave);
+    const leave = await this.leaveRepository.findOne({
+      where: { id },
+      relations: ['user']
+    });
+    if (!leave) throw new NotFoundException('Leave not found');
+    if (leave.status !== 'pending') throw new BadRequestException('Leave not in pending status');
+    
+    // Manager approval - moves to waiting for admin/superuser approval
+    leave.status = 'approved_by_manager';
+    leave.managerApproverId = userId;
+    leave.managerApprovalTime = new Date();
+    
+    const savedLeave = await this.leaveRepository.save(leave);
+    
+    // Get manager details for notification
+    const manager = await this.getUserDetails(userId);
+    
+    // Send notification to user about manager approval
+    await this.notificationService.create({
+      message: `Your leave request has been approved by manager ${manager.name} and is now waiting for final approval`,
+      users: [leave.user.id]
+    });
+    
+    // Send notification to selected admins if provided
+    if (notifyAdmins && notifyAdmins.length > 0) {
+      await this.notificationService.create({
+        message: `Leave request from ${leave.user.name} has been approved by manager ${manager.name} and requires your final approval`,
+        users: notifyAdmins
+      });
+    }
+    
+    return savedLeave;
   }
 
   async approveByAdmin(id: string, userId: string): Promise<Leave> {
     this.validateUUID(userId, 'User ID');
-    const leave = await this.findOne(id);
-    if (leave.status !== 'approved_by_pm') throw new BadRequestException('Leave not approved by PM');
+    const leave = await this.leaveRepository.findOne({
+      where: { id },
+      relations: ['user']
+    });
+    if (!leave) throw new NotFoundException('Leave not found');
+    
+    // Admin/superuser can approve any leave that is pending or approved_by_manager
+    // For the two-level approval, admin usually approves leaves that were already approved by managers
+    // But admins/superusers can also directly approve pending leaves from managers
+    
+    // Fill in manager approver ID if missing (if a manager requested leave directly to admin)
+    if (!leave.managerApproverId) {
+      leave.managerApproverId = userId;
+      leave.managerApprovalTime = new Date();
+    }
+    
     leave.status = 'approved';
     leave.adminApproverId = userId;
-    return this.leaveRepository.save(leave);
+    leave.adminApprovalTime = new Date();
+    
+    const savedLeave = await this.leaveRepository.save(leave);
+    
+    // Get admin details for notification
+    const admin = await this.getUserDetails(userId);
+    
+    // Send notification to user about final approval
+    await this.notificationService.create({
+      message: `Your leave request has been fully approved by ${admin.name} and is now confirmed`,
+      users: [leave.user.id]
+    });
+    
+    return savedLeave;
   }
 
   async reject(id: string, userId: string): Promise<Leave> {
     this.validateUUID(userId, 'User ID');
-    const leave = await this.findOne(id);
+    const leave = await this.leaveRepository.findOne({
+      where: { id },
+      relations: ['user']
+    });
+    if (!leave) throw new NotFoundException('Leave not found');
+    
     leave.status = 'rejected';
-    // Optionally track who rejected
-    return this.leaveRepository.save(leave);
+    
+    const savedLeave = await this.leaveRepository.save(leave);
+    
+    // Get rejector details for notification
+    const rejector = await this.getUserDetails(userId);
+    
+    // Send notification to user about rejection
+    await this.notificationService.create({
+      message: `Your leave request has been rejected by ${rejector.name}`,
+      users: [leave.user.id]
+    });
+    
+    return savedLeave;
   }
 
-  // Override an already approved leave (revert to pending or appropriate status)
-  async override(id: string, userId: string, newStatus: 'pending' | 'rejected' = 'pending'): Promise<Leave> {
-    this.validateUUID(userId, 'User ID');
-    
-    const user = await this.getUserDetails(userId);
-    const leave = await this.findOne(id);
-    
-    // Only allow override of approved leaves
-    if (leave.status !== 'approved') {
-      throw new BadRequestException('Can only override approved leaves');
-    }
-    
-    // Check if user has authority to override based on role hierarchy
-    const currentUserRole = user.role?.name?.toLowerCase();
-    const requesterRole = leave.user?.role?.name?.toLowerCase();
-    
-    const canOverride = 
-      (currentUserRole === 'superuser') ||
-      (currentUserRole === 'administrator' && ['manager', 'projectlead', 'auditjunior'].includes(requesterRole || '')) ||
-      (currentUserRole === 'manager' && ['projectlead', 'auditjunior'].includes(requesterRole || '')) ||
-      (currentUserRole === 'projectlead' && requesterRole === 'auditjunior');
-    
-    if (!canOverride) {
-      throw new BadRequestException('You do not have authority to override this approval');
-    }
-    
-    // Reset the leave to appropriate status based on override reason
-    leave.status = newStatus;
-    leave.adminApproverId = null; // Clear approval trail
-    leave.pmApproverId = null;
-    if (newStatus === 'pending') {
-      leave.leadApproverId = null;
-    }
-    
-    // Track who performed the override
-    leave.overriddenBy = userId;
-    leave.overriddenAt = new Date();
-    
-    return this.leaveRepository.save(leave);
-  }
+  // Admin can manage leave approval through the regular approve/reject methods
+  // Override functionality removed as requested
 
   // Generic approve method that determines the correct approval level based on user role
-  async approve(id: string, userId: string): Promise<Leave> {
+  async approve(id: string, userId: string, notifyAdmins?: string[]): Promise<Leave> {
     this.validateUUID(userId, 'User ID');
     
     // Get user details and their role
     const user = await this.getUserDetails(userId);
     const roleName = user.role?.name?.toLowerCase();
     
-    // Determine which approval method to use based on role
-    if (roleName === 'teamlead') {
-      return this.approveByLead(id, userId);
-    } else if (roleName === 'projectmanager') {
-      return this.approveByPM(id, userId);
-    } else if (roleName === 'admin') {
-      return this.approveByAdmin(id, userId);
-    } else if (roleName === 'superuser') {
-      // Superuser can directly approve to final status
-      return this.approveByAdmin(id, userId);
-    } else {
-      throw new BadRequestException('User does not have permission to approve leaves');
+    // Get the leave details
+    const leave = await this.leaveRepository.findOne({
+      where: { id },
+      relations: ['user']
+    });
+    if (!leave) throw new NotFoundException('Leave not found');
+    
+    const leaveRequesterRole = leave.user?.role?.name?.toLowerCase();
+    
+    // Admin and superuser can approve any leave - now with direct full approval
+    if (roleName === 'admin' || roleName === 'administrator' || roleName === 'superuser') {
+      // If the leave is in pending status, set both manager and admin approval at once
+      if (leave.status === 'pending') {
+        // Set manager approval first (using the admin as the manager approver)
+        leave.managerApproverId = userId;
+      }
+      
+      // Then set admin approval (full approval)
+      leave.status = 'approved';
+      leave.adminApproverId = userId;
+      
+      const savedLeave = await this.leaveRepository.save(leave);
+      
+      // Send notification to user about full approval
+      await this.notificationService.create({
+        message: `Your leave request has been fully approved by ${user.name} and is now confirmed`,
+        users: [leave.user.id]
+      });
+      
+      return savedLeave;
     }
+    
+    // For manager roles, follow the regular approval chain
+    if (roleName === 'manager' || roleName === 'projectmanager') {
+      // Verify this manager was requested to approve this leave
+      if (leave.requestedManagerId !== userId) {
+        throw new BadRequestException('You are not the requested manager for this leave');
+      }
+
+      // Manager can only approve pending leaves
+      if (leave.status !== 'pending') {
+        throw new BadRequestException('Leave is not in a state that can be approved by manager');
+      }
+      
+      return this.approveByPM(id, userId, notifyAdmins);
+    } 
+    
+    // All other roles cannot approve leave requests
+    throw new BadRequestException('User does not have permission to approve leaves');
   }
 
   // Get leaves that need approval by a specific user (based on their role and projects)
@@ -409,133 +546,86 @@ export class LeaveService {
     const roleName = user.role?.name?.toLowerCase();
     
     let pendingLeaves: Leave[] = [];
-    let overridableLeaves: Leave[] = [];
+
 
     if (roleName === 'superuser') {
-      // Superuser can see all pending approvals and override any approved leaves
-      pendingLeaves = await this.leaveRepository.find({
-        where: [
-          { status: 'pending' },
-          { status: 'approved_by_lead' },
-          { status: 'approved_by_pm' }
-        ],
-        relations: ['user', 'user.role', 'leaveType'],
+      // Superuser can see ALL leave requests in the system regardless of status
+      const superuserLeaves = await this.leaveRepository.find({
+        relations: ['user', 'user.role', 'leaveType', 'requestedManager', 'managerApprover', 'adminApprover'],
         order: { createdAt: 'DESC' }
       });
       
-      // Superuser can override leaves approved by admin, manager, projectlead
-      overridableLeaves = await this.leaveRepository
-        .createQueryBuilder('leave')
-        .leftJoinAndSelect('leave.user', 'user')
-        .leftJoinAndSelect('leave.user.role', 'userRole')
-        .leftJoinAndSelect('leave.leaveType', 'leaveType')
-        .where('leave.status = :status', { status: 'approved' })
-        .andWhere('userRole.name IN (:...roles)', { 
-          roles: ['administrator', 'manager', 'projectlead', 'auditjunior'] 
-        })
-        .orderBy('leave.createdAt', 'DESC')
-        .getMany();
+      return superuserLeaves;
         
     } else if (roleName === 'admin' || roleName === 'administrator') {
-      // Admin can see all leaves that need admin approval
+      // Admin can see all pending leave requests from managers (approved_by_manager status)
+      // These are leaves that have already been approved by managers and need final admin approval
       pendingLeaves = await this.leaveRepository.find({
-        where: { status: 'approved_by_pm' },
-        relations: ['user', 'user.role', 'leaveType'],
+        where: { status: 'approved_by_manager' },
+        relations: ['user', 'user.role', 'leaveType', 'requestedManager', 'managerApprover', 'adminApprover'],
         order: { createdAt: 'DESC' }
       });
-      
-      // Admin can override leaves approved by manager, projectlead
-      overridableLeaves = await this.leaveRepository
+            
+      // Admin can also see pending leaves that were directly requested to them by managers
+      const directRequests = await this.leaveRepository
         .createQueryBuilder('leave')
         .leftJoinAndSelect('leave.user', 'user')
-        .leftJoinAndSelect('leave.user.role', 'userRole')
+        .leftJoinAndSelect('user.role', 'userRole')
         .leftJoinAndSelect('leave.leaveType', 'leaveType')
-        .where('leave.status = :status', { status: 'approved' })
-        .andWhere('userRole.name IN (:...roles)', { 
-          roles: ['manager', 'projectlead', 'auditjunior'] 
+        .leftJoinAndSelect('leave.requestedManager', 'requestedManager')
+        .leftJoinAndSelect('leave.managerApprover', 'managerApprover')
+        .leftJoinAndSelect('leave.adminApprover', 'adminApprover')
+        .where('leave.requestedManagerId = :adminId', { adminId: userId })
+        .andWhere('leave.status = :status', { status: 'pending' })
+        .andWhere('userRole.name IN (:...managerRoles)', { 
+          managerRoles: ['manager', 'projectmanager'] 
         })
         .orderBy('leave.createdAt', 'DESC')
         .getMany();
         
-    } else if (roleName === 'manager') {
-      // Manager can see leaves that need manager approval and override projectlead approvals
-      const managerProjects = await this.projectRepository.find({
-        where: { projectManager: { id: userId } },
-        relations: ['users']
-      });
+      pendingLeaves = [...pendingLeaves, ...directRequests];
+        
+    } else if (roleName === 'manager' || roleName === 'projectmanager') {
 
-      const userIds = managerProjects.flatMap(project => 
-        project.users.map(user => user.id)
-      );
-
-      if (userIds.length > 0) {
-        pendingLeaves = await this.leaveRepository
-          .createQueryBuilder('leave')
-          .leftJoinAndSelect('leave.user', 'user')
-          .leftJoinAndSelect('leave.user.role', 'userRole')
-          .leftJoinAndSelect('leave.leaveType', 'leaveType')
-          .where('user.id IN (:...userIds)', { userIds })
-          .andWhere('leave.status = :status', { status: 'approved_by_lead' })
-          .orderBy('leave.createdAt', 'DESC')
-          .getMany();
-          
-        // Manager can override leaves approved by projectlead in their projects
-        overridableLeaves = await this.leaveRepository
-          .createQueryBuilder('leave')
-          .leftJoinAndSelect('leave.user', 'user')
-          .leftJoinAndSelect('leave.user.role', 'userRole')
-          .leftJoinAndSelect('leave.leaveType', 'leaveType')
-          .where('user.id IN (:...userIds)', { userIds })
-          .andWhere('leave.status = :status', { status: 'approved' })
-          .andWhere('userRole.name IN (:...roles)', { roles: ['projectlead', 'auditjunior'] })
-          .orderBy('leave.createdAt', 'DESC')
-          .getMany();
-      }
-      
-    } else if (roleName === 'projectlead') {
-      // Team leads can see leaves from their project team members that are pending
-      const leadProjects = await this.projectRepository.find({
-        where: { projectLead: { id: userId } },
-        relations: ['users']
-      });
-
-      const userIds = leadProjects.flatMap(project => 
-        project.users.map(user => user.id)
-      );
-
-      if (userIds.length > 0) {
-        pendingLeaves = await this.leaveRepository
-          .createQueryBuilder('leave')
-          .leftJoinAndSelect('leave.user', 'user')
-          .leftJoinAndSelect('leave.user.role', 'userRole')
-          .leftJoinAndSelect('leave.leaveType', 'leaveType')
-          .where('user.id IN (:...userIds)', { userIds })
-          .andWhere('leave.status = :status', { status: 'pending' })
-          .orderBy('leave.createdAt', 'DESC')
-          .getMany();
-          
-        // Projectlead can override leaves they approved for audit juniors
-        overridableLeaves = await this.leaveRepository
-          .createQueryBuilder('leave')
-          .leftJoinAndSelect('leave.user', 'user')
-          .leftJoinAndSelect('leave.user.role', 'userRole')
-          .leftJoinAndSelect('leave.leaveType', 'leaveType')
-          .where('user.id IN (:...userIds)', { userIds })
-          .andWhere('leave.status = :status', { status: 'approved' })
-          .andWhere('userRole.name = :role', { role: 'auditjunior' })
-          .andWhere('leave.leadApproverId = :leadId', { leadId: userId })
-          .orderBy('leave.createdAt', 'DESC')
-          .getMany();
-      }
+      // Manager sees leaves where they are specifically requested as approver
+      // These are pending leave requests from regular users
+      pendingLeaves = await this.leaveRepository
+        .createQueryBuilder('leave')
+        .leftJoinAndSelect('leave.user', 'user')
+        .leftJoinAndSelect('user.role', 'userRole')
+        .leftJoinAndSelect('leave.leaveType', 'leaveType')
+        .leftJoinAndSelect('leave.requestedManager', 'requestedManager')
+        .leftJoinAndSelect('leave.managerApprover', 'managerApprover')
+        .leftJoinAndSelect('leave.adminApprover', 'adminApprover')
+        .where('leave.requestedManagerId = :managerId', { managerId: userId })
+        .andWhere('leave.status = :status', { status: 'pending' })
+        // Only show requests from non-manager users
+        .andWhere('userRole.name NOT IN (:...managerRoles)', { 
+          managerRoles: ['manager', 'projectmanager', 'admin', 'administrator', 'superuser'] 
+        })
+        .orderBy('leave.createdAt', 'DESC')
+        .getMany();      
+      // Manager can see leaves they've approved that are waiting for admin confirmation
+      const pendingAdminConfirmation = await this.leaveRepository
+        .createQueryBuilder('leave')
+        .leftJoinAndSelect('leave.user', 'user')
+        .leftJoinAndSelect('user.role', 'userRole')
+        .leftJoinAndSelect('leave.leaveType', 'leaveType')
+        .leftJoinAndSelect('leave.requestedManager', 'requestedManager')
+        .leftJoinAndSelect('leave.managerApprover', 'managerApprover')
+        .leftJoinAndSelect('leave.adminApprover', 'adminApprover')
+        .where('leave.managerApproverId = :managerId', { managerId: userId })
+        .andWhere('leave.status = :status', { status: 'approved_by_manager' })
+        .orderBy('leave.createdAt', 'DESC')
+        .getMany();
+        
+      pendingLeaves = [...pendingLeaves, ...pendingAdminConfirmation];
+    } else {
+      // Regular users don't have any approval responsibilities
+      pendingLeaves = [];
     }
 
-    // Combine pending and overridable leaves, mark overridable ones
-    const allLeaves = [
-      ...pendingLeaves.map(leave => ({ ...leave, canOverride: false })),
-      ...overridableLeaves.map(leave => ({ ...leave, canOverride: true }))
-    ];
-    
-    return allLeaves.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return pendingLeaves.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   private async getUserDetails(userId: string): Promise<UserEntity> {
@@ -556,13 +646,12 @@ export class LeaveService {
   // Get user's own leaves
   async getUserLeaves(userId: string, status?: string): Promise<Leave[]> {
     this.validateUUID(userId, 'User ID');
-    console.log(`Fetching leaves for User ID:`, userId, `with status:`, status);
     const where: any = { user: { id: userId } };
     if (status && status !== 'all') where.status = status;
 
     return this.leaveRepository.find({
       where,
-      relations: ['leaveType', 'user', 'user.role'],
+      relations: ['leaveType', 'user', 'user.role', 'requestedManager', 'managerApprover', 'adminApprover'],
       order: { createdAt: 'DESC' }
     });
   }
@@ -573,6 +662,9 @@ export class LeaveService {
       .createQueryBuilder('leave')
       .leftJoinAndSelect('leave.user', 'user')
       .leftJoinAndSelect('leave.leaveType', 'leaveType')
+      .leftJoinAndSelect('leave.requestedManager', 'requestedManager')
+      .leftJoinAndSelect('leave.managerApprover', 'managerApprover')
+      .leftJoinAndSelect('leave.adminApprover', 'adminApprover')
       .where('leave.startDate <= :to AND leave.endDate >= :from', { from, to })
       .andWhere('leave.status = :status', { status: 'approved' });
 

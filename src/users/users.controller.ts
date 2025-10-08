@@ -10,12 +10,13 @@ import {
   UploadedFile,
   Query,
   BadRequestException,
-  Request
+  Request,
+  Logger
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync, renameSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 
 import { UsersService } from './users.service';
 import { CreateUsersDto } from './dto/create-user.dto';
@@ -24,6 +25,9 @@ import { multerOptionsHelper } from 'src/common/helper/multer-options.helper';
 import { UserHistoryService } from './services/user-history.service';
 import { HistoryActionType } from './entities/user.history.entity';
 import { UserDocumentEntity } from './entities/user.document.entity';
+import { UserBankDetailEntity } from './entities/user.bankdetail.entity';
+import { UserEducationDetailEntity } from './entities/user.educationdetail.entity';
+import { UserTrainningEntity } from './entities/user.trainingcertificate.entity';
 
 @Controller('users')
 export class UsersController {
@@ -31,7 +35,13 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly userHistoryService: UserHistoryService,
     @InjectRepository(UserDocumentEntity)
-    private readonly documentRepository: Repository<UserDocumentEntity>
+    private readonly documentRepository: Repository<UserDocumentEntity>,
+    @InjectRepository(UserBankDetailEntity)
+    private readonly bankDetailRepository: Repository<UserBankDetailEntity>,
+    @InjectRepository(UserEducationDetailEntity)
+    private readonly educationDetailRepository: Repository<UserEducationDetailEntity>,
+    @InjectRepository(UserTrainningEntity)
+    private readonly trainingRepository: Repository<UserTrainningEntity>
   ) {}
 
   @Post()
@@ -130,6 +140,28 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('role/:roleName')
+  async findByRole(@Param('roleName') roleName: string) {
+        // Special case for managers - include both manager and projectmanager roles
+    let rolesToSearch = [roleName];
+    if (roleName.toLowerCase() === 'manager') {
+      rolesToSearch = ['manager', 'projectmanager'];
+    }
+    
+    const users = await this.usersService.findByRoles(rolesToSearch);
+    
+    return users.map(user => ({
+      id: user.id,
+      firstName: user.name?.split(' ')[0] || '',
+      lastName: user.name?.split(' ').slice(1).join(' ') || '',
+      email: user.email,
+      role: {
+        name: user.role?.name || '',
+        displayName: user.role?.displayName || user.role?.name || ''
+      }
+    }));
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
@@ -139,6 +171,24 @@ export class UsersController {
   async getUserDocuments(@Param('id') id: string) {
     const user = await this.usersService.findOne(id);
     return user.document || [];
+  }
+  
+  @Get(':id/bank-detail')
+  async getUserBankDetails(@Param('id') id: string) {
+    const user = await this.usersService.findOne(id);
+    return user.bank_detail || [];
+  }
+  
+  @Get(':id/education-detail')
+  async getUserEducationDetails(@Param('id') id: string) {
+    const user = await this.usersService.findOne(id);
+    return user.education_detail || [];
+  }
+  
+  @Get(':id/training-certificate')
+  async getUserTrainingCertificates(@Param('id') id: string) {
+    const user = await this.usersService.findOne(id);
+    return user.trainning_detail || [];
   }
   
   @Post(':id/document')
@@ -249,6 +299,9 @@ export class UsersController {
     return { message: 'Document deleted successfully' };
   }
   
+  // Activity endpoints have been moved to UserActivityController
+  // This prevents route conflicts with dynamic parameters
+  
   @Post(':id/document/:documentId/verify')
   async verifyUserDocument(
     @Param('id') userId: string,
@@ -291,6 +344,150 @@ export class UsersController {
     
     return { 
       message: 'Document verification status updated successfully',
+      isVerified: verifyData.isVerified,
+      verifiedAt: verifyData.verifiedAt || new Date().toISOString(),
+      verifiedBy: verifier.name
+    };
+  }
+  
+  @Post(':id/bank-detail/:bankDetailId/verify')
+  async verifyUserBankDetail(
+    @Param('id') userId: string,
+    @Param('bankDetailId') bankDetailId: string,
+    @Body() verifyData: { isVerified: boolean, verifiedAt?: string },
+    @Request() req
+  ) {
+    // We need the authenticated user to be the verifier
+    if (!req.user || !req.user.id) {
+      throw new BadRequestException('Authentication required for verification');
+    }
+    
+    const verifier = await this.usersService.findOne(req.user.id);
+    
+    // First check if bank detail exists and belongs to this user
+    const bankDetail = await this.usersService.findUserBankDetail(userId, bankDetailId);
+    
+    if (!bankDetail) {
+      throw new BadRequestException('Bank detail not found or does not belong to this user');
+    }
+    
+    // Update bank detail verification status
+    await this.bankDetailRepository.update(bankDetailId, {
+      isVerified: verifyData.isVerified,
+      verifiedById: verifier.id,
+      verifiedAt: verifyData.verifiedAt ? new Date(verifyData.verifiedAt) : new Date()
+    });
+    
+    // Record the verification action in history
+    const user = await this.usersService.findOne(userId);
+    await this.userHistoryService.createHistoryRecord(
+      user,
+      verifier,
+      HistoryActionType.VERIFICATION,
+      'bank_detail',
+      bankDetail.isVerified ? 'Verified' : 'Unverified',
+      verifyData.isVerified ? 'Verified' : 'Unverified',
+      `Bank detail (${bankDetail.bankName || ''}) verification status updated by ${verifier.name}`
+    );
+    
+    return { 
+      message: 'Bank detail verification status updated successfully',
+      isVerified: verifyData.isVerified,
+      verifiedAt: verifyData.verifiedAt || new Date().toISOString(),
+      verifiedBy: verifier.name
+    };
+  }
+  
+  @Post(':id/education-detail/:educationDetailId/verify')
+  async verifyUserEducationDetail(
+    @Param('id') userId: string,
+    @Param('educationDetailId') educationDetailId: string,
+    @Body() verifyData: { isVerified: boolean, verifiedAt?: string },
+    @Request() req
+  ) {
+    // We need the authenticated user to be the verifier
+    if (!req.user || !req.user.id) {
+      throw new BadRequestException('Authentication required for verification');
+    }
+    
+    const verifier = await this.usersService.findOne(req.user.id);
+    
+    // First check if education detail exists and belongs to this user
+    const educationDetail = await this.usersService.findUserEducationDetail(userId, educationDetailId);
+    
+    if (!educationDetail) {
+      throw new BadRequestException('Education detail not found or does not belong to this user');
+    }
+    
+    // Update education detail verification status
+    await this.educationDetailRepository.update(educationDetailId, {
+      isVerified: verifyData.isVerified,
+      verifiedById: verifier.id,
+      verifiedAt: verifyData.verifiedAt ? new Date(verifyData.verifiedAt) : new Date()
+    });
+    
+    // Record the verification action in history
+    const user = await this.usersService.findOne(userId);
+    await this.userHistoryService.createHistoryRecord(
+      user,
+      verifier,
+      HistoryActionType.VERIFICATION,
+      'education_detail',
+      educationDetail.isVerified ? 'Verified' : 'Unverified',
+      verifyData.isVerified ? 'Verified' : 'Unverified',
+      `Education detail (${educationDetail.universityCollege || ''}) verification status updated by ${verifier.name}`
+    );
+    
+    return { 
+      message: 'Education detail verification status updated successfully',
+      isVerified: verifyData.isVerified,
+      verifiedAt: verifyData.verifiedAt || new Date().toISOString(),
+      verifiedBy: verifier.name
+    };
+  }
+  
+  @Post(':id/training-certificate/:trainingId/verify')
+  async verifyUserTrainingCertificate(
+    @Param('id') userId: string,
+    @Param('trainingId') trainingId: string,
+    @Body() verifyData: { isVerified: boolean, verifiedAt?: string },
+    @Request() req
+  ) {
+    // We need the authenticated user to be the verifier
+    if (!req.user || !req.user.id) {
+      throw new BadRequestException('Authentication required for verification');
+    }
+    
+    const verifier = await this.usersService.findOne(req.user.id);
+    
+    // First check if training certificate exists and belongs to this user
+    const trainingCertificate = await this.usersService.findUserTrainingCertificate(userId, trainingId);
+    
+    if (!trainingCertificate) {
+      throw new BadRequestException('Training certificate not found or does not belong to this user');
+    }
+    
+    // Update training certificate verification status
+    await this.trainingRepository.update(trainingId, {
+      isVerified: verifyData.isVerified,
+      verifiedById: verifier.id,
+      verifiedAt: verifyData.verifiedAt ? new Date(verifyData.verifiedAt) : new Date()
+    });
+    
+    // Record the verification action in history
+    const user = await this.usersService.findOne(userId);
+    await this.userHistoryService.createHistoryRecord(
+      user,
+      verifier,
+      HistoryActionType.VERIFICATION,
+      'training_certificate',
+      trainingCertificate.isVerified ? 'Verified' : 'Unverified',
+      verifyData.isVerified ? 'Verified' : 'Unverified',
+      `Training certificate (${trainingCertificate.designationOfCourse || ''}) verification status updated by ${verifier.name}`
+    );
+    
+    return { 
+      message: 'Training certificate verification status updated successfully',
       isVerified: verifyData.isVerified,
       verifiedAt: verifyData.verifiedAt || new Date().toISOString(),
       verifiedBy: verifier.name

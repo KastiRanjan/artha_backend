@@ -4,7 +4,7 @@ import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 
 /**
- * User Document Entity
+ * User Bank Detail Entity
  */
 @Entity({
   name: 'user_bank_detail'
@@ -21,6 +21,18 @@ export class UserBankDetailEntity extends CustomBaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   documentFile: string;
+  
+  @Column({ type: 'varchar', nullable: true })
+  filename: string;
+
+  @Column({ type: 'boolean', default: false })
+  isVerified: boolean;
+  
+  @Column({ nullable: true })
+  verifiedById: string;
+  
+  @Column({ type: 'timestamp', nullable: true })
+  verifiedAt: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.bank_detail)
   user: UserEntity;

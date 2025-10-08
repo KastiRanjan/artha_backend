@@ -187,7 +187,6 @@ export class TaskSuperService {
     });
 
     if (existingTaskSuperProject) {
-      console.log(`Reusing existing TaskSuperProject: ${existingTaskSuperProject.name} (${existingTaskSuperProject.id})`);
       return existingTaskSuperProject;
     }
 
@@ -207,7 +206,6 @@ export class TaskSuperService {
     newTaskSuperProject.project = project;
 
     const savedTaskSuperProject = await this.taskSuperProjectRepository.save(newTaskSuperProject);
-    console.log(`Created new TaskSuperProject: ${savedTaskSuperProject.name} (${savedTaskSuperProject.id})`);
     return savedTaskSuperProject;
   }
 
@@ -227,7 +225,6 @@ export class TaskSuperService {
     });
 
     if (existingTaskGroupProject) {
-      console.log(`Reusing existing TaskGroupProject: ${existingTaskGroupProject.name} (${existingTaskGroupProject.id})`);
       return existingTaskGroupProject;
     }
 
@@ -250,7 +247,6 @@ export class TaskSuperService {
     newTaskGroupProject.taskSuper = taskSuperProject;
 
     const savedTaskGroupProject = await this.taskGroupProjectRepository.save(newTaskGroupProject);
-    console.log(`Created new TaskGroupProject: ${savedTaskGroupProject.name} (${savedTaskGroupProject.id})`);
     return savedTaskGroupProject;
   }
   
