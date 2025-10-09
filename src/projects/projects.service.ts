@@ -131,7 +131,9 @@ export class ProjectsService {
       const users = await this.userRepository.findOne({
         relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager', 'projects.billing', 'projects.customer', 'projects.users.role', 'projects.natureOfWork'],
         where: {
-          id: user.id
+          id: user.id,
+          status: status
+
         }
       });
       projects = users.projects;
@@ -273,7 +275,6 @@ export class ProjectsService {
     // Remove the project
     await this.projectRepository.remove(project);
 
-    // Optionally, return a success message or the removed project
     return { message: `Project with ID ${id} removed successfully` };
   }
   async findByUserId(id: string) {
