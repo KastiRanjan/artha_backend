@@ -64,6 +64,14 @@ export class TasksController {
     return this.tasksService.findOneByProjectIdAndTaskId(projectId, taskId);
   }
 
+  @Get('project/:pid/user/:uid')
+  findTasksByProjectIdAndUserId(
+    @Param('pid') projectId: string,
+    @Param('uid') userId: string
+  ) {
+    return this.tasksService.findTasksByProjectIdAndUserId(projectId, userId);
+  }
+
   @Patch('/bulk-update')
   bulkUpdate(@Body() bulkUpdateTaskDto: BulkUpdateTaskDto) {
     return this.tasksService.bulkUpdate(bulkUpdateTaskDto);

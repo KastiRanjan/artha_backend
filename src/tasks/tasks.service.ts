@@ -856,6 +856,84 @@ export class TasksService {
     return task;
   }
 
+  async findTasksByProjectIdAndUserId(projectId: string, userId: string) {
+    // Check if the project exists
+    const project = await this.projectRepository.findOne({
+      where: { id: projectId }
+    });
+    
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    // Check if user exists
+    const user = await this.userRepository.findOne({
+      where: { id: userId }
+    });
+    
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    
+    // We need to query differently for many-to-many relationships
+    // First, get all tasks for the project
+    const allProjectTasks = await this.taskRepository.find({
+      where: { project: { id: projectId } },
+      relations: [
+        'assignees', 
+        'groupProject',
+        'groupProject.taskSuper',
+        'project', 
+        'parentTask'
+      ]
+    });
+    
+    // Then filter for tasks assigned to the user
+    const tasks = allProjectTasks.filter(task => 
+      task.assignees && 
+      task.assignees.some(assignee => assignee.id === userId)
+    );
+
+    // Process tasks based on project's allowSubtaskWorklog setting
+    const processedTasks = [];
+    
+    // If subtask worklog is allowed, include all matching tasks
+    if (project.allowSubtaskWorklog) {
+      return tasks;
+    } else {
+      // If subtask worklog is not allowed, only include story tasks
+      // and include subtasks with their parent tasks for reference
+      
+      // First, gather all story tasks assigned to the user
+      const storyTasks = tasks.filter(task => task.taskType === 'story');
+      
+      // For each story task, find its subtasks (also assigned to the user)
+      for (const storyTask of storyTasks) {
+        // Get all subtasks of this story
+        const allSubTasks = await this.taskRepository.find({
+          where: { 
+            parentTask: { id: storyTask.id },
+            project: { id: projectId }
+          },
+          relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
+        });
+        
+        // Filter for subtasks assigned to the user
+        const userSubTasks = allSubTasks.filter(task => 
+          task.assignees && 
+          task.assignees.some(assignee => assignee.id === userId)
+        );
+        
+        processedTasks.push({
+          ...storyTask,
+          subTasks: userSubTasks
+        });
+      }
+      
+      return processedTasks;
+    }
+  }
+
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id); // Ensures task exists
 

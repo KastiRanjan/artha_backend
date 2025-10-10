@@ -1084,6 +1084,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'Get tasks by project and user',
+          route: [
+            { path: '/tasks/project/:pid/user/:uid', method: MethodList.GET }
+          ]
+        },
+        {
           name: 'Update task by id',
           route: [
             { path: '/tasks/:id', method: MethodList.PATCH }
