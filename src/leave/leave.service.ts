@@ -358,7 +358,39 @@ export class LeaveService {
   }
 
   async update(id: string, updateLeaveDto: UpdateLeaveDto): Promise<Leave> {
-    const leave = await this.findOne(id);
+    const leave = await this.leaveRepository.findOne({
+      where: { id },
+      relations: ['user', 'requestedManager']
+    });
+    
+    if (!leave) throw new NotFoundException('Leave not found');
+    
+    // Store the original status before update
+    const originalStatus = leave.status;
+    
+    // If the leave was approved_by_manager and is being edited, reset it to pending
+    // This requires the manager to re-approve
+    if (originalStatus === 'approved_by_manager') {
+      leave.status = 'pending';
+      leave.managerApproverId = null;
+      leave.managerApprovalTime = null;
+      
+      // Send notification to the manager that the leave was updated
+      if (leave.requestedManagerId) {
+        const manager = await this.getUserDetails(leave.requestedManagerId);
+        await this.notificationService.create({
+          message: `${leave.user.name} has updated their leave request. Please review the changes and approve again.`,
+          users: [leave.requestedManagerId]
+        });
+      }
+      
+      // Send notification to user that their leave is back to pending
+      await this.notificationService.create({
+        message: `Your leave request has been updated and reset to pending status. It needs to be approved again by your manager.`,
+        users: [leave.user.id]
+      });
+    }
+    
     Object.assign(leave, updateLeaveDto);
     return this.leaveRepository.save(leave);
   }
