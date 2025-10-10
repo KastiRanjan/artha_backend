@@ -1180,6 +1180,24 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             { path: '/dashboard/browser', method: MethodList.GET }
           ]
+        },        
+        {
+          name: 'View Dashboard Attendance',
+          route: [
+            {
+              path: '/dashboard/attendance',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View Dashboard Working Time',
+          route: [
+            {
+              path: '/dashboard/working-time',
+              method: MethodList.GET
+            }
+          ]
         }
       ]
     },

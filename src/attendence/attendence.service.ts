@@ -462,4 +462,115 @@ export class AttendenceService {
     
     return enrichedRecords;
   }
+
+  /**
+   * Get dashboard attendance statistics
+   * Returns users who haven't clocked in, users with attendance, and users without clock-out
+   */
+  async getDashboardAttendanceStats(user: UserEntity, date?: string) {
+    // Check if user has permission to view dashboard attendance
+    const isSuperUser = await this.checkSuperUserPermission(user);
+    if (!isSuperUser) {
+      throw new ForbiddenException('You do not have permission to view dashboard attendance');
+    }
+
+    const targetDate = date ? moment(date).format('YYYY-MM-DD').toString() : moment().format('YYYY-MM-DD').toString();
+    
+    // Fetch attendance records for the specified date (removed 'user' from relations as it doesn't exist)
+    const attendanceRecords = await this.attendanceRepository.find({ 
+      where: { date: targetDate },
+      relations: ['history']
+    });
+
+    // Fetch all active users with their roles
+    const allUsers = await this.userRepository.find({
+      relations: ['role']
+    });
+
+    // Create a map for quick attendance lookup by userId
+    const attendanceMap = new Map();
+    attendanceRecords.forEach(attendance => {
+      attendanceMap.set(attendance.userId, attendance);
+    });
+
+    // Categorize users
+    const usersWithoutClockIn = [];
+    const usersWithAttendance = [];
+    const usersWithoutClockOut = [];
+    const earlyClockIns = [];
+    const lateClockIns = [];
+
+    const EARLY_LATE_THRESHOLD = 15; // 15 minutes
+
+    allUsers.forEach(u => {
+      const attendance = attendanceMap.get(u.id);
+      const userInfo = {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        username: u.username,
+        roleId: u.role?.id,
+        roleName: u.role?.name
+      };
+
+      if (!attendance || !attendance.clockIn) {
+        // User hasn't done clock-in today
+        usersWithoutClockIn.push(userInfo);
+      } else {
+        // Parse clock-in time
+        const clockInTime = moment(attendance.clockIn, 'HH:mm:ss');
+        
+        // Assume default work start time is 09:00 (can be fetched from workhour config per role)
+        const defaultStartTime = moment('09:00', 'HH:mm');
+        const minutesDiff = clockInTime.diff(defaultStartTime, 'minutes');
+
+        // User has attendance
+        const attendanceData = {
+          ...userInfo,
+          clockIn: attendance.clockIn,
+          clockInTime: attendance.clockIn,
+          clockOut: attendance.clockOut,
+          clockOutTime: attendance.clockOut,
+          hasClockOut: !!attendance.clockOut,
+          minutesDiff: minutesDiff
+        };
+
+        usersWithAttendance.push(attendanceData);
+
+        // Determine if early or late clock-in
+        if (minutesDiff <= -EARLY_LATE_THRESHOLD) {
+          // Early by at least 15 minutes
+          earlyClockIns.push(attendanceData);
+        } else if (minutesDiff >= EARLY_LATE_THRESHOLD) {
+          // Late by at least 15 minutes
+          lateClockIns.push(attendanceData);
+        }
+
+        // Check if user hasn't done final clock-out
+        if (!attendance.clockOut) {
+          usersWithoutClockOut.push({
+            ...attendanceData,
+            clockInTime: attendance.clockIn
+          });
+        }
+      }
+    });
+
+    return {
+      date: targetDate,
+      summary: {
+        totalUsers: allUsers.length,
+        usersWithClockIn: usersWithAttendance.length,
+        usersWithoutClockIn: usersWithoutClockIn.length,
+        usersWithoutClockOut: usersWithoutClockOut.length,
+        earlyClockIns: earlyClockIns.length,
+        lateClockIns: lateClockIns.length
+      },
+      usersWithoutClockIn: usersWithoutClockIn.sort((a, b) => a.name.localeCompare(b.name)),
+      usersWithAttendance: usersWithAttendance.sort((a, b) => a.name.localeCompare(b.name)),
+      usersWithoutClockOut: usersWithoutClockOut.sort((a, b) => a.name.localeCompare(b.name)),
+      earlyClockIns: earlyClockIns.sort((a, b) => Math.abs(b.minutesDiff) - Math.abs(a.minutesDiff)),
+      lateClockIns: lateClockIns.sort((a, b) => b.minutesDiff - a.minutesDiff)
+    };
+  }
 }

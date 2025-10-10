@@ -8,8 +8,6 @@ export class Workhour {
   @Column({ type: 'uuid', nullable: false })
   roleId: string;
 
-  // Removed userId field as per requirement #2 (workhour is role-based only)
-
   @Column({ type: 'int', default: 8 })
   workHours: number;
 
@@ -21,8 +19,6 @@ export class Workhour {
 
   @Column({ type: 'date', nullable: false })
   validFrom: Date;
-
-  // Removed validTo field as per requirement #1 (only validFrom is needed)
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;  // To mark current active workhour for a role

@@ -17,6 +17,7 @@ import { WorklogModule } from 'src/worklog/worklog.module';
     WorklogModule
   ],
   controllers: [AttendenceController],
-  providers: [AttendenceService]
+  providers: [AttendenceService],
+  exports: [AttendenceService]
 })
 export class AttendenceModule {}
