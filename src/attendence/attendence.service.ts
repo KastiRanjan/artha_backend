@@ -10,6 +10,7 @@ import { LeaveService } from 'src/leave/leave.service';
 import { HolidayService } from 'src/holiday/holiday.service';
 import { AttendanceHistory } from './entities/attendence-history.entity';
 import { WorklogService } from 'src/worklog/worklog.service';
+import { WorkhourService } from 'src/workhour/workhour.service';
 
 @Injectable()
 export class AttendenceService {
@@ -23,6 +24,7 @@ export class AttendenceService {
     private readonly leaveService: LeaveService,
     private readonly holidayService: HolidayService,
     private readonly worklogService: WorklogService,
+    private readonly workhourService: WorkhourService,
   ) {}
 
   async create(createAttendanceDto: CreateAttendanceDto, user: UserEntity): Promise<Attendance> {
@@ -502,7 +504,7 @@ export class AttendenceService {
 
     const EARLY_LATE_THRESHOLD = 15; // 15 minutes
 
-    allUsers.forEach(u => {
+    for (const u of allUsers) {
       const attendance = attendanceMap.get(u.id);
       const userInfo = {
         id: u.id,
@@ -513,15 +515,17 @@ export class AttendenceService {
         roleName: u.role?.name
       };
 
+      // Get workhour settings for this user's role
+      const workhour = await this.workhourService.resolveForUser(u.id, u.roleId);
+      const defaultStartTime = moment(workhour.startTime, 'HH:mm');
+      const defaultEndTime = moment(workhour.endTime, 'HH:mm');
+
       if (!attendance || !attendance.clockIn) {
         // User hasn't done clock-in today
         usersWithoutClockIn.push(userInfo);
       } else {
         // Parse clock-in time
         const clockInTime = moment(attendance.clockIn, 'HH:mm:ss');
-        
-        // Assume default work start time is 09:00 (can be fetched from workhour config per role)
-        const defaultStartTime = moment('09:00', 'HH:mm');
         const minutesDiff = clockInTime.diff(defaultStartTime, 'minutes');
 
         // User has attendance
@@ -532,7 +536,9 @@ export class AttendenceService {
           clockOut: attendance.clockOut,
           clockOutTime: attendance.clockOut,
           hasClockOut: !!attendance.clockOut,
-          minutesDiff: minutesDiff
+          minutesDiff: minutesDiff,
+          expectedStartTime: workhour.startTime,
+          expectedEndTime: workhour.endTime
         };
 
         usersWithAttendance.push(attendanceData);
@@ -554,7 +560,7 @@ export class AttendenceService {
           });
         }
       }
-    });
+    }
 
     return {
       date: targetDate,

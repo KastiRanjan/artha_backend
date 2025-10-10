@@ -8,13 +8,15 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { LeaveModule } from 'src/leave/leave.module';
 import { HolidayModule } from 'src/holiday/holiday.module';
 import { WorklogModule } from 'src/worklog/worklog.module';
+import { WorkhourModule } from 'src/workhour/workhour.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Attendance, AttendanceHistory, UserEntity]),
     LeaveModule,
     HolidayModule,
-    WorklogModule
+    WorklogModule,
+    WorkhourModule
   ],
   controllers: [AttendenceController],
   providers: [AttendenceService],
