@@ -934,6 +934,63 @@ export class TasksService {
     }
   }
 
+  async findUserTasksFromActiveProjects(userId: string) {
+    // Check if user exists
+    const user = await this.userRepository.findOne({
+      where: { id: userId }
+    });
+    
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Get all tasks for the user from active projects
+    const allTasks = await this.taskRepository.find({
+      where: {
+        project: { status: 'active' }
+      },
+      relations: [
+        'assignees',
+        'groupProject',
+        'groupProject.taskSuper',
+        'project',
+        'parentTask',
+        'subTasks',
+        'subTasks.assignees'
+      ]
+    });
+
+    // Filter tasks where the user is assigned
+    const userTasks = allTasks.filter(task =>
+      task.assignees &&
+      task.assignees.some(assignee => assignee.id === userId)
+    );
+
+    // Process tasks to include subtasks for story tasks
+    const processedTasks = await Promise.all(
+      userTasks.map(async task => {
+        if (task.taskType === 'story') {
+          // Get all subtasks for this story
+          const subTasks = await this.taskRepository.find({
+            where: {
+              parentTask: { id: task.id },
+              project: { status: 'active' }
+            },
+            relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
+          });
+
+          return {
+            ...task,
+            subTasks: subTasks
+          };
+        }
+        return task;
+      })
+    );
+
+    return processedTasks;
+  }
+
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id); // Ensures task exists
 

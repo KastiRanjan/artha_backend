@@ -1058,6 +1058,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'Get current user tasks from active projects',
+          route: [
+            { path: '/tasks/user', method: MethodList.GET }
+          ]
+        },
+        {
           name: 'Add task',
           route: [
             { path: '/tasks', method: MethodList.POST }

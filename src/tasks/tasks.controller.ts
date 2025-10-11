@@ -7,7 +7,8 @@ import {
   Param,
   Delete,
   UseGuards,
-  Query
+  Query,
+  Request
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -23,7 +24,7 @@ import { FirstVerifyTaskDto } from './dto/first-verify-task.dto';
 import { SecondVerifyTaskDto } from './dto/second-verify-task.dto';
 
 @ApiTags('tasks')
-@UseGuards(JwtTwoFactorGuard)
+@UseGuards(JwtTwoFactorGuard, PermissionGuard)
 @Controller('tasks')
 @ApiBearerAuth()
 export class TasksController {
@@ -48,20 +49,15 @@ export class TasksController {
     return this.tasksService.findAll(status);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tasksService.findOne(id);
+  @Get('user')
+  findUserTasks(@Request() req: any) {
+    const userId = req.user.id;
+    return this.tasksService.findUserTasksFromActiveProjects(userId);
   }
+
   @Get('project/:id')
   findOneByProjectId(@Param('id') id: string) {
     return this.tasksService.findOneByProjectId(id);
-  }
-  @Get(':tid/project/:pid')
-  findOneByProjectIdAndTaskId(
-    @Param('pid') projectId: string,
-    @Param('tid') taskId: string
-  ) {
-    return this.tasksService.findOneByProjectIdAndTaskId(projectId, taskId);
   }
 
   @Get('project/:pid/user/:uid')
@@ -70,6 +66,19 @@ export class TasksController {
     @Param('uid') userId: string
   ) {
     return this.tasksService.findTasksByProjectIdAndUserId(projectId, userId);
+  }
+
+  @Get(':tid/project/:pid')
+  findOneByProjectIdAndTaskId(
+    @Param('pid') projectId: string,
+    @Param('tid') taskId: string
+  ) {
+    return this.tasksService.findOneByProjectIdAndTaskId(projectId, taskId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.tasksService.findOne(id);
   }
 
   @Patch('/bulk-update')
