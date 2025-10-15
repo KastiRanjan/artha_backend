@@ -793,44 +793,56 @@ export class TasksService {
   }
   
   async findOneByProjectId(id: string) {
-    const tasks = await this.taskRepository.find({
+    // Fetch all tasks for the project with complete relations
+    const allTasks = await this.taskRepository.find({
       where: { project: { id: id } },
       relations: [
-        'assignees', 
+        'assignees',
         'groupProject',
         'groupProject.taskSuper',
         'project', 
-        'parentTask'
+        'parentTask',
+        'parentTask.assignees',
+        'parentTask.groupProject',
+        'parentTask.groupProject.taskSuper'
       ]
     });
     
-    if (!tasks) {
-      throw new NotFoundException(`Task with project ID ${id} not found`);
+    if (!allTasks || allTasks.length === 0) {
+      return []; // Return empty array if no tasks found
     }
 
-    // Manually populate subTasks for each parent task
-    const tasksWithSubTasks = await Promise.all(
-      tasks.map(async (task) => {
-        if (task.taskType === 'story') {
-          // Find all subtasks that have this task as parent and belong to the same project
-          const subTasks = await this.taskRepository.find({
-            where: { 
-              parentTask: { id: task.id },
-              project: { id: id }
-            },
-            relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
-          });
-          
-          return {
-            ...task,
-            subTasks: subTasks
-          };
-        }
-        return task;
-      })
+    // Separate parent tasks (story type without parent) and standalone tasks
+    const parentTasks = allTasks.filter(task => 
+      task.taskType === 'story' && !task.parentTask
     );
+    
+    // Standalone subtasks (task type without parent) - these should be shown at top level
+    const standaloneSubtasks = allTasks.filter(task => 
+      task.taskType === 'task' && !task.parentTask
+    );
+    
+    const subTasksMap = new Map<string, any[]>();
+    
+    // Group subtasks by their parent task ID (for tasks that HAVE a parent)
+    allTasks.forEach(task => {
+      if (task.taskType === 'task' && task.parentTask) {
+        const parentId = task.parentTask.id;
+        if (!subTasksMap.has(parentId)) {
+          subTasksMap.set(parentId, []);
+        }
+        subTasksMap.get(parentId).push(task);
+      }
+    });
 
-    return tasksWithSubTasks;
+    // Attach subtasks to their parent tasks (includes ALL subtasks regardless of status)
+    const tasksWithSubTasks = parentTasks.map(task => ({
+      ...task,
+      subTasks: subTasksMap.get(task.id) || []
+    }));
+
+    // Return both parent tasks (with nested subtasks) AND standalone subtasks
+    return [...tasksWithSubTasks, ...standaloneSubtasks];
   }
   async findOneByProjectIdAndTaskId(projectId: string, taskId: string) {
     const task = await this.taskRepository.findOne({
