@@ -897,9 +897,31 @@ export class TasksService {
     // Process tasks based on project's allowSubtaskWorklog setting
     const processedTasks = [];
     
-    // If subtask worklog is allowed, include all matching tasks
+    // If subtask worklog is allowed
     if (project.allowSubtaskWorklog) {
-      return tasks;
+      // Show only subtasks and parent tasks that don't have subtasks
+      for (const task of tasks) {
+        // Include subtasks (taskType === 'task')
+        if (task.taskType === 'task') {
+          processedTasks.push(task);
+        }
+        // Include parent tasks (taskType === 'story') only if they don't have subtasks
+        else if (task.taskType === 'story') {
+          // Check if this parent task has any subtasks
+          const hasSubtasks = await this.taskRepository.count({
+            where: { 
+              parentTask: { id: task.id },
+              project: { id: projectId }
+            }
+          });
+          
+          // Only include if no subtasks exist
+          if (hasSubtasks === 0) {
+            processedTasks.push(task);
+          }
+        }
+      }
+      return processedTasks;
     } else {
       // If subtask worklog is not allowed, only include story tasks
       // and include subtasks with their parent tasks for reference
