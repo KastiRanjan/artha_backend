@@ -989,6 +989,9 @@ export class TasksService {
         'groupProject.taskSuper',
         'project',
         'parentTask',
+        'parentTask.assignees',
+        'parentTask.groupProject',
+        'parentTask.groupProject.taskSuper',
         'subTasks',
         'subTasks.assignees'
       ]
@@ -1000,12 +1003,30 @@ export class TasksService {
       task.assignees.some(assignee => assignee.id === userId)
     );
 
+    // Collect parent task IDs from subtasks assigned to the user
+    const parentTaskIds = new Set<string>();
+    userTasks.forEach(task => {
+      if (task.taskType === 'task' && task.parentTask) {
+        parentTaskIds.add(task.parentTask.id);
+      }
+    });
+
+    // Get parent tasks that aren't already in userTasks but have subtasks assigned to user
+    const additionalParentTasks = allTasks.filter(task =>
+      task.taskType === 'story' &&
+      parentTaskIds.has(task.id) &&
+      !userTasks.some(ut => ut.id === task.id)
+    );
+
+    // Combine user's directly assigned tasks with parent tasks
+    const combinedTasks = [...userTasks, ...additionalParentTasks];
+
     // Process tasks to include subtasks for story tasks
     const processedTasks = await Promise.all(
-      userTasks.map(async task => {
+      combinedTasks.map(async task => {
         if (task.taskType === 'story') {
           // Get all subtasks for this story
-          const subTasks = await this.taskRepository.find({
+          const allSubTasks = await this.taskRepository.find({
             where: {
               parentTask: { id: task.id },
               project: { status: 'active' }
@@ -1013,9 +1034,15 @@ export class TasksService {
             relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
           });
 
+          // Filter subtasks to only include those assigned to the user
+          const userSubTasks = allSubTasks.filter(subtask =>
+            subtask.assignees &&
+            subtask.assignees.some(assignee => assignee.id === userId)
+          );
+
           return {
             ...task,
-            subTasks: subTasks
+            subTasks: userSubTasks // Only include subtasks assigned to the user
           };
         }
         return task;
