@@ -73,4 +73,10 @@ export class ProjectsController {
   addFromTemplates(@Body() addFromTemplatesDto: AddFromTemplatesDto) {
     return this.projectsService.addFromTemplates(addFromTemplatesDto);
   }
+
+  @Post(':id/complete')
+  @ApiOperation({ summary: 'Mark project as completed (project lead or manager only)' })
+  completeProject(@Param('id') id: string, @GetUser() user: UserEntity) {
+    return this.projectsService.completeProject(id, user);
+  }
 }

@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddFromTemplatesDto } from './dto/add-from-templates.dto';
+import { CompleteProjectDto } from './dto/complete-project.dto';
 import { Project } from './entities/project.entity';
 import { ProjectTimelineService } from './project-timeline.service';
 import { ProjectDateFormatter } from './utils/date-formatter.util';
@@ -448,5 +449,70 @@ export class ProjectsService {
       tasks: dto.taskTemplates?.length || 0,
       subtasks: dto.subtasks?.length || 0
     };
+  }
+
+  async completeProject(id: string, user: UserEntity): Promise<Project> {
+    // Find project with all necessary relations
+    const project = await this.projectRepository.findOne({
+      where: { id },
+      relations: ['tasks', 'tasks.subTasks', 'projectLead', 'projectManager', 'users']
+    });
+
+    if (!project) {
+      throw new Error(`Project with ID ${id} not found`);
+    }
+
+    // Check if user is authorized (project lead or project manager)
+    const isProjectLead = project.projectLead?.id === user.id;
+    const isProjectManager = project.projectManager?.id === user.id;
+    const isSuperUser = user.role?.name === 'superuser';
+
+    if (!isProjectLead && !isProjectManager && !isSuperUser) {
+      throw new Error('Only project lead or project manager can mark project as completed');
+    }
+
+    // Check if all tasks are completed
+    const allTasks = project.tasks || [];
+    const incompleteTasks = allTasks.filter(task => {
+      // Check main task status
+      if (task.status !== 'done') {
+        return true;
+      }
+      
+      // Check subtasks status
+      const hasIncompleteSubtasks = task.subTasks?.some(subtask => subtask.status !== 'done');
+      return hasIncompleteSubtasks;
+    });
+
+    if (incompleteTasks.length > 0) {
+      const incompleteTaskNames = incompleteTasks.map(t => t.name).join(', ');
+      throw new Error(
+        `Cannot complete project. ${incompleteTasks.length} task(s) are not completed: ${incompleteTaskNames}`
+      );
+    }
+
+    // Update project status
+    project.status = 'completed';
+    const updatedProject = await this.projectRepository.save(project);
+
+    // Log in timeline
+    await this.projectTimelineService.log({
+      projectId: project.id,
+      userId: user.id,
+      action: 'project_completed',
+      details: `Project marked as completed by ${user.name}`
+    });
+
+    // Send notifications to all project members
+    const userIds = project.users?.map(u => u.id) || [];
+    if (userIds.length > 0) {
+      await this.notificationService.create({
+        message: `Project ${project.name} has been marked as completed`,
+        users: userIds,
+        link: `${process.env.frontendUrl}/projects/${project.id}`
+      });
+    }
+
+    return updatedProject;
   }
 }

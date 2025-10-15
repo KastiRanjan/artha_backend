@@ -50,6 +50,8 @@ import { LegalStatusModule } from './legal-status/legal-status.module';
 import { NoticeBoardModule } from './notice-board/notice-board.module';
 import { UploadModule } from './upload/upload.module';
 import { DepartmentModule } from './department/department.module';
+import { ProjectEvaluationModule } from './project-evaluation/project-evaluation.module';
+import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -115,7 +117,9 @@ import { DepartmentModule } from './department/department.module';
   TaskTypeModule,
   NoticeBoardModule,
   UploadModule,
-  DepartmentModule
+  DepartmentModule,
+  ProjectEvaluationModule,
+  ProjectSignoffModule
   ],
   providers: [
     {
