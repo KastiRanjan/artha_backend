@@ -11,7 +11,6 @@ import {
 } from 'typeorm';
 
 @Entity()
-@Unique(['name'])
 export class TaskTemplate extends CustomBaseEntity {
   @Column({ length: 100 })
   name: string;
