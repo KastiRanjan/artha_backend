@@ -18,19 +18,7 @@ export class TaskTemplateService {
     const { name, description, groupId, parentTaskId, taskType, budgetedHours, rank } =
       createTaskTemplateDto;
 
-    // Validate name length
-    if (name && name.length > 100) {
-      throw new BadRequestException('Task template name cannot exceed 100 characters');
-    }
-
-    // Check for duplicate name first
-    const existingTask = await this.taskTemplateRepository.findOne({
-      where: { name }
-    });
-
-    if (existingTask) {
-      throw new BadRequestException(`A task template with the name "${name}" already exists`);
-    }
+    // ...existing code...
 
     // Validate parent task if parentTaskId is provided
     let parentTask = null;
