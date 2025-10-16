@@ -28,6 +28,12 @@ export class NotificationController {
     return this.notificationService.markAsRead(userId, notificationId);
   }
 
+  // Mark all notifications of a specific type as read for a user
+  @Patch('read-all/:userId/:type')
+  markAllAsReadByType(@Param('userId') userId: string, @Param('type') type: NotificationType) {
+    return this.notificationService.markAllAsReadByType(userId, type);
+  }
+
   // Mark notification as unread for a user
   @Patch('unread/:userId/:notificationId')
   markAsUnread(@Param('userId') userId: string, @Param('notificationId') notificationId: string) {

@@ -82,6 +82,28 @@ export class NotificationService {
     return userNotification;
   }
 
+  async markAllAsReadByType(userId: string, type: NotificationType) {
+    const queryBuilder = this.userNotificationRepository
+      .createQueryBuilder('userNotification')
+      .leftJoinAndSelect('userNotification.notification', 'notification')
+      .leftJoinAndSelect('userNotification.user', 'user')
+      .where('user.id = :userId', { userId })
+      .andWhere('userNotification.isRead = :isRead', { isRead: false })
+      .andWhere('notification.type = :type', { type });
+
+    const userNotifications = await queryBuilder.getMany();
+    
+    if (userNotifications && userNotifications.length > 0) {
+      for (const userNotification of userNotifications) {
+        userNotification.isRead = true;
+        await this.userNotificationRepository.save(userNotification);
+      }
+      this.notificationGateway.sendToUser(userId, 'notification_bulk_read', { type, count: userNotifications.length });
+    }
+    
+    return { success: true, count: userNotifications.length };
+  }
+
   async markAsUnread(userId: string, notificationId: string) {
     const userNotification = await this.userNotificationRepository.findOne({
       where: { user: { id: userId }, notification: { id: notificationId } }
