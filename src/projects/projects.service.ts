@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { UserEntity } from 'src/auth/entity/user.entity';
@@ -59,8 +60,19 @@ export class ProjectsService {
       client, // Add client property
       billing,
       natureOfWork: natureOfWorkId,
+      name,
       ...projectData
     } = createProjectDto;
+
+    // Check for duplicate project name
+    const existingProject = await this.projectRepository.findOne({ where: { name } });
+    if (existingProject) {
+      // Use BadRequestException so frontend gets a 400 error and message
+      // Import BadRequestException from @nestjs/common
+      // If not imported, add: import { BadRequestException } from '@nestjs/common';
+      throw new BadRequestException('A project with this name already exists. Please choose a different name.');
+    }
+
     // Fetch the user entities using the user IDs
     const users = await this.userRepository.findByIds(userIds || []);
     const lead = projectLead ? await this.userRepository.findOne({ where: { id: projectLead } }) : null;
@@ -79,14 +91,15 @@ export class ProjectsService {
     }
     const billingEntity = billing ? await this.billingRepository.findOne({ where: { id: billing } }) : null;
     const natureOfWorkEntity = await this.natureOfWorkRepository.findOne({ where: { id: natureOfWorkId } });
-    
+
     if (!natureOfWorkEntity) {
       throw new Error(`Nature of work with ID ${natureOfWorkId} not found`);
     }
-    
+
     // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
+      name,
       users, // Assign the user entities here
       projectLead: lead,
       projectManager: manager,
