@@ -968,89 +968,160 @@ export class TasksService {
     }
   }
 
-  async findUserTasksFromActiveProjects(userId: string) {
-    // Check if user exists
-    const user = await this.userRepository.findOne({
-      where: { id: userId }
-    });
+  // async findUserTasksFromActiveProjects(userId: string) {
+  //   // Check if user exists
+  //   const user = await this.userRepository.findOne({
+  //     where: { id: userId }
+  //   });
     
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
+  //   if (!user) {
+  //     throw new NotFoundException(`User with ID ${userId} not found`);
+  //   }
 
-    // Get all tasks for the user from active projects
-    const allTasks = await this.taskRepository.find({
-      where: {
-        project: { status: 'active' }
-      },
-      relations: [
-        'assignees',
-        'groupProject',
-        'groupProject.taskSuper',
-        'project',
-        'parentTask',
-        'parentTask.assignees',
-        'parentTask.groupProject',
-        'parentTask.groupProject.taskSuper',
-        'subTasks',
-        'subTasks.assignees'
-      ]
-    });
+  //   // Get all tasks for the user from active projects
+  //   const allTasks = await this.taskRepository.find({
+  //     where: {
+  //       project: { status: 'active' }
+  //     },
+  //     relations: [
+  //       'assignees',
+  //       'groupProject',
+  //       'groupProject.taskSuper',
+  //       'project',
+  //       'parentTask',
+  //       'parentTask.assignees',
+  //       'parentTask.groupProject',
+  //       'parentTask.groupProject.taskSuper',
+  //       'subTasks',
+  //       'subTasks.assignees'
+  //     ]
+  //   });
 
-    // Filter tasks where the user is assigned
-    const userTasks = allTasks.filter(task =>
-      task.assignees &&
-      task.assignees.some(assignee => assignee.id === userId)
-    );
+  //   // Filter tasks where the user is assigned
+  //   const userTasks = allTasks.filter(task =>
+  //     task.assignees &&
+  //     task.assignees.some(assignee => assignee.id === userId)
+  //   );
 
-    // Collect parent task IDs from subtasks assigned to the user
-    const parentTaskIds = new Set<string>();
-    userTasks.forEach(task => {
-      if (task.taskType === 'task' && task.parentTask) {
-        parentTaskIds.add(task.parentTask.id);
-      }
-    });
+  //   // Collect parent task IDs from subtasks assigned to the user
+  //   const parentTaskIds = new Set<string>();
+  //   userTasks.forEach(task => {
+  //     if (task.taskType === 'task' && task.parentTask) {
+  //       parentTaskIds.add(task.parentTask.id);
+  //     }
+  //   });
 
-    // Get parent tasks that aren't already in userTasks but have subtasks assigned to user
-    const additionalParentTasks = allTasks.filter(task =>
-      task.taskType === 'story' &&
-      parentTaskIds.has(task.id) &&
-      !userTasks.some(ut => ut.id === task.id)
-    );
+  //   // Get parent tasks that aren't already in userTasks but have subtasks assigned to user
+  //   const additionalParentTasks = allTasks.filter(task =>
+  //     task.taskType === 'story' &&
+  //     parentTaskIds.has(task.id) &&
+  //     !userTasks.some(ut => ut.id === task.id)
+  //   );
 
-    // Combine user's directly assigned tasks with parent tasks
-    const combinedTasks = [...userTasks, ...additionalParentTasks];
+  //   // Combine user's directly assigned tasks with parent tasks
+  //   const combinedTasks = [...userTasks, ...additionalParentTasks];
 
-    // Process tasks to include subtasks for story tasks
-    const processedTasks = await Promise.all(
-      combinedTasks.map(async task => {
-        if (task.taskType === 'story') {
-          // Get all subtasks for this story
-          const allSubTasks = await this.taskRepository.find({
-            where: {
-              parentTask: { id: task.id },
-              project: { status: 'active' }
-            },
-            relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
-          });
+  //   // Process tasks to include subtasks for story tasks
+  //   const processedTasks = await Promise.all(
+  //     combinedTasks.map(async task => {
+  //       if (task.taskType === 'story') {
+  //         // Get all subtasks for this story
+  //         const allSubTasks = await this.taskRepository.find({
+  //           where: {
+  //             parentTask: { id: task.id },
+  //             project: { status: 'active' }
+  //           },
+  //           relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
+  //         });
 
-          // Filter subtasks to only include those assigned to the user
-          const userSubTasks = allSubTasks.filter(subtask =>
-            subtask.assignees &&
-            subtask.assignees.some(assignee => assignee.id === userId)
-          );
+  //         // Filter subtasks to only include those assigned to the user
+  //         const userSubTasks = allSubTasks.filter(subtask =>
+  //           subtask.assignees &&
+  //           subtask.assignees.some(assignee => assignee.id === userId)
+  //         );
 
-          return {
-            ...task,
-            subTasks: userSubTasks // Only include subtasks assigned to the user
-          };
-        }
-        return task;
-      })
-    );
+  //         return {
+  //           ...task,
+  //           subTasks: userSubTasks // Only include subtasks assigned to the user
+  //         };
+  //       }
+  //       return task;
+  //     })
+  //   );
 
-    return processedTasks;
+  //   return processedTasks;
+  // }
+
+  async findUserTasksFromActiveProjects(userId: string) {
+  // Check if user exists
+  const user = await this.userRepository.findOne({ where: { id: userId } });
+  if (!user) {
+    throw new NotFoundException(`User with ID ${userId} not found`);
   }
+
+  // Fetch only tasks assigned to the user from active projects
+  const userTasks = await this.taskRepository
+    .createQueryBuilder('task')
+    .leftJoinAndSelect('task.assignees', 'assignee')
+    .leftJoinAndSelect('task.project', 'project')
+    .leftJoinAndSelect('task.groupProject', 'groupProject')
+    .leftJoinAndSelect('groupProject.taskSuper', 'taskSuper')
+    .leftJoinAndSelect('task.parentTask', 'parentTask')
+    .where('project.status = :status', { status: 'active' })
+    .andWhere('assignee.id = :userId', { userId })
+    .getMany();
+
+  // Get all parent task IDs from subtasks
+  const parentTaskIds = userTasks
+    .filter(task => task.taskType === 'task' && task.parentTask)
+    .map(task => task.parentTask.id);
+
+  // Fetch parent tasks that have subtasks assigned to the user
+  let additionalParentTasks: Task[] = [];
+  if (parentTaskIds.length > 0) {
+    additionalParentTasks = await this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.project', 'project')
+      .where('task.taskType = :type', { type: 'story' })
+      .andWhere('task.id IN (:...ids)', { ids: parentTaskIds })
+      .andWhere('project.status = :status', { status: 'active' })
+      .getMany();
+  }
+
+  // Combine tasks
+  const combinedTasks = [...userTasks, ...additionalParentTasks];
+
+  // Fetch all subtasks for these parent tasks in one go
+  const storyTaskIds = combinedTasks.filter(t => t.taskType === 'story').map(t => t.id);
+  let allSubTasks: Task[] = [];
+  if (storyTaskIds.length > 0) {
+    allSubTasks = await this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.assignees', 'assignee')
+      .where('task.parentTask IN (:...ids)', { ids: storyTaskIds })
+      .andWhere('assignee.id = :userId', { userId })
+      .getMany();
+  }
+
+  // Attach subtasks to their parent
+  const subTasksMap = new Map<string, Task[]>();
+  allSubTasks.forEach(subtask => {
+    const parentId = subtask.parentTask?.id;
+    if (parentId) {
+      if (!subTasksMap.has(parentId)) subTasksMap.set(parentId, []);
+      subTasksMap.get(parentId)!.push(subtask);
+    }
+  });
+
+  const processedTasks = combinedTasks.map(task => {
+    if (task.taskType === 'story') {
+      return { ...task, subTasks: subTasksMap.get(task.id) || [] };
+    }
+    return task;
+  });
+
+  return processedTasks;
+}
 
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id); // Ensures task exists
