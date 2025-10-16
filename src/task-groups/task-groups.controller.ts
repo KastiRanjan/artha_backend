@@ -29,8 +29,14 @@ export class TaskGroupsController {
 
   @Get()
   @ApiQuery({ name: 'taskSuperId', required: false })
-  findAll(@Query('taskSuperId') taskSuperId?: string) {
-    return this.taskGroupsService.findAll(taskSuperId);
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  findAll(
+    @Query('taskSuperId') taskSuperId?: string,
+    @Query('limit') limit?: number,
+    @Query('page') page?: number
+  ) {
+    return this.taskGroupsService.findAll(taskSuperId, limit, page);
   }
 
   @Get(':id')

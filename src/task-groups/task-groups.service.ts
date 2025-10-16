@@ -44,42 +44,30 @@ export class TaskGroupsService {
     return await this.taskGroupRepository.save(taskGroup);
   }
 
-  async findAll(taskSuperId?: string) {
+  async findAll(taskSuperId?: string, limit?: number, page?: number) {
     let taskGroups;
-    
+    const take = limit ? Number(limit) : 10;
+    const skip = page && limit ? (Number(page) - 1) * Number(limit) : 0;
+    const findOptions: any = {
+      relations: ['taskSuper', 'tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks'],
+      order: {
+        rank: 'ASC',
+        updatedAt: 'DESC'
+      },
+      take,
+      skip
+    };
     if (taskSuperId) {
-      // Filter by taskSuperId when provided
-      taskGroups = await this.taskGroupRepository.find({
-        where: { taskSuperId },
-        relations: ['taskSuper', 'tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks'],
-        order: {
-          rank: 'ASC',
-          updatedAt: 'DESC'
-        }
-      });
-    } else {
-      // Return all when no filter is provided
-      taskGroups = await this.taskGroupRepository.find({
-        relations: ['taskSuper', 'tasktemplate', 'tasktemplate.parentTask', 'tasktemplate.subTasks'],
-        order: {
-          rank: 'ASC',
-          updatedAt: 'DESC'
-        }
-      });
+      findOptions.where = { taskSuperId };
     }
-    
+    taskGroups = await this.taskGroupRepository.find(findOptions);
     // Process each task group to organize templates
     for (const taskGroup of taskGroups) {
-      // Organize the task templates properly with parent-child relationships
       if (taskGroup && taskGroup.tasktemplate) {
-        // Manually populate subtasks for each story to ensure complete data
         for (const template of taskGroup.tasktemplate) {
           if (template.taskType === 'story') {
-            // Get all tasks that have this story as parent
             const subtasks = await this.taskTemplateRepository.find({
-              where: { 
-                parentTask: { id: template.id }
-              },
+              where: { parentTask: { id: template.id } },
               relations: ['parentTask']
             });
             template.subTasks = subtasks;
@@ -87,7 +75,6 @@ export class TaskGroupsService {
         }
       }
     }
-    
     return taskGroups;
   }
 
