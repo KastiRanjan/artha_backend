@@ -955,7 +955,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id',
               method: MethodList.GET
-            },
+            }
+          ]
+        },
+        {
+          name: 'View project timeline',
+          route: [
             {
               path: '/projects/:id/timeline',
               method: MethodList.GET
@@ -1003,6 +1008,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/projects/add-from-templates',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Mark project as completed',
+          route: [
+            {
+              path: '/projects/:id/complete',
               method: MethodList.POST
             }
           ]
