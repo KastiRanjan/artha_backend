@@ -140,7 +140,7 @@ export class ProjectsService {
         },
         relations: ['users', 'tasks', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork'],
         order: {
-          updatedAt: 'DESC'
+          name: 'ASC' // Order alphabetically by name
         }
       });
     } else {
@@ -151,8 +151,9 @@ export class ProjectsService {
         }
       });
       projects = users.projects.filter(project => project.status === status);
+      // Sort alphabetically by name for non-superuser
+      projects = projects.sort((a, b) => a.name.localeCompare(b.name));
     }
-    
     // Add Nepali date formatting to each project
     return projects.map(project => ProjectDateFormatter.addNepaliDates(project));
   }
