@@ -7,6 +7,7 @@ import { UpdateTodoTaskDto } from './dto/update-todo-task.dto';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { TaskTypeService } from 'src/task-type/task-type.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { NotificationType } from 'src/notification/enums/notification-type.enum';
 
 @Injectable()
 export class TodoTaskService {
@@ -46,7 +47,8 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [createTodoTaskDto.assignedToId],
       message: `Task "${createTodoTaskDto.title}" has been assigned to you with due date ${dueDateStr}.`,
-      link: `/todotask/${savedTask.id}`
+      link: `/todotask/${savedTask.id}`,
+      type: NotificationType.TASK
     });
     
     return savedTask;
@@ -135,7 +137,8 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [todoTask.createdById],
       message: `Task "${todoTask.title}" has been acknowledged by ${user.name || user.email}`,
-      link: `/todotask/${id}`
+      link: `/todotask/${id}`,
+      type: NotificationType.TASK
     });
     
     return this.findOne(id, user);
@@ -164,7 +167,8 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [todoTask.createdById],
       message: `Task "${todoTask.title}" has been marked as pending by ${user.name || user.email}`,
-      link: `/todotask/${id}`
+      link: `/todotask/${id}`,
+      type: NotificationType.TASK
     });
     
     return this.findOne(id, user);
@@ -194,7 +198,8 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [todoTask.createdById],
       message: `Task "${todoTask.title}" has been completed by ${user.name || user.email}`,
-      link: `/todotask/${id}`
+      link: `/todotask/${id}`,
+      type: NotificationType.TASK
     });
     
     return this.findOne(id, user);
@@ -227,7 +232,8 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [todoTask.assignedToId],
       message: `Task "${todoTask.title}" has been dropped by ${user.name || user.email}`,
-      link: `/todotask/${id}`
+      link: `/todotask/${id}`,
+      type: NotificationType.TASK
     });
     
     return this.findOne(id, user);
@@ -271,7 +277,8 @@ export class TodoTaskService {
       await this.notificationService.create({
         users: [updateTodoTaskDto.assignedToId],
         message: `You have been assigned to task: ${todoTask.title} by ${user.name || user.email}`,
-        link: `/todotask/${id}`
+        link: `/todotask/${id}`,
+        type: NotificationType.TASK
       });
     }
     

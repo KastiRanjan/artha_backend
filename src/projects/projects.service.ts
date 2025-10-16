@@ -6,6 +6,7 @@ import { Billing } from 'src/billing/entities/billing.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { NotificationType } from 'src/notification/enums/notification-type.enum';
 import { Repository } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -99,7 +100,8 @@ export class ProjectsService {
     await this.notificationService.create({
       message: `Project ${savedProject.name} created`,
       users: userIds,
-      link: `${process.env.frontendUrl}/projects/${savedProject.id}`
+      link: `${process.env.frontendUrl}/projects/${savedProject.id}`,
+      type: NotificationType.PROJECT
     });
     // Log project creation in timeline
     await this.projectTimelineService.log({
@@ -253,7 +255,8 @@ export class ProjectsService {
       await this.notificationService.create({
         message: `Project ${updatedProject.name} updated`,
         users: users,
-        link: `${process.env.frontendUrl}/projects/${updatedProject.id}`
+        link: `${process.env.frontendUrl}/projects/${updatedProject.id}`,
+        type: NotificationType.PROJECT
       });
     }
     
@@ -509,7 +512,8 @@ export class ProjectsService {
       await this.notificationService.create({
         message: `Project ${project.name} has been marked as completed`,
         users: userIds,
-        link: `${process.env.frontendUrl}/projects/${project.id}`
+        link: `${process.env.frontendUrl}/projects/${project.id}`,
+        type: NotificationType.PROJECT
       });
     }
 

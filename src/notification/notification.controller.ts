@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationType } from './enums/notification-type.enum';
 
 @Controller('notification')
 export class NotificationController {
@@ -12,10 +13,13 @@ export class NotificationController {
     return this.notificationService.create(createNotificationDto);
   }
 
-  // Get notifications for a user
+  // Get notifications for a user with optional type filter
   @Get('user/:userId')
-  getUserNotifications(@Param('userId') userId: string) {
-    return this.notificationService.getUserNotifications(userId);
+  getUserNotifications(
+    @Param('userId') userId: string,
+    @Query('type') type?: NotificationType
+  ) {
+    return this.notificationService.getUserNotifications(userId, type);
   }
 
   // Mark notification as read for a user

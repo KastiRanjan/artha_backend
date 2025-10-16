@@ -6,6 +6,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './entities/notification.entity';
 import { UserNotification } from './entities/user-notification.entity';
 import { NotificationGateway } from './notification.gateway';
+import { NotificationType } from './enums/notification-type.enum';
 
 @Injectable()
 export class NotificationService {
@@ -25,6 +26,7 @@ export class NotificationService {
     const notification = this.notificationRepository.create({
       message: createNotificationDto.message,
       link: createNotificationDto.link,
+      type: createNotificationDto.type || NotificationType.GENERAL,
     });
     const savedNotification = await this.notificationRepository.save(notification);
 
@@ -53,12 +55,19 @@ export class NotificationService {
     return savedNotification;
   }
 
-  async getUserNotifications(userId: string) {
-    return this.userNotificationRepository.find({
-      where: { user: { id: userId } },
-      relations: ['notification'],
-      order: { createdAt: 'DESC' }
-    });
+  async getUserNotifications(userId: string, type?: NotificationType) {
+    const queryBuilder = this.userNotificationRepository
+      .createQueryBuilder('userNotification')
+      .leftJoinAndSelect('userNotification.notification', 'notification')
+      .leftJoinAndSelect('userNotification.user', 'user')
+      .where('user.id = :userId', { userId })
+      .orderBy('userNotification.createdAt', 'DESC');
+
+    if (type) {
+      queryBuilder.andWhere('notification.type = :type', { type });
+    }
+
+    return queryBuilder.getMany();
   }
 
   async markAsRead(userId: string, notificationId: string) {

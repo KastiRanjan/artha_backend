@@ -7,6 +7,7 @@ import { NoticeBoard } from './entities/notice-board.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { RoleEntity } from 'src/role/entities/role.entity';
 import { MailService } from 'src/mail/mail.service';
+import { NotificationType } from 'src/notification/enums/notification-type.enum';
 
 @Injectable()
 export class NoticeBoardService {
@@ -101,8 +102,9 @@ export class NoticeBoardService {
     if (savedNotice.users && savedNotice.users.length > 0) {
       await (this as any).notificationService.create({
         users: savedNotice.users.map(u => u.id),
-          message: `A notice has been published: "${savedNotice.title}"`,
-        link: `/noticeboard/}`
+        message: `A notice has been published: "${savedNotice.title}"`,
+        link: `/noticeboard/}`,
+        type: NotificationType.NOTICEBOARD
       });
     }
 
@@ -224,7 +226,8 @@ export class NoticeBoardService {
       await (this as any).notificationService.create({
         users: noticeBoard.users.map(u => u.id),
         message: `Notice updated: "${noticeBoard.title}"`,
-        link: `/noticeboard/${noticeBoard.id}`
+        link: `/noticeboard/${noticeBoard.id}`,
+        type: NotificationType.NOTICEBOARD
       });
     }
 

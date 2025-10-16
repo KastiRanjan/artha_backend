@@ -9,7 +9,7 @@ import { Worklog } from './entities/worklog.entity';
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
 import { Task } from 'src/tasks/entities/task.entity';
 import { NotificationService } from 'src/notification/notification.service';
-
+import { NotificationType } from 'src/notification/enums/notification-type.enum';
 import { LeaveService } from 'src/leave/leave.service';
 import { HolidayService } from 'src/holiday/holiday.service';
 import moment = require('moment');
@@ -117,7 +117,8 @@ export class WorklogService {
       if (worklog.requestTo) {
           await this.notificationService.create({
             message: `Worklog has been requested by user ${user.name}`,
-            users: [worklog.requestTo]
+            users: [worklog.requestTo],
+            type: NotificationType.WORKLOG
           });
       }
     }
@@ -327,7 +328,8 @@ export class WorklogService {
           const approver = await this.userRepository.findOne({ where: { id: user.id } });
           await this.notificationService.create({
             message: `Worklog has been approved by user ${approver?.name || user.id}`,
-            users: [worklog.user.id]
+            users: [worklog.user.id],
+            type: NotificationType.WORKLOG
           });
         }
       } else if (updateWorklogDto.status === 'rejected') {
@@ -339,7 +341,8 @@ export class WorklogService {
           const rejector = await this.userRepository.findOne({ where: { id: user.id } });
           await this.notificationService.create({
             message: `Worklog has been rejected by user ${rejector?.name || user.id}`,
-            users: [worklog.user.id]
+            users: [worklog.user.id],
+            type: NotificationType.WORKLOG
           });
         }
       } else if (updateWorklogDto.status === 'requested') {
