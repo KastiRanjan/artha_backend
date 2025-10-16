@@ -46,6 +46,13 @@ import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-tok
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Get('/auth/validate-reset-token')
+  validateResetToken(
+    @Query('token') token: string
+  ): Promise<{ valid: boolean }> {
+    return this.authService.validateResetToken(token);
+  }
+
   @Post('/auth/register')
   register(
     @Body(ValidationPipe)

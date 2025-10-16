@@ -64,6 +64,19 @@ export class AuthService {
     private readonly rateLimiter: RateLimiterStoreAbstract
   ) {}
 
+
+    /**
+   * Validate reset password token
+   * @param token
+   */
+  async validateResetToken(token: string): Promise<{ valid: boolean }> {
+    const user = await this.userRepository.createQueryBuilder('user')
+      .where('user.token = :token', { token })
+      .andWhere('user.tokenValidityDate > NOW()')
+      .getOne();
+    return { valid: !!user };
+  }
+
   /**
    * send mail
    * @param user
@@ -81,7 +94,7 @@ export class AuthService {
   ) {
     try {
       // Get the frontend URL from environment variable
-      const frontendUrl = process.env.FRONTEND_URL || 'https://artha.sarojkasti.com.np';
+      const frontendUrl = process.env.FRONTEND_URL;
       const mailData: MailJobInterface = {
         to: user.email,
         subject,
