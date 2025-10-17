@@ -888,9 +888,12 @@ export class TasksService {
     }
     
     // We need to query differently for many-to-many relationships
-    // First, get all tasks for the project
+    // First, get all tasks for the project with status 'open' or 'in_progress'
     const allProjectTasks = await this.taskRepository.find({
-      where: { project: { id: projectId } },
+      where: { 
+        project: { id: projectId },
+        status: In(['open', 'in_progress'])
+      },
       relations: [
         'assignees', 
         'groupProject',
@@ -943,11 +946,12 @@ export class TasksService {
       
       // For each story task, find its subtasks (also assigned to the user)
       for (const storyTask of storyTasks) {
-        // Get all subtasks of this story
+        // Get all subtasks of this story with status 'open' or 'in_progress'
         const allSubTasks = await this.taskRepository.find({
           where: { 
             parentTask: { id: storyTask.id },
-            project: { id: projectId }
+            project: { id: projectId },
+            status: In(['open', 'in_progress'])
           },
           relations: ['assignees', 'groupProject', 'groupProject.taskSuper', 'project']
         });
