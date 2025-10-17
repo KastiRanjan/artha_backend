@@ -517,6 +517,7 @@ export class AttendenceService {
 
       // Get workhour settings for this user's role
       const workhour = await this.workhourService.resolveForUser(u.id, u.roleId);
+      console.log(`Workhour for user ${u.name} (ID: ${u.id}, Role: ${u.role?.name}):`, workhour);
       const defaultStartTime = moment(workhour.startTime, 'HH:mm');
       const defaultEndTime = moment(workhour.endTime, 'HH:mm');
 
