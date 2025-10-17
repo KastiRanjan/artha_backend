@@ -501,6 +501,8 @@ export class AttendenceService {
     const usersWithoutClockOut = [];
     const earlyClockIns = [];
     const lateClockIns = [];
+    const earlyClockOuts = [];
+    const lateClockOuts = [];
 
     const EARLY_LATE_THRESHOLD = 15; // 15 minutes
 
@@ -567,8 +569,45 @@ export class AttendenceService {
           lateClockIns.push(attendanceData);
         }
 
-        // Check if user hasn't done final clock-out
-        if (!attendance.clockOut) {
+        // Check clock-out time if available
+        if (attendance.clockOut) {
+          // Parse clock-out time - handle both formats for backward compatibility
+          let clockOutTime = moment(attendance.clockOut, 'HH:mm:ss');
+          
+          // If parsing with 24-hour format fails, try with AM/PM format
+          if (!clockOutTime.isValid() || attendance.clockOut.toLowerCase().includes('am') || attendance.clockOut.toLowerCase().includes('pm')) {
+            clockOutTime = moment(attendance.clockOut, 'hh:mm:ss a');
+          }
+          
+          const clockOutMinutesDiff = clockOutTime.diff(defaultEndTime, 'minutes');
+          
+          console.log(`Clock-out parsing for ${u.name}:`, {
+            rawClockOut: attendance.clockOut,
+            parsedClockOutTime: clockOutTime.format('HH:mm:ss'),
+            expectedEndTime: defaultEndTime.format('HH:mm:ss'),
+            clockOutMinutesDiff: clockOutMinutesDiff,
+            isValid: clockOutTime.isValid()
+          });
+
+          // Update attendance data with clock-out difference
+          attendanceData['clockOutMinutesDiff'] = clockOutMinutesDiff;
+
+          // Determine if early or late clock-out
+          if (clockOutMinutesDiff <= -EARLY_LATE_THRESHOLD) {
+            // Left early by at least 15 minutes
+            earlyClockOuts.push({
+              ...attendanceData,
+              clockOutMinutesDiff: clockOutMinutesDiff
+            });
+          } else if (clockOutMinutesDiff >= EARLY_LATE_THRESHOLD) {
+            // Stayed late (worked overtime) by at least 15 minutes
+            lateClockOuts.push({
+              ...attendanceData,
+              clockOutMinutesDiff: clockOutMinutesDiff
+            });
+          }
+        } else {
+          // User hasn't done final clock-out
           usersWithoutClockOut.push({
             ...attendanceData,
             clockInTime: attendance.clockIn
@@ -585,13 +624,17 @@ export class AttendenceService {
         usersWithoutClockIn: usersWithoutClockIn.length,
         usersWithoutClockOut: usersWithoutClockOut.length,
         earlyClockIns: earlyClockIns.length,
-        lateClockIns: lateClockIns.length
+        lateClockIns: lateClockIns.length,
+        earlyClockOuts: earlyClockOuts.length,
+        lateClockOuts: lateClockOuts.length
       },
       usersWithoutClockIn: usersWithoutClockIn.sort((a, b) => a.name.localeCompare(b.name)),
       usersWithAttendance: usersWithAttendance.sort((a, b) => a.name.localeCompare(b.name)),
       usersWithoutClockOut: usersWithoutClockOut.sort((a, b) => a.name.localeCompare(b.name)),
       earlyClockIns: earlyClockIns.sort((a, b) => Math.abs(b.minutesDiff) - Math.abs(a.minutesDiff)),
-      lateClockIns: lateClockIns.sort((a, b) => b.minutesDiff - a.minutesDiff)
+      lateClockIns: lateClockIns.sort((a, b) => b.minutesDiff - a.minutesDiff),
+      earlyClockOuts: earlyClockOuts.sort((a, b) => a.clockOutMinutesDiff - b.clockOutMinutesDiff),
+      lateClockOuts: lateClockOuts.sort((a, b) => b.clockOutMinutesDiff - a.clockOutMinutesDiff)
     };
   }
 }
