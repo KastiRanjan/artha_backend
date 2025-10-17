@@ -60,7 +60,7 @@ export class AttendenceService {
           ...createAttendanceDto,
           userId: user.id,
           date: today,
-          clockIn: createAttendanceDto.clockIn || moment().format('HH:mm:ss a'),
+          clockIn: createAttendanceDto.clockIn || moment().format('HH:mm:ss'),
           clockInRemark: createAttendanceDto.clockInRemark,
         };
         attendance = this.attendanceRepository.create(datatosave);
@@ -525,9 +525,23 @@ export class AttendenceService {
         // User hasn't done clock-in today
         usersWithoutClockIn.push(userInfo);
       } else {
-        // Parse clock-in time
-        const clockInTime = moment(attendance.clockIn, 'HH:mm:ss');
+        // Parse clock-in time - handle both formats for backward compatibility
+        let clockInTime = moment(attendance.clockIn, 'HH:mm:ss');
+        
+        // If parsing with 24-hour format fails, try with AM/PM format
+        if (!clockInTime.isValid() || attendance.clockIn.toLowerCase().includes('am') || attendance.clockIn.toLowerCase().includes('pm')) {
+          clockInTime = moment(attendance.clockIn, 'hh:mm:ss a');
+        }
+        
         const minutesDiff = clockInTime.diff(defaultStartTime, 'minutes');
+        
+        console.log(`Clock-in parsing for ${u.name}:`, {
+          rawClockIn: attendance.clockIn,
+          parsedClockInTime: clockInTime.format('HH:mm:ss'),
+          expectedStartTime: defaultStartTime.format('HH:mm:ss'),
+          minutesDiff: minutesDiff,
+          isValid: clockInTime.isValid()
+        });
 
         // User has attendance
         const attendanceData = {
