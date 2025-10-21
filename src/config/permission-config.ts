@@ -936,6 +936,31 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       ]
     },
     {
+      name: 'Mail Settings',
+      resource: 'mailSettings',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View mail settings',
+          route: [
+            {
+              path: '/mail-settings',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update mail settings',
+          route: [
+            {
+              path: '/mail-settings',
+              method: MethodList.PUT
+            }
+          ]
+        }
+      ]
+    },
+    {
       name: 'Project Management',
       resource: 'projects',
       hasSubmodules: false,

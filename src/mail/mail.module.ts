@@ -2,11 +2,15 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import * as config from 'config';
 import * as dotenv from 'dotenv';
 dotenv.config();
 import { MailService } from 'src/mail/mail.service';
 import { MailProcessor } from 'src/mail/mail.processor';
+import { MailSettingsService } from 'src/mail/mail-settings.service';
+import { MailSettingsController } from 'src/mail/mail-settings.controller';
+import { MailSettings } from 'src/mail/entities/mail-settings.entity';
 import { EmailTemplateModule } from 'src/email-template/email-template.module';
 import { EmailTemplateService } from 'src/email-template/email-template.service';
 
@@ -27,6 +31,7 @@ const mailConfig = {
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([MailSettings]),
     EmailTemplateModule,
     MailerModule.forRootAsync({
       useFactory: () => ({
@@ -56,8 +61,8 @@ const mailConfig = {
       })
     })
   ],
-  controllers: [],
-  providers: [MailService],
-  exports: [MailService]
+  controllers: [MailSettingsController],
+  providers: [MailService, MailSettingsService],
+  exports: [MailService, MailSettingsService]
 })
 export class MailModule { }

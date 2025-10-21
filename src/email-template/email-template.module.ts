@@ -8,14 +8,16 @@ import { UniqueValidatorPipe } from 'src/common/pipes/unique-validator.pipe';
 import { EmailTemplateRepository } from 'src/email-template/email-template.repository';
 import { EmailTemplateSeedService } from './seed/email-template.seed.service';
 import { EmailTemplateEntity } from './entities/email-template.entity';
+import { EmailTemplateSeederService } from './email-template-seeder.service';
+import { UpdateTemplatesService } from './update-templates.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([EmailTemplateRepository, EmailTemplateEntity]),
     forwardRef(() => AuthModule)
   ],
-  exports: [EmailTemplateService],
+  exports: [EmailTemplateService, EmailTemplateSeederService, UpdateTemplatesService],
   controllers: [EmailTemplateController],
-  providers: [EmailTemplateService, UniqueValidatorPipe, EmailTemplateSeedService]
+  providers: [EmailTemplateService, UniqueValidatorPipe, EmailTemplateSeedService, EmailTemplateSeederService, UpdateTemplatesService]
 })
 export class EmailTemplateModule {}

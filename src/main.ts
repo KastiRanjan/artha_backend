@@ -143,6 +143,15 @@ async function bootstrap() {
   if (isCloudflareSetup) {
     console.log(`🌐 Public access via: ${process.env.BACKEND_URL}/api-docs`);
   }
+
+  // Seed email templates for attendance reminders
+  try {
+    const { EmailTemplateSeederService } = await import('./email-template/email-template-seeder.service');
+    const seederService = app.get(EmailTemplateSeederService);
+    await seederService.seedAttendanceTemplates();
+  } catch (error) {
+    console.error('❌ Failed to seed email templates:', error.message);
+  }
 }
 
 bootstrap();

@@ -519,7 +519,6 @@ export class AttendenceService {
 
       // Get workhour settings for this user's role
       const workhour = await this.workhourService.resolveForUser(u.id, u.roleId);
-      console.log(`Workhour for user ${u.name} (ID: ${u.id}, Role: ${u.role?.name}):`, workhour);
       const defaultStartTime = moment(workhour.startTime, 'HH:mm');
       const defaultEndTime = moment(workhour.endTime, 'HH:mm');
 
@@ -537,14 +536,6 @@ export class AttendenceService {
         
         const minutesDiff = clockInTime.diff(defaultStartTime, 'minutes');
         
-        console.log(`Clock-in parsing for ${u.name}:`, {
-          rawClockIn: attendance.clockIn,
-          parsedClockInTime: clockInTime.format('HH:mm:ss'),
-          expectedStartTime: defaultStartTime.format('HH:mm:ss'),
-          minutesDiff: minutesDiff,
-          isValid: clockInTime.isValid()
-        });
-
         // User has attendance
         const attendanceData = {
           ...userInfo,
@@ -581,14 +572,6 @@ export class AttendenceService {
           
           const clockOutMinutesDiff = clockOutTime.diff(defaultEndTime, 'minutes');
           
-          console.log(`Clock-out parsing for ${u.name}:`, {
-            rawClockOut: attendance.clockOut,
-            parsedClockOutTime: clockOutTime.format('HH:mm:ss'),
-            expectedEndTime: defaultEndTime.format('HH:mm:ss'),
-            clockOutMinutesDiff: clockOutMinutesDiff,
-            isValid: clockOutTime.isValid()
-          });
-
           // Update attendance data with clock-out difference
           attendanceData['clockOutMinutesDiff'] = clockOutMinutesDiff;
 

@@ -95,15 +95,20 @@ export class AuthService {
     try {
       // Get the frontend URL from environment variable
       const frontendUrl = process.env.FRONTEND_URL;
+      const companyName = process.env.COMPANY_NAME || 'Artha';
+      const currentYear = new Date().getFullYear().toString();
+      
       const mailData: MailJobInterface = {
         to: user.email,
         subject,
         slug,
         context: {
           email: user.email,
-          link: `<a href="${frontendUrl}/${url}">${linkLabel} →</a>`,
+          link: `<a href="${frontendUrl}/${url}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">${linkLabel} →</a>`,
           username: user.username,
-          subject
+          subject,
+          companyName,
+          currentYear
         }
       };
       

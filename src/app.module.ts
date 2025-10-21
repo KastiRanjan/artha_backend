@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WinstonModule } from 'nest-winston';
@@ -58,6 +59,7 @@ import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     WinstonModule.forRoot(winstonConfig),
     TypeOrmModule.forRootAsync({
       useFactory: () => ormConfig
