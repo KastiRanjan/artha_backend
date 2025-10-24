@@ -66,27 +66,35 @@ export class ProjectEvaluationService {
     // Get evaluator role and position
     const evaluatorRole = evaluatedBy.role.name.toLowerCase();
     const isProjectLead = project.projectLead?.id === evaluatedBy.id;
-    const isProjectManager = evaluatorRole === 'projectmanager' || evaluatorRole === 'manager';
+    // Manager-level roles include: projectmanager, manager, administrator, and superuser
+    const managerRoles = ['projectmanager', 'manager', 'administrator', 'admin', 'superuser'];
+    const isManagerLevel = managerRoles.includes(evaluatorRole);
     
-    // Don't allow evaluation of manager, administrator, or superuser roles
+    // Prevent self-evaluation
+    if (evaluatedUser.id === evaluatedBy.id) {
+      throw new BadRequestException('Cannot evaluate yourself');
+    }
+    
+    // Don't allow evaluation of projectmanager, administrator or superuser roles
     const evaluatedUserRole = evaluatedUser.role.name.toLowerCase();
-    const protectedRoles = ['projectmanager', 'manager', 'administrator', 'admin', 'superuser'];
+    const protectedRoles = ['projectmanager', 'administrator', 'admin', 'superuser'];
     if (protectedRoles.includes(evaluatedUserRole)) {
-      throw new BadRequestException('Cannot evaluate users with manager, administrator, or superuser roles');
+      throw new BadRequestException('Cannot evaluate users with project manager, administrator or superuser roles');
     }
 
     // Role-based evaluation authorization
-    // Project lead can evaluate audit senior and audit junior only
-    if (isProjectLead && !isProjectManager) {
+    // Project lead (who is not manager-level) can evaluate audit senior and audit junior only
+    if (isProjectLead && !isManagerLevel) {
       const allowedRoles = ['auditsenior', 'auditjunior'];
       if (!allowedRoles.includes(evaluatedUserRole)) {
         throw new BadRequestException('Project lead can only evaluate audit senior and audit junior members');
       }
     }
 
-    // Manager can evaluate all team members (already passed the protected roles check)
-    if (!isProjectLead && !isProjectManager) {
-      throw new BadRequestException('Only project lead or project manager can evaluate team members');
+    // Manager-level users (projectmanager, manager, administrator, superuser) can evaluate all team members
+    // Project leads who are not manager-level can only evaluate audit senior/junior (checked above)
+    if (!isProjectLead && !isManagerLevel) {
+      throw new BadRequestException('Only project lead or manager-level users can evaluate team members');
     }
 
     // Determine if user is team lead
@@ -147,9 +155,13 @@ export class ProjectEvaluationService {
   ): Promise<ProjectEvaluation> {
     const evaluation = await this.findOne(id);
 
-    // Only the evaluator or manager can update
-    if (evaluation.evaluatedById !== user.id && user.role.name !== 'projectmanager') {
-      throw new BadRequestException('Only the evaluator or manager can update this evaluation');
+    // Only the evaluator or manager-level users can update
+    const userRole = user.role.name.toLowerCase();
+    const managerRoles = ['projectmanager', 'manager', 'administrator', 'admin', 'superuser'];
+    const isManagerLevel = managerRoles.includes(userRole);
+    
+    if (evaluation.evaluatedById !== user.id && !isManagerLevel) {
+      throw new BadRequestException('Only the evaluator or manager-level users can update this evaluation');
     }
 
     Object.assign(evaluation, updateDto);
@@ -159,9 +171,13 @@ export class ProjectEvaluationService {
   async remove(id: string, user: UserEntity): Promise<void> {
     const evaluation = await this.findOne(id);
 
-    // Only the evaluator or manager can delete
-    if (evaluation.evaluatedById !== user.id && user.role.name !== 'projectmanager') {
-      throw new BadRequestException('Only the evaluator or manager can delete this evaluation');
+    // Only the evaluator or manager-level users can delete
+    const userRole = user.role.name.toLowerCase();
+    const managerRoles = ['projectmanager', 'manager', 'administrator', 'admin', 'superuser'];
+    const isManagerLevel = managerRoles.includes(userRole);
+    
+    if (evaluation.evaluatedById !== user.id && !isManagerLevel) {
+      throw new BadRequestException('Only the evaluator or manager-level users can delete this evaluation');
     }
 
     await this.evaluationRepository.remove(evaluation);

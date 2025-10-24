@@ -162,7 +162,8 @@ export class ProjectsService {
     const project = await this.projectRepository.findOne({
       where: { id },
       relations: [
-        'users', 
+        'users',
+        'users.role', 
         'tasks', 
         'projectLead', 
         'projectManager', 

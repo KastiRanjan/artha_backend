@@ -31,7 +31,7 @@ export class ProjectSignoffService {
     // Verify project exists and is completed
     const project = await this.projectRepository.findOne({
       where: { id: createDto.projectId },
-      relations: ['users', 'projectManager']
+      relations: ['users', 'users.role', 'projectManager']
     });
 
     if (!project) {
@@ -47,15 +47,24 @@ export class ProjectSignoffService {
       throw new ForbiddenException('Only the assigned project manager can sign off this project');
     }
 
-    // Check if all evaluations are completed
+    // Check if all evaluable team members have been evaluated
+    // Protected roles (projectmanager, administrator, superuser) don't need evaluation
     const projectUsers = project.users || [];
+    const protectedRoles = ['projectmanager', 'administrator', 'admin', 'superuser'];
+    
+    // Filter to only evaluable users (exclude protected roles)
+    const evaluableUsers = projectUsers.filter(user => {
+      const userRole = user?.role?.name?.toLowerCase();
+      return !protectedRoles.includes(userRole);
+    });
+
     const evaluations = await this.evaluationRepository.find({
       where: { projectId: project.id }
     });
 
-    if (evaluations.length < projectUsers.length) {
+    if (evaluations.length < evaluableUsers.length) {
       throw new BadRequestException(
-        `All team members must be evaluated before sign-off. ${evaluations.length}/${projectUsers.length} completed`
+        `All evaluable team members must be evaluated before sign-off. ${evaluations.length}/${evaluableUsers.length} completed (excluding project managers, administrators, and superusers)`
       );
     }
 
