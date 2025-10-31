@@ -9,6 +9,7 @@ import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UserEntity } from '../auth/entity/user.entity';
 import { Project } from '../projects/entities/project.entity';
 import { NotificationService } from '../notification/notification.service';
+import { UserLeaveBalanceService } from './user-leave-balance.service';
 import * as moment from 'moment';
 
 @Injectable()
@@ -30,6 +31,7 @@ export class LeaveService {
     @InjectRepository(Holiday)
     private readonly holidayRepository: Repository<Holiday>,
     private readonly notificationService: NotificationService,
+    private readonly userLeaveBalanceService: UserLeaveBalanceService,
   ) {}
 
   private createMoment(dateInput: any): moment.Moment {
@@ -115,6 +117,7 @@ export class LeaveService {
     let endDate: moment.Moment;
     let requestedDays: number;
     let days: string[] = [];
+    const today = moment().startOf('day');
 
     if (createLeaveDto.isCustomDates && createLeaveDto.customDates) {
       // Handle custom dates
@@ -133,9 +136,17 @@ export class LeaveService {
       days = createLeaveDto.customDates;
 
       // Validate no past dates
-      const pastDate = sortedDates.find(date => date.isBefore(moment(), 'day'));
+      const pastDate = sortedDates.find(date => date.isBefore(today, 'day'));
       if (pastDate) {
         throw new BadRequestException('Cannot request leave for past dates');
+      }
+
+      // Check if any date is today and if it's not an emergency leave
+      const hasToday = sortedDates.some(date => date.isSame(today, 'day'));
+      if (hasToday && !leaveType.isEmergency) {
+        throw new BadRequestException(
+          `Only emergency leave types can be requested for today. "${leaveType.name}" must be requested at least one day in advance.`
+        );
       }
 
     } else {
@@ -148,6 +159,18 @@ export class LeaveService {
       endDate = this.createMoment(createLeaveDto.endDate);
       requestedDays = endDate.diff(startDate, 'days') + 1;
       days = this.generateDateRange(createLeaveDto.startDate, createLeaveDto.endDate);
+
+      // Validate start date is not in the past
+      if (startDate.isBefore(today, 'day')) {
+        throw new BadRequestException('Cannot request leave for past dates');
+      }
+
+      // Check if start date is today and if it's not an emergency leave
+      if (startDate.isSame(today, 'day') && !leaveType.isEmergency) {
+        throw new BadRequestException(
+          `Only emergency leave types can be requested for today. "${leaveType.name}" must be requested at least one day in advance.`
+        );
+      }
     }
 
     // Prevent creating leave that overlaps an existing approved leave for the same user
@@ -175,16 +198,20 @@ export class LeaveService {
       throw new BadRequestException('Cannot request leave on company/public holiday');
     }
 
-    // Check if leave type has a limit and validate against used days
-    if (leaveType.maxDaysPerYear) {
-      const currentYear = startDate.year();
-      const usedDays = await this.getUsedLeavedays(user, createLeaveDto.type, currentYear);
-      
-      if (usedDays + requestedDays > leaveType.maxDaysPerYear) {
-        throw new BadRequestException(
-          `Cannot request ${requestedDays} days. You have used ${usedDays} out of ${leaveType.maxDaysPerYear} days for ${leaveType.name} this year.`
-        );
-      }
+    // Check leave balance from user_leave_balances table
+    const currentYear = startDate.year();
+    const balanceCheck = await this.userLeaveBalanceService.checkSufficientBalance(
+      user.id,
+      leaveType.id,
+      currentYear,
+      requestedDays
+    );
+
+    if (!balanceCheck.sufficient) {
+      throw new BadRequestException(
+        balanceCheck.message || 
+        `Insufficient leave balance. You have ${balanceCheck.available} days available but requested ${requestedDays} days.`
+      );
     }
 
     // Load user with role information
@@ -243,6 +270,14 @@ export class LeaveService {
     
     const savedLeave = await this.leaveRepository.save(leave);
     
+    // Update pending days in user leave balance
+    await this.userLeaveBalanceService.updatePendingDays(
+      user.id,
+      leaveType.id,
+      currentYear,
+      requestedDays
+    );
+    
     // Send notification to the requested manager
     if (createLeaveDto.requestedManagerId) {
       const requestedManager = await this.getUserDetails(createLeaveDto.requestedManagerId);
@@ -292,9 +327,12 @@ export class LeaveService {
 
   async getLeaveBalance(userId: string, leaveTypeName: string, year?: number): Promise<{
     leaveType: LeaveType;
-    maxDays: number | null;
+    allocatedDays: number;
+    carriedOverDays: number;
+    totalAvailableDays: number;
     usedDays: number;
-    remainingDays: number | null;
+    pendingDays: number;
+    remainingDays: number;
   }> {
     this.validateUUID(userId, 'User ID');
     const leaveType = await this.leaveTypeRepository.findOne({
@@ -306,36 +344,59 @@ export class LeaveService {
     }
 
     const currentYear = year || moment().year();
-    const user = { id: userId } as UserEntity;
-    const usedDays = await this.getUsedLeavedays(user, leaveTypeName, currentYear);
+    const balance = await this.userLeaveBalanceService.getUserLeaveBalance(
+      userId,
+      leaveType.id,
+      currentYear
+    );
+
+    if (!balance) {
+      // No balance allocated yet
+      return {
+        leaveType,
+        allocatedDays: 0,
+        carriedOverDays: 0,
+        totalAvailableDays: 0,
+        usedDays: 0,
+        pendingDays: 0,
+        remainingDays: 0,
+      };
+    }
     
     return {
       leaveType,
-      maxDays: leaveType.maxDaysPerYear,
-      usedDays,
-      remainingDays: leaveType.maxDaysPerYear ? leaveType.maxDaysPerYear - usedDays : null,
+      allocatedDays: Number(balance.allocatedDays),
+      carriedOverDays: Number(balance.carriedOverDays),
+      totalAvailableDays: balance.totalAvailableDays,
+      usedDays: Number(balance.usedDays),
+      pendingDays: Number(balance.pendingDays),
+      remainingDays: balance.remainingDays,
     };
   }
 
   async getAllLeaveBalances(userId: string, year?: number): Promise<Array<{
     leaveType: LeaveType;
-    maxDays: number | null;
+    allocatedDays: number;
+    carriedOverDays: number;
+    totalAvailableDays: number;
     usedDays: number;
-    remainingDays: number | null;
+    pendingDays: number;
+    remainingDays: number;
   }>> {
     this.validateUUID(userId, 'User ID');
-    const activeLeaveTypes = await this.leaveTypeRepository.find({
-      where: { isActive: true },
-      order: { name: 'ASC' }
-    });
-
-    const balances = [];
-    for (const leaveType of activeLeaveTypes) {
-      const balance = await this.getLeaveBalance(userId, leaveType.name, year);
-      balances.push(balance);
-    }
-
-    return balances;
+    const currentYear = year || moment().year();
+    
+    const balances = await this.userLeaveBalanceService.getUserAllLeaveBalances(userId, currentYear);
+    
+    return balances.map(balance => ({
+      leaveType: balance.leaveType,
+      allocatedDays: Number(balance.allocatedDays),
+      carriedOverDays: Number(balance.carriedOverDays),
+      totalAvailableDays: balance.totalAvailableDays,
+      usedDays: Number(balance.usedDays),
+      pendingDays: Number(balance.pendingDays),
+      remainingDays: balance.remainingDays,
+    }));
   }
 
   async findAll(status?: string): Promise<Leave[]> {
@@ -396,8 +457,29 @@ export class LeaveService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.leaveRepository.delete(id);
-    if (result.affected === 0) throw new NotFoundException('Leave not found');
+    const leave = await this.leaveRepository.findOne({
+      where: { id },
+      relations: ['user', 'leaveType']
+    });
+    
+    if (!leave) throw new NotFoundException('Leave not found');
+    
+    // If leave is pending, revert the pending days
+    if (leave.status === 'pending' || leave.status === 'approved_by_manager') {
+      const startDate = this.createMoment(leave.startDate);
+      const endDate = this.createMoment(leave.endDate);
+      const leaveDays = endDate.diff(startDate, 'days') + 1;
+      const year = startDate.year();
+      
+      await this.userLeaveBalanceService.revertPendingDays(
+        leave.user.id,
+        leave.leaveType.id,
+        year,
+        leaveDays
+      );
+    }
+    
+    await this.leaveRepository.delete(id);
   }
 
   // Approval logic
@@ -452,7 +534,7 @@ export class LeaveService {
     this.validateUUID(userId, 'User ID');
     const leave = await this.leaveRepository.findOne({
       where: { id },
-      relations: ['user']
+      relations: ['user', 'leaveType']
     });
     if (!leave) throw new NotFoundException('Leave not found');
     
@@ -472,6 +554,19 @@ export class LeaveService {
     
     const savedLeave = await this.leaveRepository.save(leave);
     
+    // Update leave balance: convert pending to used days
+    const startDate = this.createMoment(leave.startDate);
+    const endDate = this.createMoment(leave.endDate);
+    const leaveDays = endDate.diff(startDate, 'days') + 1;
+    const year = startDate.year();
+    
+    await this.userLeaveBalanceService.updateUsedDays(
+      leave.user.id,
+      leave.leaveType.id,
+      year,
+      leaveDays
+    );
+    
     // Get admin details for notification
     const admin = await this.getUserDetails(userId);
     
@@ -488,13 +583,26 @@ export class LeaveService {
     this.validateUUID(userId, 'User ID');
     const leave = await this.leaveRepository.findOne({
       where: { id },
-      relations: ['user']
+      relations: ['user', 'leaveType']
     });
     if (!leave) throw new NotFoundException('Leave not found');
     
     leave.status = 'rejected';
     
     const savedLeave = await this.leaveRepository.save(leave);
+    
+    // Revert pending days in user leave balance
+    const startDate = this.createMoment(leave.startDate);
+    const endDate = this.createMoment(leave.endDate);
+    const leaveDays = endDate.diff(startDate, 'days') + 1;
+    const year = startDate.year();
+    
+    await this.userLeaveBalanceService.revertPendingDays(
+      leave.user.id,
+      leave.leaveType.id,
+      year,
+      leaveDays
+    );
     
     // Get rejector details for notification
     const rejector = await this.getUserDetails(userId);
@@ -534,13 +642,28 @@ export class LeaveService {
       if (leave.status === 'pending') {
         // Set manager approval first (using the admin as the manager approver)
         leave.managerApproverId = userId;
+        leave.managerApprovalTime = new Date();
       }
       
       // Then set admin approval (full approval)
       leave.status = 'approved';
       leave.adminApproverId = userId;
+      leave.adminApprovalTime = new Date();
       
       const savedLeave = await this.leaveRepository.save(leave);
+      
+      // Update leave balance: convert pending to used days
+      const leaveStartDate = this.createMoment(leave.startDate);
+      const leaveEndDate = this.createMoment(leave.endDate);
+      const leaveDays = leaveEndDate.diff(leaveStartDate, 'days') + 1;
+      const leaveYear = leaveStartDate.year();
+      
+      await this.userLeaveBalanceService.updateUsedDays(
+        leave.user.id,
+        leave.leaveType.id,
+        leaveYear,
+        leaveDays
+      );
       
       // Send notification to user about full approval
       await this.notificationService.create({

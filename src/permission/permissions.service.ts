@@ -126,7 +126,17 @@ export class PermissionsService
    * @param id
    */
   async remove(id: string): Promise<void> {
-    await this.findOne(id);
+    const permission = await this.findOne(id);
+    
+    // First, remove all role-permission associations
+    await this.repository
+      .createQueryBuilder()
+      .delete()
+      .from('role_permission')
+      .where('permissionId = :id', { id })
+      .execute();
+    
+    // Then delete the permission
     await this.repository.delete({ id });
   }
 

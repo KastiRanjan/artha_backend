@@ -1,7 +1,10 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
+import { AllocateLeaveDto } from './dto/allocate-leave.dto';
+import { CarryOverLeaveDto } from './dto/carry-over-leave.dto';
 import { LeaveService } from './leave.service';
+import { UserLeaveBalanceService } from './user-leave-balance.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
@@ -13,7 +16,10 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 @Controller('leave')
 @ApiBearerAuth()
 export class LeaveController {
-  constructor(private readonly leaveService: LeaveService) {}
+  constructor(
+    private readonly leaveService: LeaveService,
+    private readonly userLeaveBalanceService: UserLeaveBalanceService,
+  ) {}
 
   @Post()
   create(@Body() createLeaveDto: CreateLeaveDto, @GetUser() user: UserEntity) {
@@ -135,6 +141,35 @@ export class LeaveController {
     return this.leaveService.reject(id, user.id);
   }
 
-  // Override endpoint removed per requirements
+  // Leave Balance Management Endpoints
+  
+  @Post('balance/allocate')
+  allocateLeave(@Body() allocateLeaveDto: AllocateLeaveDto) {
+    return this.userLeaveBalanceService.allocateLeave(allocateLeaveDto);
+  }
+
+  @Post('balance/allocate-all')
+  allocateLeaveToAllUsers(
+    @Body() body: { leaveTypeId: string; year: number; allocatedDays: number }
+  ) {
+    return this.userLeaveBalanceService.allocateLeaveToAllUsers(
+      body.leaveTypeId,
+      body.year,
+      body.allocatedDays
+    );
+  }
+
+  @Post('balance/carry-over')
+  carryOverLeave(@Body() carryOverDto: CarryOverLeaveDto) {
+    return this.userLeaveBalanceService.carryOverLeave(carryOverDto);
+  }
+
+  @Get('balance/user/:userId/year/:year')
+  getUserLeaveBalancesByYear(
+    @Param('userId') userId: string,
+    @Param('year') year: number
+  ) {
+    return this.userLeaveBalanceService.getUserAllLeaveBalances(userId, year);
+  }
   
 }

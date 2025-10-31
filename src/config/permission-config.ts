@@ -2015,6 +2015,69 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.GET
             }
           ]
+        },
+        {
+          name: 'Allocate leave to user',
+          route: [
+            {
+              path: '/leave/balance/allocate',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Allocate leave to all users',
+          route: [
+            {
+              path: '/leave/balance/allocate-all',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Carry over leave',
+          route: [
+            {
+              path: '/leave/balance/carry-over',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View leave balances by user and year',
+          route: [
+            {
+              path: '/leave/balance/user/:userId/year/:year',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user leave balances',
+          route: [
+            {
+              path: '/leave/balance/:userId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View my leave balances',
+          route: [
+            {
+              path: '/leave/balance/my',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View specific leave balance',
+          route: [
+            {
+              path: '/leave/balance/:userId/:leaveType',
+              method: MethodList.GET
+            }
+          ]
         }
       ]
     },

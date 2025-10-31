@@ -14,6 +14,15 @@ export class LeaveType {
   @Column({ type: 'int', nullable: true })
   maxDaysPerYear?: number; // null means unlimited
 
+  @Column({ type: 'boolean', default: false })
+  isEmergency: boolean; // Emergency leaves can be requested for today
+
+  @Column({ type: 'boolean', default: false })
+  allowCarryOver: boolean; // Can unused days be carried to next year
+
+  @Column({ type: 'int', nullable: true })
+  maxCarryOverDays?: number; // Max days that can be carried over (null means all unused days)
+
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
