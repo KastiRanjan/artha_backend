@@ -262,27 +262,31 @@ export class UsersService {
     // Convert role field to roleId if provided (matching create behavior)
     const updateData: any = { ...updateUserDto };
     
-    // Track role changes in history
-    if (updateUserDto.role && user.roleId !== updateUserDto.role) {
-      // TypeScript-safe approach to get role name
-      const oldRole: any = await this.userRepository.manager.findOne('role', user.roleId);
-      const newRole: any = await this.userRepository.manager.findOne('role', updateUserDto.role);
+    // Always convert role to roleId if role field exists to prevent TypeORM errors
+    if (updateUserDto.role) {
+      // Track role changes in history only if the role actually changed
+      if (user.roleId !== updateUserDto.role) {
+        // TypeScript-safe approach to get role name
+        const oldRole: any = await this.userRepository.manager.findOne('role', user.roleId);
+        const newRole: any = await this.userRepository.manager.findOne('role', updateUserDto.role);
+        
+        const oldRoleName = oldRole && oldRole.name ? oldRole.name : 'unknown';
+        const newRoleName = newRole && newRole.name ? newRole.name : 'unknown';
+              
+        // Always record role changes, even without a modifier user (use system as default)
+        const modifier = modifierUser || await this.findSystemUser();
+        await this.userHistoryService.createHistoryRecord(
+          user,
+          modifier,
+          HistoryActionType.ROLE_CHANGE,
+          'role',
+          oldRoleName,
+          newRoleName,
+          `User role changed from ${oldRoleName} to ${newRoleName} by ${modifier.name}`
+        );
+      }
       
-      const oldRoleName = oldRole && oldRole.name ? oldRole.name : 'unknown';
-      const newRoleName = newRole && newRole.name ? newRole.name : 'unknown';
-            
-      // Always record role changes, even without a modifier user (use system as default)
-      const modifier = modifierUser || await this.findSystemUser();
-      await this.userHistoryService.createHistoryRecord(
-        user,
-        modifier,
-        HistoryActionType.ROLE_CHANGE,
-        'role',
-        oldRoleName,
-        newRoleName,
-        `User role changed from ${oldRoleName} to ${newRoleName} by ${modifier.name}`
-      );
-      
+      // Always convert role to roleId and remove role field to avoid TypeORM constraint errors
       updateData.roleId = updateUserDto.role;
       delete updateData.role;
     }

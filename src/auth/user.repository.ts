@@ -51,13 +51,34 @@ export class UserRepository extends BaseRepository<UserEntity, UserSerializer> {
       ]
     });
     if (user && (await user.validatePassword(password))) {
-      if (user.status !== UserStatusEnum.ACTIVE) {
+      // Check user status
+      if (user.status === UserStatusEnum.BLOCKED) {
+        // For blocked users, return invalid credentials to hide their existence
+        return [
+          null,
+          ExceptionTitleList.InvalidCredentials,
+          StatusCodesList.InvalidCredentials
+        ];
+      }
+      
+      if (user.status === UserStatusEnum.INACTIVE) {
+        // For inactive users, show specific message to contact administrator
         return [
           null,
           ExceptionTitleList.UserInactive,
           StatusCodesList.UserInactive
         ];
       }
+      
+      if (user.status !== UserStatusEnum.ACTIVE) {
+        // Fallback for any other non-active status
+        return [
+          null,
+          ExceptionTitleList.InvalidCredentials,
+          StatusCodesList.InvalidCredentials
+        ];
+      }
+      
       return [user, null, null];
     }
     return [
