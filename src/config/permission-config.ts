@@ -689,7 +689,28 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             }
           ]
         },
-                {
+        {
+          name: 'Edit user profile details',
+          resource: 'edit_user_profile_details',
+          route: [
+            {
+              path: '/users/:id',
+              method: MethodList.PATCH,
+              description: 'Edit any user profile information including personal details, status, role, etc.'
+            },
+            {
+              path: '/users/:id/upload',
+              method: MethodList.POST,
+              description: 'Upload documents for any user'
+            },
+            {
+              path: '/users/:id',
+              method: MethodList.POST,
+              description: 'Create user details (profile, bank, education, etc.)'
+            }
+          ]
+        },
+        {
           name: 'Get user history',
           route: [
             {
@@ -4888,6 +4909,36 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/users/:id/status',
               method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Edit user profile details',
+          resource: 'edit_user_profile_details',
+          route: [
+            {
+              path: '/users/:id',
+              method: MethodList.PATCH,
+              description: 'Edit any user profile information including personal details, status, role, etc.'
+            },
+            {
+              path: '/users/:id/upload',
+              method: MethodList.POST,
+              description: 'Upload documents for any user'
+            },
+            {
+              path: '/users/:id',
+              method: MethodList.POST,
+              description: 'Create user details (profile, bank, education, etc.)'
+            }
+          ]
+        },
+        {
+          name: 'Get user history',
+          route: [
+            {
+              path: '/users/:id/history',
+              method: MethodList.GET
             }
           ]
         }
