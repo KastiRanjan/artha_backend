@@ -19,6 +19,10 @@ import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { AssignUserToProjectDto } from './dto/assign-user-to-project.dto';
+import { ReleaseUserFromProjectDto } from './dto/release-user-from-project.dto';
+import { UpdateUserAssignmentDto } from './dto/update-user-assignment.dto';
+import { UserAvailabilityService } from './user-availability.service';
 
 @ApiTags('projects')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -27,7 +31,8 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
-    private readonly projectTimelineService: ProjectTimelineService
+    private readonly projectTimelineService: ProjectTimelineService,
+    private readonly userAvailabilityService: UserAvailabilityService
   ) {}
 
   @Get(':id/timeline')
@@ -78,5 +83,89 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Mark project as completed (project lead or manager only)' })
   completeProject(@Param('id') id: string, @GetUser() user: UserEntity) {
     return this.projectsService.completeProject(id, user);
+  }
+
+  // User Assignment Endpoints
+  @Post(':id/users/assign')
+  @ApiOperation({ summary: 'Assign a user to a project with assignment details' })
+  assignUserToProject(
+    @Param('id') projectId: string,
+    @Body() assignDto: AssignUserToProjectDto,
+    @GetUser() user: UserEntity
+  ) {
+    return this.projectsService.assignUserToProject(projectId, assignDto, user);
+  }
+
+  @Patch(':id/users/:userId/release')
+  @ApiOperation({ summary: 'Release a user from a project' })
+  releaseUserFromProject(
+    @Param('id') projectId: string,
+    @Param('userId') userId: string,
+    @Body() releaseDto: ReleaseUserFromProjectDto,
+    @GetUser() user: UserEntity
+  ) {
+    return this.projectsService.releaseUserFromProject(projectId, userId, releaseDto, user);
+  }
+
+  @Patch(':id/users/:userId')
+  @ApiOperation({ summary: 'Update user assignment details' })
+  updateUserAssignment(
+    @Param('id') projectId: string,
+    @Param('userId') userId: string,
+    @Body() updateDto: UpdateUserAssignmentDto,
+    @GetUser() user: UserEntity
+  ) {
+    return this.projectsService.updateUserAssignment(projectId, userId, updateDto, user);
+  }
+
+  @Get(':id/users/assignments')
+  @ApiOperation({ summary: 'Get all user assignments for a project' })
+  getProjectUserAssignments(@Param('id') projectId: string) {
+    return this.projectsService.getProjectUserAssignments(projectId);
+  }
+
+  @Get('users/:userId/assignments')
+  @ApiOperation({ summary: 'Get all project assignments for a user' })
+  getUserProjectAssignments(@Param('userId') userId: string) {
+    return this.projectsService.getUserProjectAssignments(userId);
+  }
+
+  // User Availability Endpoints
+  @Get('availability/users')
+  @ApiOperation({ summary: 'Get availability status for all users' })
+  getUserAvailability(@Query('date') date?: string) {
+    const checkDate = date ? new Date(date) : undefined;
+    return this.userAvailabilityService.getUserAvailability(checkDate);
+  }
+
+  @Get('availability/timeline')
+  @ApiOperation({ summary: 'Get user availability timeline for a date range' })
+  getUserAvailabilityTimeline(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string
+  ) {
+    return this.userAvailabilityService.getUserAvailabilityTimeline(
+      new Date(startDate),
+      new Date(endDate)
+    );
+  }
+
+  @Get('availability/users/:userId')
+  @ApiOperation({ summary: 'Get availability for a specific user' })
+  getUserAvailabilityById(@Param('userId') userId: string) {
+    return this.userAvailabilityService.getUserAvailabilityById(userId);
+  }
+
+  @Get('availability/available')
+  @ApiOperation({ summary: 'Get all available users at a specific date' })
+  getAvailableUsers(@Query('date') date?: string) {
+    const checkDate = date ? new Date(date) : undefined;
+    return this.userAvailabilityService.getAvailableUsers(checkDate);
+  }
+
+  @Get('availability/available-by')
+  @ApiOperation({ summary: 'Get users who will be available by a specific date' })
+  getUsersAvailableBy(@Query('date') date: string) {
+    return this.userAvailabilityService.getUsersAvailableBy(new Date(date));
   }
 }

@@ -24,6 +24,8 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { TaskSuper } from 'src/task-super/entities/task-super.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
+import { ProjectUserAssignment } from './entities/project-user-assignment.entity';
+import { UserAvailabilityService } from './user-availability.service';
 
 @Module({
   imports: [
@@ -41,7 +43,8 @@ import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
       Task,
       TaskSuper,
       TaskGroup,
-      TaskTemplate
+      TaskTemplate,
+      ProjectUserAssignment
     ]),
     CustomersModule,
     BusinessSizeModule,
@@ -49,7 +52,7 @@ import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
     LegalStatusModule
   ],
   controllers: [ProjectsController],
-  providers: [ProjectsService, ProjectTimelineService, NotificationService, BillingService, NatureOfWorkService],
-  exports: [ProjectsService, ProjectTimelineService]
+  providers: [ProjectsService, ProjectTimelineService, NotificationService, BillingService, NatureOfWorkService, UserAvailabilityService],
+  exports: [ProjectsService, ProjectTimelineService, UserAvailabilityService]
 })
 export class ProjectsModule {}

@@ -8,7 +8,7 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/enums/notification-type.enum';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddFromTemplatesDto } from './dto/add-from-templates.dto';
@@ -22,6 +22,10 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { TaskSuper } from 'src/task-super/entities/task-super.entity';
 import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
+import { ProjectUserAssignment } from './entities/project-user-assignment.entity';
+import { AssignUserToProjectDto } from './dto/assign-user-to-project.dto';
+import { ReleaseUserFromProjectDto } from './dto/release-user-from-project.dto';
+import { UpdateUserAssignmentDto } from './dto/update-user-assignment.dto';
 dotenv.config();
 
 @Injectable()
@@ -48,6 +52,8 @@ export class ProjectsService {
     private taskGroupRepository: Repository<TaskGroup>,
     @InjectRepository(TaskTemplate)
     private taskTemplateRepository: Repository<TaskTemplate>,
+    @InjectRepository(ProjectUserAssignment)
+    private assignmentRepository: Repository<ProjectUserAssignment>,
     private readonly notificationService: NotificationService,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
@@ -109,6 +115,20 @@ export class ProjectsService {
     });
 
     const savedProject = await this.projectRepository.save(project);
+
+    // Auto-create inactive assignments for all project members
+    if (userIds && userIds.length > 0) {
+      for (const userId of userIds) {
+        const assignment = this.assignmentRepository.create({
+          userId,
+          projectId: savedProject.id,
+          isActive: false, // Members are added as inactive by default
+          assignedDate: new Date(),
+          notes: 'Auto-assigned as project member'
+        });
+        await this.assignmentRepository.save(assignment);
+      }
+    }
 
     await this.notificationService.create({
       message: `Project ${savedProject.name} created`,
@@ -219,7 +239,49 @@ export class ProjectsService {
     // If there are user updates, handle them
     if (users) {
       const userEntities = await this.userRepository.findByIds(users);
+      const previousUsers = project.users || [];
       project.users = userEntities; // Update users if provided
+      
+      // Sync with ProjectUserAssignment: Add new users as inactive assignments
+      const previousUserIds = previousUsers.map(u => u.id);
+      const newUserIds = userEntities.map(u => u.id);
+      
+      // Find newly added users
+      const addedUserIds = newUserIds.filter(uid => !previousUserIds.includes(uid));
+      
+      // Create inactive assignments for newly added users
+      for (const userId of addedUserIds) {
+        // Check if assignment already exists
+        const existingAssignment = await this.assignmentRepository.findOne({
+          where: { userId, projectId: id }
+        });
+        
+        if (!existingAssignment) {
+          // Create new inactive assignment
+          const assignment = this.assignmentRepository.create({
+            userId,
+            projectId: id,
+            isActive: false, // Members are added as inactive by default
+            assignedDate: new Date(),
+            notes: 'Auto-assigned as project member'
+          });
+          await this.assignmentRepository.save(assignment);
+        }
+      }
+      
+      // Find removed users and mark their assignments as released
+      const removedUserIds = previousUserIds.filter(uid => !newUserIds.includes(uid));
+      for (const userId of removedUserIds) {
+        const assignment = await this.assignmentRepository.findOne({
+          where: { userId, projectId: id, releaseDate: IsNull() }
+        });
+        
+        if (assignment) {
+          assignment.releaseDate = new Date();
+          assignment.isActive = false;
+          await this.assignmentRepository.save(assignment);
+        }
+      }
     }
     
     if (projectLead) {
@@ -533,5 +595,203 @@ export class ProjectsService {
     }
 
     return updatedProject;
+  }
+
+  /**
+   * Assign a user to a project with assignment details
+   */
+  async assignUserToProject(
+    projectId: string,
+    assignDto: AssignUserToProjectDto,
+    currentUser: UserEntity
+  ): Promise<ProjectUserAssignment> {
+    const project = await this.projectRepository.findOne({
+      where: { id: projectId },
+      relations: ['users']
+    });
+
+    if (!project) {
+      throw new Error(`Project with ID ${projectId} not found`);
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: assignDto.userId }
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${assignDto.userId} not found`);
+    }
+
+    // Check if assignment already exists
+    let assignment = await this.assignmentRepository.findOne({
+      where: {
+        projectId,
+        userId: assignDto.userId
+      }
+    });
+
+    if (assignment) {
+      // Update existing assignment
+      assignment.isActive = assignDto.isActive ?? true;
+      assignment.plannedReleaseDate = assignDto.plannedReleaseDate || null;
+      assignment.notes = assignDto.notes || assignment.notes;
+      assignment.releaseDate = null; // Clear release date when re-assigning
+    } else {
+      // Create new assignment
+      assignment = this.assignmentRepository.create({
+        projectId,
+        userId: assignDto.userId,
+        project,
+        user,
+        isActive: assignDto.isActive ?? true,
+        plannedReleaseDate: assignDto.plannedReleaseDate || null,
+        notes: assignDto.notes || null
+      });
+
+      // Also add to the many-to-many relationship if not already there
+      if (!project.users.some(u => u.id === user.id)) {
+        project.users.push(user);
+        await this.projectRepository.save(project);
+      }
+    }
+
+    const savedAssignment = await this.assignmentRepository.save(assignment);
+
+    // Log in timeline
+    await this.projectTimelineService.log({
+      projectId,
+      userId: currentUser.id,
+      action: 'user_assigned',
+      details: `User ${user.name} assigned to project${assignDto.plannedReleaseDate ? ` until ${assignDto.plannedReleaseDate.toISOString().split('T')[0]}` : ''}`
+    });
+
+    // Send notification
+    await this.notificationService.create({
+      message: `You have been assigned to project ${project.name}`,
+      users: [user.id],
+      link: `${process.env.frontendUrl}/projects/${project.id}`,
+      type: NotificationType.PROJECT
+    });
+
+    return savedAssignment;
+  }
+
+  /**
+   * Release a user from a project
+   */
+  async releaseUserFromProject(
+    projectId: string,
+    userId: string,
+    releaseDto: ReleaseUserFromProjectDto,
+    currentUser: UserEntity
+  ): Promise<ProjectUserAssignment> {
+    const assignment = await this.assignmentRepository.findOne({
+      where: {
+        projectId,
+        userId
+      },
+      relations: ['project', 'user']
+    });
+
+    if (!assignment) {
+      throw new Error(`User assignment not found for project ${projectId} and user ${userId}`);
+    }
+
+    assignment.isActive = false;
+    assignment.releaseDate = releaseDto.releaseDate || new Date();
+    assignment.notes = releaseDto.notes || assignment.notes;
+
+    const savedAssignment = await this.assignmentRepository.save(assignment);
+
+    // Log in timeline
+    await this.projectTimelineService.log({
+      projectId,
+      userId: currentUser.id,
+      action: 'user_released',
+      details: `User ${assignment.user.name} released from project on ${assignment.releaseDate.toISOString().split('T')[0]}`
+    });
+
+    // Send notification
+    await this.notificationService.create({
+      message: `You have been released from project ${assignment.project.name}`,
+      users: [userId],
+      link: `${process.env.frontendUrl}/projects/${projectId}`,
+      type: NotificationType.PROJECT
+    });
+
+    return savedAssignment;
+  }
+
+  /**
+   * Update user assignment details
+   */
+  async updateUserAssignment(
+    projectId: string,
+    userId: string,
+    updateDto: UpdateUserAssignmentDto,
+    currentUser: UserEntity
+  ): Promise<ProjectUserAssignment> {
+    const assignment = await this.assignmentRepository.findOne({
+      where: {
+        projectId,
+        userId
+      },
+      relations: ['project', 'user']
+    });
+
+    if (!assignment) {
+      throw new Error(`User assignment not found for project ${projectId} and user ${userId}`);
+    }
+
+    if (updateDto.isActive !== undefined) {
+      assignment.isActive = updateDto.isActive;
+    }
+    if (updateDto.plannedReleaseDate !== undefined) {
+      assignment.plannedReleaseDate = updateDto.plannedReleaseDate;
+    }
+    if (updateDto.releaseDate !== undefined) {
+      assignment.releaseDate = updateDto.releaseDate;
+    }
+    if (updateDto.notes !== undefined) {
+      assignment.notes = updateDto.notes;
+    }
+
+    const savedAssignment = await this.assignmentRepository.save(assignment);
+
+    // Log in timeline
+    await this.projectTimelineService.log({
+      projectId,
+      userId: currentUser.id,
+      action: 'user_assignment_updated',
+      details: `Assignment for user ${assignment.user.name} updated`
+    });
+
+    return savedAssignment;
+  }
+
+  /**
+   * Get all user assignments for a project
+   */
+  async getProjectUserAssignments(projectId: string): Promise<ProjectUserAssignment[]> {
+    return this.assignmentRepository.find({
+      where: { projectId },
+      relations: ['user', 'user.role', 'project'],
+      order: {
+        assignedDate: 'DESC'
+      }
+    });
+  }
+
+  /**
+   * Get all project assignments for a user
+   */
+  async getUserProjectAssignments(userId: string): Promise<ProjectUserAssignment[]> {
+    return this.assignmentRepository.find({
+      where: { userId },
+      relations: ['project', 'project.customer'],
+      order: {
+        assignedDate: 'DESC'
+      }
+    });
   }
 }

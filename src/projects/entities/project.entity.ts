@@ -78,4 +78,7 @@ export class Project extends CustomBaseEntity {
 
   @Column({ default: true })
   allowSubtaskWorklog: boolean;
+
+  @Column({ default: true })
+  countsForAvailability: boolean;
 }

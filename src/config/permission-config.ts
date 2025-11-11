@@ -1067,6 +1067,96 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             }
           ]
         },
+        {
+          name: 'Assign user to project',
+          route: [
+            {
+              path: '/projects/:id/users/assign',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Release user from project',
+          route: [
+            {
+              path: '/projects/:id/users/:userId/release',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Update user assignment',
+          route: [
+            {
+              path: '/projects/:id/users/:userId',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'View project user assignments',
+          route: [
+            {
+              path: '/projects/:id/users/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user project assignments',
+          route: [
+            {
+              path: '/projects/users/:userId/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability',
+          route: [
+            {
+              path: '/projects/availability/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability timeline',
+          route: [
+            {
+              path: '/projects/availability/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View specific user availability',
+          route: [
+            {
+              path: '/projects/availability/users/:userId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View available users',
+          route: [
+            {
+              path: '/projects/availability/available',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View users available by date',
+          route: [
+            {
+              path: '/projects/availability/available-by',
+              method: MethodList.GET
+            }
+          ]
+        },
       ]
     },
 {
@@ -1424,6 +1514,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           route: [
             {
               path: '/dashboard/working-time',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View User Availability Dashboard',
+          route: [
+            {
+              path: '/projects/availability/users',
               method: MethodList.GET
             }
           ]
@@ -3161,6 +3260,96 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.DELETE
             }
           ]
+        },
+        {
+          name: 'Assign user to project',
+          route: [
+            {
+              path: '/projects/:id/users/assign',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Release user from project',
+          route: [
+            {
+              path: '/projects/:id/users/:userId/release',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Update user assignment',
+          route: [
+            {
+              path: '/projects/:id/users/:userId',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'View project user assignments',
+          route: [
+            {
+              path: '/projects/:id/users/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user project assignments',
+          route: [
+            {
+              path: '/projects/users/:userId/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability',
+          route: [
+            {
+              path: '/projects/availability/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability timeline',
+          route: [
+            {
+              path: '/projects/availability/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View specific user availability',
+          route: [
+            {
+              path: '/projects/availability/users/:userId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View available users',
+          route: [
+            {
+              path: '/projects/availability/available',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View users available by date',
+          route: [
+            {
+              path: '/projects/availability/available-by',
+              method: MethodList.GET
+            }
+          ]
         }
       ]
     },
@@ -4570,6 +4759,51 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.GET
             }
           ]
+        },
+        {
+          name: 'View project user assignments',
+          route: [
+            {
+              path: '/projects/:id/users/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability',
+          route: [
+            {
+              path: '/projects/availability/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability timeline',
+          route: [
+            {
+              path: '/projects/availability/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View specific user availability',
+          route: [
+            {
+              path: '/projects/availability/users/:userId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View available users',
+          route: [
+            {
+              path: '/projects/availability/available',
+              method: MethodList.GET
+            }
+          ]
         }
       ]
     },
@@ -5160,6 +5394,96 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id',
               method: MethodList.DELETE
+            }
+          ]
+        },
+        {
+          name: 'Assign user to project',
+          route: [
+            {
+              path: '/projects/:id/users/assign',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'Release user from project',
+          route: [
+            {
+              path: '/projects/:id/users/:userId/release',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Update user assignment',
+          route: [
+            {
+              path: '/projects/:id/users/:userId',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'View project user assignments',
+          route: [
+            {
+              path: '/projects/:id/users/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user project assignments',
+          route: [
+            {
+              path: '/projects/users/:userId/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability',
+          route: [
+            {
+              path: '/projects/availability/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability timeline',
+          route: [
+            {
+              path: '/projects/availability/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View specific user availability',
+          route: [
+            {
+              path: '/projects/availability/users/:userId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View available users',
+          route: [
+            {
+              path: '/projects/availability/available',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View users available by date',
+          route: [
+            {
+              path: '/projects/availability/available-by',
+              method: MethodList.GET
             }
           ]
         }
@@ -6126,6 +6450,51 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             },
             {
               path: '/projects/:id/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View project user assignments',
+          route: [
+            {
+              path: '/projects/:id/users/assignments',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability',
+          route: [
+            {
+              path: '/projects/availability/users',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View user availability timeline',
+          route: [
+            {
+              path: '/projects/availability/timeline',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View specific user availability',
+          route: [
+            {
+              path: '/projects/availability/users/:userId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View available users',
+          route: [
+            {
+              path: '/projects/availability/available',
               method: MethodList.GET
             }
           ]

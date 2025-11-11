@@ -67,4 +67,8 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   allowSubtaskWorklog?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  countsForAvailability?: boolean;
 }
