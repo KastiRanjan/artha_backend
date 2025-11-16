@@ -9,6 +9,11 @@ export class UpdateUserAssignmentDto {
   @IsOptional()
   @Type(() => Date)
   @IsDate()
+  startDate?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
   plannedReleaseDate?: Date;
 
   @IsOptional()

@@ -622,6 +622,70 @@ export class ProjectsService {
       throw new Error(`User with ID ${assignDto.userId} not found`);
     }
 
+    // Validate dates
+    const startDate = assignDto.startDate || new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Validate start date is not before project start date
+    if (project.startingDate && startDate < project.startingDate) {
+      throw new Error(
+        `Start date cannot be before project start date (${project.startingDate.toISOString().split('T')[0]})`
+      );
+    }
+
+    // Validate start date is not in the past
+    if (startDate < today) {
+      throw new Error('Start date cannot be in the past');
+    }
+
+    // Validate planned release date if provided
+    if (assignDto.plannedReleaseDate) {
+      if (assignDto.plannedReleaseDate < today) {
+        throw new Error('Planned release date cannot be in the past');
+      }
+
+      if (assignDto.plannedReleaseDate < startDate) {
+        throw new Error('Planned release date cannot be before start date');
+      }
+
+      if (project.endingDate && assignDto.plannedReleaseDate > project.endingDate) {
+        throw new Error(
+          `Planned release date cannot be after project end date (${project.endingDate.toISOString().split('T')[0]})`
+        );
+      }
+    }
+
+    // Check for overlapping assignments on the same project
+    const existingAssignments = await this.assignmentRepository.find({
+      where: {
+        projectId,
+        userId: assignDto.userId,
+        isActive: true
+      }
+    });
+
+    for (const existing of existingAssignments) {
+      const existingStart = existing.startDate || existing.assignedDate;
+      const existingEnd = existing.releaseDate || existing.plannedReleaseDate;
+
+      const newStart = startDate;
+      const newEnd = assignDto.plannedReleaseDate;
+
+      // Check for overlap: newStart <= existingEnd AND newEnd >= existingStart
+      // If existingEnd is null, assignment is open-ended
+      // If newEnd is null, new assignment is open-ended
+      const hasOverlap =
+        (!existingEnd || newStart <= existingEnd) &&
+        (!newEnd || !existingStart || newEnd >= existingStart);
+
+      if (hasOverlap) {
+        throw new Error(
+          `User already has an overlapping assignment on this project from ${existingStart.toISOString().split('T')[0]}${existingEnd ? ` to ${existingEnd.toISOString().split('T')[0]}` : ' (open-ended)'}`
+        );
+      }
+    }
+
     // Check if assignment already exists
     let assignment = await this.assignmentRepository.findOne({
       where: {
@@ -633,6 +697,7 @@ export class ProjectsService {
     if (assignment) {
       // Update existing assignment
       assignment.isActive = assignDto.isActive ?? true;
+      assignment.startDate = startDate;
       assignment.plannedReleaseDate = assignDto.plannedReleaseDate || null;
       assignment.notes = assignDto.notes || assignment.notes;
       assignment.releaseDate = null; // Clear release date when re-assigning
@@ -644,6 +709,7 @@ export class ProjectsService {
         project,
         user,
         isActive: assignDto.isActive ?? true,
+        startDate: startDate,
         plannedReleaseDate: assignDto.plannedReleaseDate || null,
         notes: assignDto.notes || null
       });
@@ -743,8 +809,79 @@ export class ProjectsService {
       throw new Error(`User assignment not found for project ${projectId} and user ${userId}`);
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Validate start date if being updated
+    if (updateDto.startDate !== undefined) {
+      if (assignment.project.startingDate && updateDto.startDate < assignment.project.startingDate) {
+        throw new Error(
+          `Start date cannot be before project start date (${assignment.project.startingDate.toISOString().split('T')[0]})`
+        );
+      }
+
+      if (updateDto.startDate < today) {
+        throw new Error('Start date cannot be in the past');
+      }
+    }
+
+    // Validate planned release date if being updated
+    if (updateDto.plannedReleaseDate !== undefined && updateDto.plannedReleaseDate !== null) {
+      if (updateDto.plannedReleaseDate < today) {
+        throw new Error('Planned release date cannot be in the past');
+      }
+
+      const startDate = updateDto.startDate !== undefined ? updateDto.startDate : (assignment.startDate || assignment.assignedDate);
+      if (updateDto.plannedReleaseDate < startDate) {
+        throw new Error('Planned release date cannot be before start date');
+      }
+
+      if (assignment.project.endingDate && updateDto.plannedReleaseDate > assignment.project.endingDate) {
+        throw new Error(
+          `Planned release date cannot be after project end date (${assignment.project.endingDate.toISOString().split('T')[0]})`
+        );
+      }
+    }
+
+    // Check for overlapping assignments if start date or planned release date is being changed
+    if (updateDto.startDate !== undefined || updateDto.plannedReleaseDate !== undefined) {
+      const newStartDate = updateDto.startDate !== undefined ? updateDto.startDate : (assignment.startDate || assignment.assignedDate);
+      const newEndDate = updateDto.plannedReleaseDate !== undefined ? updateDto.plannedReleaseDate : assignment.plannedReleaseDate;
+
+      const existingAssignments = await this.assignmentRepository.find({
+        where: {
+          projectId,
+          userId,
+          isActive: true
+        }
+      });
+
+      for (const existing of existingAssignments) {
+        // Skip the current assignment being updated
+        if (existing.id === assignment.id) {
+          continue;
+        }
+
+        const existingStart = existing.startDate || existing.assignedDate;
+        const existingEnd = existing.releaseDate || existing.plannedReleaseDate;
+
+        const hasOverlap =
+          (!existingEnd || newStartDate <= existingEnd) &&
+          (!newEndDate || !existingStart || newEndDate >= existingStart);
+
+        if (hasOverlap) {
+          throw new Error(
+            `User already has an overlapping assignment on this project from ${existingStart.toISOString().split('T')[0]}${existingEnd ? ` to ${existingEnd.toISOString().split('T')[0]}` : ' (open-ended)'}`
+          );
+        }
+      }
+    }
+
     if (updateDto.isActive !== undefined) {
       assignment.isActive = updateDto.isActive;
+    }
+    if (updateDto.startDate !== undefined) {
+      assignment.startDate = updateDto.startDate;
     }
     if (updateDto.plannedReleaseDate !== undefined) {
       assignment.plannedReleaseDate = updateDto.plannedReleaseDate;

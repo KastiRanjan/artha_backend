@@ -105,10 +105,11 @@ export class UserAvailabilityService {
       
       // Add assignment-based projects first
       activeProjectAssignments.forEach(assignment => {
+        const startDateToUse = assignment.startDate || assignment.assignedDate;
         projectMap.set(assignment.project.id, {
           projectId: assignment.project.id,
           projectName: assignment.project.name,
-          assignedDate: assignment.assignedDate,
+          assignedDate: startDateToUse,
           plannedReleaseDate: assignment.plannedReleaseDate,
           isActive: assignment.isActive
         });

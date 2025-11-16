@@ -4,7 +4,7 @@ import { Project } from './project.entity';
 import { Column, Entity, ManyToOne, Index } from 'typeorm';
 
 @Entity('project_user_assignment')
-@Index(['project', 'user'], { unique: true })
+@Index(['projectId', 'userId', 'assignedDate'])
 export class ProjectUserAssignment extends CustomBaseEntity {
   @ManyToOne(() => Project, { onDelete: 'CASCADE' })
   project: Project;
@@ -23,6 +23,9 @@ export class ProjectUserAssignment extends CustomBaseEntity {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   assignedDate: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  startDate: Date;
 
   @Column({ type: 'timestamp', nullable: true })
   releaseDate: Date;
