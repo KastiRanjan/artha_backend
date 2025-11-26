@@ -16,26 +16,36 @@ export class ProjectDateFormatter {
    * @returns Project with added Nepali date fields
    */
   static addNepaliDates(project: any): any {
+    if (!project) return project;
+    
     const result = { ...project };
     
-    if (project.startingDate) {
-      result.startingDateNepali = CalendarUtil.adToBs(
-        typeof project.startingDate === 'string'
+    try {
+      if (project.startingDate) {
+        const startingDateStr = typeof project.startingDate === 'string'
           ? project.startingDate
-          : project.startingDate.toISOString().split('T')[0]
-      );
-      
-      result.startingDateFormatted = CalendarUtil.formatNepaliDate(project.startingDate);
+          : project.startingDate.toISOString().split('T')[0];
+        
+        result.startingDateNepali = CalendarUtil.adToBs(startingDateStr);
+        result.startingDateFormatted = CalendarUtil.formatNepaliDate(project.startingDate);
+      }
+    } catch (error) {
+      console.error('Error formatting starting date:', error);
+      // Leave fields undefined if conversion fails
     }
     
-    if (project.endingDate) {
-      result.endingDateNepali = CalendarUtil.adToBs(
-        typeof project.endingDate === 'string'
+    try {
+      if (project.endingDate) {
+        const endingDateStr = typeof project.endingDate === 'string'
           ? project.endingDate
-          : project.endingDate.toISOString().split('T')[0]
-      );
-      
-      result.endingDateFormatted = CalendarUtil.formatNepaliDate(project.endingDate);
+          : project.endingDate.toISOString().split('T')[0];
+        
+        result.endingDateNepali = CalendarUtil.adToBs(endingDateStr);
+        result.endingDateFormatted = CalendarUtil.formatNepaliDate(project.endingDate);
+      }
+    } catch (error) {
+      console.error('Error formatting ending date:', error);
+      // Leave fields undefined if conversion fails
     }
     
     return result;
