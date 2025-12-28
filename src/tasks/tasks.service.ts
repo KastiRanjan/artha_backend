@@ -42,11 +42,14 @@ export class TasksService {
   ) {}
 
   private async generateTaskCode(projectId: string): Promise<string> {
-    const latestTask = await this.taskRepository.findOne({
-      where: { project: { id: projectId } },
-      order: { tcode: 'DESC' }
-    });
-    const newCode = !latestTask ? 1 : parseInt(latestTask.tcode) + 1;
+    const result = await this.taskRepository
+      .createQueryBuilder('task')
+      .select('MAX(CAST(task.tcode AS INTEGER))', 'max')
+      .where('task.project = :projectId', { projectId })
+      .getRawOne();
+
+    const maxCode = result && result.max ? parseInt(result.max) : 0;
+    const newCode = maxCode + 1;
     return newCode.toString();
   }
 
@@ -228,9 +231,9 @@ export class TasksService {
 
     // Map to track original group ID to project-specific group
     const projectTaskGroupMap = new Map<string, TaskGroupProject>();
+    const savedTasks = [];
     
-    const savedTasks = await Promise.all(
-      tasks.map(async (taskGroupId) => {
+    for (const taskGroupId of tasks) {
         // Get the original TaskGroup with its TaskSuper
         const originalTaskGroup = await this.taskGroupRepository.findOne({
           where: { id: taskGroupId },
@@ -284,8 +287,8 @@ export class TasksService {
             (template) => template.parentTask === null
           );
 
-          const newTasks = await Promise.all(
-            parentTemplates.map(async (template) => {
+          const groupTasks = [];
+          for (const template of parentTemplates) {
               const existingTask = await this.taskRepository.findOne({
                 where: {
                   name: template.name,
@@ -294,7 +297,7 @@ export class TasksService {
               });
               
               if (existingTask) {
-                return null; // Skip existing tasks
+                continue; // Skip existing tasks
               }
 
               // Create parent task
@@ -314,8 +317,7 @@ export class TasksService {
 
               // Process subtasks
               if (template.subTasks && template.subTasks.length > 0) {
-                await Promise.all(
-                  template.subTasks.map(async (subTaskTemplate) => {
+                for (const subTaskTemplate of template.subTasks) {
                     const existingSubTask = await this.taskRepository.findOne({
                       where: {
                         name: subTaskTemplate.name,
@@ -324,7 +326,7 @@ export class TasksService {
                     });
                     
                     if (existingSubTask) {
-                      return null; // Skip existing subtasks
+                      continue; // Skip existing subtasks
                     }
 
                     // Create subtask
@@ -340,21 +342,16 @@ export class TasksService {
                       budgetedHours: subTaskTemplate.budgetedHours
                     });
                     
-                    return await this.taskRepository.save(subTask);
-                  })
-                );
+                    await this.taskRepository.save(subTask);
+                }
               }
-              
-              return newTask;
-            })
-          );
-
-          return newTasks.filter((task) => task !== null);
+              groupTasks.push(newTask);
+          }
+          savedTasks.push(groupTasks);
+        } else {
+            savedTasks.push([]);
         }
-        
-        return [];
-      })
-    );
+    }
 
     return {
       project,
@@ -364,7 +361,7 @@ export class TasksService {
   }
 
   async addBulkList(importTaskTemplateDto: any): Promise<any> {
-    const { project, tasks, tasklist } = importTaskTemplateDto;
+    const { project, tasks, tasklist = [] } = importTaskTemplateDto;
   
     // Validate project exists
     const projectEntity = await this.projectRepository.findOne({
@@ -714,7 +711,13 @@ export class TasksService {
           }
 
           // Find the original group for this subtask template
-          const originalGroupId = templateToGroupMap.get(subTaskTemplate.id);
+          let originalGroupId = templateToGroupMap.get(subTaskTemplate.id);
+          
+          // If not found, try to use the parent's group
+          if (!originalGroupId) {
+            originalGroupId = templateToGroupMap.get(parentTemplate.id);
+          }
+
           if (!originalGroupId) {
             console.warn(`Could not find original group for subtask template ${subTaskTemplate.id}`);
             continue;
