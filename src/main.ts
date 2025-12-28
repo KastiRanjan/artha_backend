@@ -13,12 +13,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from 'src/app.module';
 import * as dotenv from 'dotenv';
+import * as express from 'express';
 
 dotenv.config();
 
 async function bootstrap() {
   const port = process.env.PORT || 7777;
   const app = await NestFactory.create(AppModule);
+
+  // Increase body limit to handle large payloads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // Dynamic configuration based on environment
   const isProduction = process.env.NODE_ENV === 'production';
