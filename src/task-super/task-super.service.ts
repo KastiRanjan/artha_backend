@@ -320,17 +320,7 @@ export class TaskSuperService {
       }))
     ];
     
-    // Validate no duplicate task names
-    const nameValidation = await this.validateTaskNames(projectId, itemsForValidation);
-    if (!nameValidation.valid) {
-      const duplicateNames = nameValidation.duplicates.map(d => d.name).join(', ');
-      throw new BadRequestException({
-        message: `Tasks with duplicate names detected: ${duplicateNames}`,
-        statusCode: 400,
-        error: 'Bad Request',
-        duplicates: nameValidation.duplicates
-      });
-    }
+    // Validation for duplicate task names removed to allow duplicates
     
     // Validate task super
     const taskSuper = await this.taskSuperRepository.findOne({
@@ -623,17 +613,7 @@ export class TaskSuperService {
       itemTypes: items.map(item => item.type)
     });
     
-    // Validate no duplicate task names
-    const nameValidation = await this.validateTaskNames(projectId, items);
-    if (!nameValidation.valid) {
-      const duplicateNames = nameValidation.duplicates.map(d => d.name).join(', ');
-      throw new BadRequestException({
-        message: `Tasks with duplicate names detected: ${duplicateNames}`,
-        statusCode: 400,
-        error: 'Bad Request',
-        duplicates: nameValidation.duplicates
-      });
-    }
+    // Validation for duplicate task names removed to allow duplicates
     
     // Validate task super
     const taskSuper = await this.taskSuperRepository.findOne({

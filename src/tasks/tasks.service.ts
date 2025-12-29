@@ -76,6 +76,7 @@ export class TasksService {
       description: originalTaskSuper.description || '',
       rank: originalTaskSuper.rank,
       projectId: projectId,
+      project: { id: projectId } as Project,
       originalTaskSuperId: originalTaskSuper.id
     });
 
@@ -108,6 +109,7 @@ export class TasksService {
       taskSuper: projectTaskSuper,
       taskSuperId: projectTaskSuper.id,
       projectId: projectId,
+      project: { id: projectId } as Project,
       originalTaskGroupId: originalTaskGroup.id
     });
 
@@ -266,6 +268,7 @@ export class TasksService {
               description: `Auto-generated TaskSuper for project ${projectEntity.id}`,
               rank: 1,
               projectId: projectEntity.id,
+              project: projectEntity,
               originalTaskSuperId: null
             })
           );
@@ -408,6 +411,7 @@ export class TasksService {
             description: `Auto-generated TaskSuper for project ${projectEntity.id}`,
             rank: 1,
             projectId: projectEntity.id,
+            project: projectEntity,
             originalTaskSuperId: null
           })
         );
