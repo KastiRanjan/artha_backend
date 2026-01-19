@@ -33,7 +33,8 @@ export class CreateClientReportDto {
   @IsOptional()
   @Transform(({ value }) => {
     if (typeof value === 'string') {
-      return value === 'true' ? true : value === 'false' ? false : value;
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? value : parsed;
     }
     return value;
   })
