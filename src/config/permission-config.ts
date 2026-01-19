@@ -171,6 +171,47 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     {
       path: '/leave/:id/approve',
       method: MethodList.PATCH
+    },
+    // Client Portal routes (no admin permission required)
+    {
+      path: '/client-portal/login',
+      method: MethodList.POST
+    },
+    {
+      path: '/client-portal/logout',
+      method: MethodList.POST
+    },
+    {
+      path: '/client-portal/profile',
+      method: MethodList.GET
+    },
+    {
+      path: '/client-portal/reports',
+      method: MethodList.GET
+    },
+    {
+      path: '/client-portal/reports/stats',
+      method: MethodList.GET
+    },
+    {
+      path: '/client-portal/reports/:id',
+      method: MethodList.GET
+    },
+    {
+      path: '/client-portal/reports/:id/download',
+      method: MethodList.GET
+    },
+    {
+      path: '/client-portal/forgot-password',
+      method: MethodList.POST
+    },
+    {
+      path: '/client-portal/reset-password',
+      method: MethodList.POST
+    },
+    {
+      path: '/client-portal/change-password',
+      method: MethodList.POST
     }
   ],
   modules: [
@@ -899,6 +940,76 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/permissions/:id',
               method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
+        {
+      name: 'DSA Management',
+      resource: 'dsa',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Create DSA',
+          route: [
+            {
+              path: '/dsa',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View DSA by Project',
+          route: [
+            {
+              path: '/dsa/project/:projectId',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'View DSA details',
+          route: [
+            {
+              path: '/dsa/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Approve DSA',
+          route: [
+            {
+              path: '/dsa/:id/approve',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Reject DSA',
+          route: [
+            {
+              path: '/dsa/:id/reject',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Settle DSA',
+          route: [
+            {
+              path: '/dsa/:id/settle',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Verify DSA',
+          route: [
+            {
+              path: '/dsa/:id/verify',
+              method: MethodList.PATCH
             }
           ]
         }
@@ -2919,6 +3030,163 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               resource: 'todo-task',
               description: 'View all todo tasks',
               isDefault: false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Client Reports Management',
+      resource: 'client-reports',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all client reports',
+          route: [
+            {
+              path: '/client-reports',
+              method: MethodList.GET,
+              resource: 'client-reports',
+              description: 'View all client reports'
+            }
+          ]
+        },
+        {
+          name: 'Create client report',
+          route: [
+            {
+              path: '/client-reports',
+              method: MethodList.POST,
+              resource: 'client-reports',
+              description: 'Upload new client report'
+            }
+          ]
+        },
+        {
+          name: 'Update client report',
+          route: [
+            {
+              path: '/client-reports/:id',
+              method: MethodList.PATCH,
+              resource: 'client-reports',
+              description: 'Update client report details'
+            }
+          ]
+        },
+        {
+          name: 'Delete client report',
+          route: [
+            {
+              path: '/client-reports/:id',
+              method: MethodList.DELETE,
+              resource: 'client-reports',
+              description: 'Delete a client report'
+            }
+          ]
+        },
+        {
+          name: 'Update report access',
+          route: [
+            {
+              path: '/client-reports/:id/access',
+              method: MethodList.PATCH,
+              resource: 'client-reports',
+              description: 'Grant or revoke download access'
+            }
+          ]
+        },
+        {
+          name: 'Bulk update report access',
+          route: [
+            {
+              path: '/client-reports/bulk-access',
+              method: MethodList.POST,
+              resource: 'client-reports',
+              description: 'Bulk grant or revoke download access'
+            }
+          ]
+        },
+        {
+          name: 'Replace report file',
+          route: [
+            {
+              path: '/client-reports/:id/file',
+              method: MethodList.PUT,
+              resource: 'client-reports',
+              description: 'Replace file for existing report'
+            }
+          ]
+        },
+        {
+          name: 'View customer reports',
+          route: [
+            {
+              path: '/client-reports/customer/:customerId',
+              method: MethodList.GET,
+              resource: 'client-reports',
+              description: 'View reports for specific customer'
+            }
+          ]
+        },
+        {
+          name: 'View customer stats',
+          route: [
+            {
+              path: '/client-reports/customer/:customerId/stats',
+              method: MethodList.GET,
+              resource: 'client-reports',
+              description: 'View report stats for customer'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Client Users Management',
+      resource: 'client-users',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all client users',
+          route: [
+            {
+              path: '/client-users',
+              method: MethodList.GET,
+              resource: 'client-users',
+              description: 'View all client portal users'
+            }
+          ]
+        },
+        {
+          name: 'Create client user',
+          route: [
+            {
+              path: '/client-users',
+              method: MethodList.POST,
+              resource: 'client-users',
+              description: 'Create new client portal user'
+            }
+          ]
+        },
+        {
+          name: 'Update client user',
+          route: [
+            {
+              path: '/client-users/:id',
+              method: MethodList.PATCH,
+              resource: 'client-users',
+              description: 'Update client portal user'
+            }
+          ]
+        },
+        {
+          name: 'Delete client user',
+          route: [
+            {
+              path: '/client-users/:id',
+              method: MethodList.DELETE,
+              resource: 'client-users',
+              description: 'Delete client portal user'
             }
           ]
         }

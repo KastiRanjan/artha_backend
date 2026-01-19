@@ -53,6 +53,8 @@ import { UploadModule } from './upload/upload.module';
 import { DepartmentModule } from './department/department.module';
 import { ProjectEvaluationModule } from './project-evaluation/project-evaluation.module';
 import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
+// import { DsaModule } from './dsa/dsa.module';
+import { ClientReportModule } from './client-report/client-report.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -121,7 +123,9 @@ import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
   UploadModule,
   DepartmentModule,
   ProjectEvaluationModule,
-  ProjectSignoffModule
+  ProjectSignoffModule,
+  // DsaModule,
+  ClientReportModule
   ],
   providers: [
     {
