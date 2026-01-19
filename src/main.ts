@@ -36,7 +36,35 @@ async function bootstrap() {
   // Add configured URLs from environment
   if (process.env.FRONTEND_URL) {
     corsOrigins.push(process.env.FRONTEND_URL);
+    
+    // Also add client subdomain for client portal
+    // If FRONTEND_URL is https://task.artha.com.np, add https://client.artha.com.np
+    try {
+      const frontendUrl = new URL(process.env.FRONTEND_URL);
+      const hostParts = frontendUrl.hostname.split('.');
+      if (hostParts.length >= 2) {
+        // Replace first subdomain with 'client' or add 'client' prefix
+        const clientSubdomain = process.env.CLIENT_SUBDOMAIN || 'client';
+        if (hostParts[0] === 'task' || hostParts[0] === 'app' || hostParts[0] === 'www') {
+          hostParts[0] = clientSubdomain;
+        } else {
+          hostParts.unshift(clientSubdomain);
+        }
+        const clientOrigin = `${frontendUrl.protocol}//${hostParts.join('.')}`;
+        if (!corsOrigins.includes(clientOrigin)) {
+          corsOrigins.push(clientOrigin);
+        }
+      }
+    } catch (e) {
+      console.log('Could not parse FRONTEND_URL for client subdomain');
+    }
   }
+  
+  // Explicitly add CLIENT_PORTAL_URL if provided
+  if (process.env.CLIENT_PORTAL_URL) {
+    corsOrigins.push(process.env.CLIENT_PORTAL_URL);
+  }
+  
   if (process.env.BACKEND_URL) {
     corsOrigins.push(process.env.BACKEND_URL);
   }
