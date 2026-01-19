@@ -3138,6 +3138,17 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               description: 'View report stats for customer'
             }
           ]
+        },
+        {
+          name: 'View customer projects',
+          route: [
+            {
+              path: '/client-reports/customer/:customerId/projects',
+              method: MethodList.GET,
+              resource: 'client-reports',
+              description: 'View projects for customer dropdown'
+            }
+          ]
         }
       ]
     },
