@@ -3,8 +3,9 @@ import { CreateAttendanceDto } from './dto/create-attendence.dto';
 import { UpdateAttendenceDto } from './dto/update-attendence.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Attendance } from './entities/attendence.entity';
-import { Repository } from 'typeorm';
+import { Repository, In, Not } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { UserStatusEnum } from 'src/auth/user-status.enum';
 import * as moment from 'moment';
 import { LeaveService } from 'src/leave/leave.service';
 import { HolidayService } from 'src/holiday/holiday.service';
@@ -137,8 +138,10 @@ export class AttendenceService {
       relations: ['history']
     });
 
-    // Fetch all users
-      let users = await this.userRepository.find();
+    // Fetch only active users (exclude inactive and blocked)
+      let users = await this.userRepository.find({
+        where: { status: UserStatusEnum.ACTIVE }
+      });
       // Sort users alphabetically by name
       users = users.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -184,8 +187,10 @@ export class AttendenceService {
       relations: ['history']
     });
 
-    // Fetch all users
-    const users = await this.userRepository.find();
+    // Fetch only active users (exclude inactive and blocked)
+    const users = await this.userRepository.find({
+      where: { status: UserStatusEnum.ACTIVE }
+    });
 
     // Create a map for quick attendance lookup by userId
     const attendanceMap = new Map();
@@ -252,8 +257,10 @@ export class AttendenceService {
       relations: ['history']
     });
 
-    // Fetch all users
-    const users = await this.userRepository.find();
+    // Fetch only active users (exclude inactive and blocked)
+    const users = await this.userRepository.find({
+      where: { status: UserStatusEnum.ACTIVE }
+    });
 
     // Create a map for quick attendance lookup by userId
     const attendanceMap = new Map();
@@ -484,8 +491,9 @@ export class AttendenceService {
       relations: ['history']
     });
 
-    // Fetch all active users with their roles
+    // Fetch only active users with their roles (exclude inactive and blocked)
     const allUsers = await this.userRepository.find({
+      where: { status: UserStatusEnum.ACTIVE },
       relations: ['role']
     });
 

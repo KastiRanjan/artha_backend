@@ -76,8 +76,9 @@ export class DashboardService {
       endDate = moment(targetDate).endOf('month').toDate();
     }
 
-    // Get all users with role relation
+    // Get only active users with role relation (exclude inactive and blocked)
     const allUsers = await this.userRepository.find({
+      where: { status: UserStatusEnum.ACTIVE },
       relations: ['role']
     });
     
