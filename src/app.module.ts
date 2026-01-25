@@ -55,6 +55,7 @@ import { ProjectEvaluationModule } from './project-evaluation/project-evaluation
 import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
 // import { DsaModule } from './dsa/dsa.module';
 import { ClientReportModule } from './client-report/client-report.module';
+import { ClientReportDocumentTypeModule } from './client-report-document-type/client-report-document-type.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -125,7 +126,8 @@ import { ClientReportModule } from './client-report/client-report.module';
   ProjectEvaluationModule,
   ProjectSignoffModule,
   // DsaModule,
-  ClientReportModule
+  ClientReportModule,
+  ClientReportDocumentTypeModule
   ],
   providers: [
     {

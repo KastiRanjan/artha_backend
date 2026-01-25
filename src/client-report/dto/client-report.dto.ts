@@ -31,6 +31,11 @@ export class CreateClientReportDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  documentTypeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @Transform(({ value }) => {
     if (typeof value === 'string') {
       const parsed = parseInt(value, 10);
@@ -92,6 +97,11 @@ export class UpdateClientReportDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  documentTypeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
   fiscalYear?: number;
 }
@@ -117,6 +127,11 @@ export class ClientReportFilterDto {
   @IsOptional()
   @IsUUID()
   projectId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  documentTypeId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

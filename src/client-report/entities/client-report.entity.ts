@@ -2,6 +2,7 @@ import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { ClientReportDocumentType } from 'src/client-report-document-type/entities/client-report-document-type.entity';
 
 export enum ReportAccessStatus {
   PENDING = 'pending',       // Uploaded but payment not done
@@ -30,18 +31,22 @@ export class ClientReport extends CustomBaseEntity {
   fileSize: number;
 
   @ManyToOne(() => Customer, { onDelete: 'CASCADE' })
-  @JoinColumn()
+  @JoinColumn({ name: 'customerId' })
   customer: Customer;
 
   @Column()
   customerId: string;
 
   @ManyToOne(() => Project, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn()
+  @JoinColumn({ name: 'projectId' })
   project: Project;
 
   @Column({ nullable: true })
   projectId: string;
+
+  @ManyToOne(() => ClientReportDocumentType, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn()
+  documentType: ClientReportDocumentType;
 
   @Column({
     type: 'enum',

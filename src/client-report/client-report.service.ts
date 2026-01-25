@@ -32,13 +32,16 @@ export class ClientReportService {
   ): Promise<ClientReport> {
     const filePath = file.path.replace(/\\/g, '/').replace('public/', '');
 
+    const { documentTypeId, ...restDto } = createDto;
+
     const report = this.clientReportRepository.create({
-      ...createDto,
+      ...restDto,
       filePath: `/${filePath}`,
       originalFileName: file.originalname,
       fileType: file.mimetype,
       fileSize: file.size,
-      createdBy: userId
+      createdBy: userId,
+      ...(documentTypeId && { documentType: { id: documentTypeId } })
     });
 
     return this.clientReportRepository.save(report);
@@ -52,6 +55,7 @@ export class ClientReportService {
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.customer', 'customer')
       .leftJoinAndSelect('report.project', 'project')
+      .leftJoinAndSelect('report.documentType', 'documentType')
       .orderBy('report.createdAt', 'DESC');
 
     if (filterDto.customerId) {
@@ -63,6 +67,12 @@ export class ClientReportService {
     if (filterDto.projectId) {
       query.andWhere('report.projectId = :projectId', {
         projectId: filterDto.projectId
+      });
+    }
+
+    if (filterDto.documentTypeId) {
+      query.andWhere('report.documentTypeId = :documentTypeId', {
+        documentTypeId: filterDto.documentTypeId
       });
     }
 
@@ -89,6 +99,7 @@ export class ClientReportService {
     return this.clientReportRepository
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.project', 'project')
+      .leftJoinAndSelect('report.documentType', 'documentType')
       .where('report.customerId = :customerId', { customerId })
       .andWhere('report.isVisible = :isVisible', { isVisible: true })
       .orderBy('report.createdAt', 'DESC')
@@ -103,6 +114,7 @@ export class ClientReportService {
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.customer', 'customer')
       .leftJoinAndSelect('report.project', 'project')
+      .leftJoinAndSelect('report.documentType', 'documentType')
       .where('report.id = :id', { id })
       .getOne();
 
@@ -123,7 +135,15 @@ export class ClientReportService {
   ): Promise<ClientReport> {
     const report = await this.findOne(id);
 
-    Object.assign(report, updateDto);
+    const { documentTypeId, ...restDto } = updateDto;
+    
+    Object.assign(report, restDto);
+    
+    // Handle documentType relation separately
+    if (documentTypeId !== undefined) {
+      report.documentType = documentTypeId ? { id: documentTypeId } as any : null;
+    }
+    
     report.updatedBy = userId;
 
     return this.clientReportRepository.save(report);

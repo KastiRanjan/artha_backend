@@ -3153,6 +3153,112 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       ]
     },
     {
+      name: 'Client Report Document Types',
+      resource: 'client-report-document-type',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'Get all document types',
+          route: [
+            {
+              path: '/client-report-document-type',
+              method: MethodList.GET,
+              resource: 'client-report-document-type',
+              description: 'View all client report document types'
+            }
+          ]
+        },
+        {
+          name: 'Get active document types',
+          route: [
+            {
+              path: '/client-report-document-type/active',
+              method: MethodList.GET,
+              resource: 'client-report-document-type',
+              description: 'View active client report document types'
+            }
+          ]
+        },
+        {
+          name: 'Get global document types',
+          route: [
+            {
+              path: '/client-report-document-type/global',
+              method: MethodList.GET,
+              resource: 'client-report-document-type',
+              description: 'View global client report document types'
+            }
+          ]
+        },
+        {
+          name: 'Get document types for customer',
+          route: [
+            {
+              path: '/client-report-document-type/customer/:customerId',
+              method: MethodList.GET,
+              resource: 'client-report-document-type',
+              description: 'View document types for specific customer'
+            }
+          ]
+        },
+        {
+          name: 'Get document types with counts',
+          route: [
+            {
+              path: '/client-report-document-type/with-counts',
+              method: MethodList.GET,
+              resource: 'client-report-document-type',
+              description: 'View document types with report counts'
+            }
+          ]
+        },
+        {
+          name: 'Create document type',
+          route: [
+            {
+              path: '/client-report-document-type',
+              method: MethodList.POST,
+              resource: 'client-report-document-type',
+              description: 'Create new client report document type'
+            }
+          ]
+        },
+        {
+          name: 'Update document type',
+          route: [
+            {
+              path: '/client-report-document-type/:id',
+              method: MethodList.PATCH,
+              resource: 'client-report-document-type',
+              description: 'Update client report document type'
+            }
+          ]
+        },
+        {
+          name: 'Delete document type',
+          route: [
+            {
+              path: '/client-report-document-type/:id',
+              method: MethodList.DELETE,
+              resource: 'client-report-document-type',
+              description: 'Delete client report document type'
+            }
+          ]
+        },
+        {
+          name: 'Toggle document type status',
+          route: [
+            {
+              path: '/client-report-document-type/:id/toggle-status',
+              method: MethodList.PATCH,
+              resource: 'client-report-document-type',
+              description: 'Toggle document type active status'
+            }
+          ]
+        }
+      ]
+    },
+    {
       name: 'Client Users Management',
       resource: 'client-users',
       hasSubmodules: false,
