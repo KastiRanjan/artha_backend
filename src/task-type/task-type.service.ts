@@ -18,7 +18,8 @@ export class TaskTypeService {
   }
 
   async findAll(activeOnly: boolean = false): Promise<TaskType[]> {
-    const query = this.taskTypeRepository.createQueryBuilder('taskType');
+    const query = this.taskTypeRepository.createQueryBuilder('taskType')
+      .leftJoinAndSelect('taskType.todoTaskTitle', 'todoTaskTitle');
     
     if (activeOnly) {
       query.where('taskType.isActive = :isActive', { isActive: true });
@@ -28,7 +29,10 @@ export class TaskTypeService {
   }
 
   async findOne(id: string): Promise<TaskType> {
-    const taskType = await this.taskTypeRepository.findOne({ where: { id } });
+    const taskType = await this.taskTypeRepository.findOne({
+      where: { id },
+      relations: ['todoTaskTitle'],
+    });
     
     if (!taskType) {
       throw new NotFoundException(`Task type with ID "${id}" not found`);

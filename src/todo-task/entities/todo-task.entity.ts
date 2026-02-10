@@ -1,7 +1,8 @@
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { TaskType } from 'src/task-type/entities/task-type.entity';
+import { TodoTaskTitle } from 'src/todo-task-title/entities/todo-task-title.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 
 export enum TodoTaskStatus {
   OPEN = 'open',
@@ -13,7 +14,14 @@ export enum TodoTaskStatus {
 
 @Entity()
 export class TodoTask extends CustomBaseEntity {
-  @Column()
+  @Column({ nullable: true })
+  titleId: string;
+
+  @ManyToOne(() => TodoTaskTitle, { nullable: true })
+  @JoinColumn({ name: 'titleId' })
+  todoTaskTitle: TodoTaskTitle;
+
+  @Column({ nullable: true })
   title: string;
 
   @Column({ nullable: true, type: 'text' })
@@ -76,6 +84,10 @@ export class TodoTask extends CustomBaseEntity {
 
   @Column({ nullable: true, type: 'timestamp' })
   droppedTimestamp: Date;
+
+  @ManyToMany(() => UserEntity, { eager: false })
+  @JoinTable({ name: 'todo_task_inform_to' })
+  informTo: UserEntity[];
 
   @Column({
     type: 'enum',

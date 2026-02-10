@@ -30,6 +30,7 @@ import { RolesModule } from 'src/role/roles.module';
 import { TaskSuperModule } from 'src/task-super/task-super.module';
 import { TodoTaskModule } from 'src/todo-task/todo-task.module';
 import { TaskTypeModule } from 'src/task-type/task-type.module';
+import { TodoTaskTitleModule } from 'src/todo-task-title/todo-task-title.module';
 import { TwofaModule } from 'src/twofa/twofa.module';
 import { WorkhourModule } from 'src/workhour/workhour.module';
 import { AttendenceModule } from './attendence/attendence.module';
@@ -120,6 +121,7 @@ import { ClientReportDocumentTypeModule } from './client-report-document-type/cl
   BillingModule,
   TodoTaskModule,
   TaskTypeModule,
+  TodoTaskTitleModule,
   NoticeBoardModule,
   UploadModule,
   DepartmentModule,

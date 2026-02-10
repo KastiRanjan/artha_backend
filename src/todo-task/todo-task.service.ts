@@ -6,6 +6,7 @@ import { CreateTodoTaskDto } from './dto/create-todo-task.dto';
 import { UpdateTodoTaskDto } from './dto/update-todo-task.dto';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { TaskTypeService } from 'src/task-type/task-type.service';
+import { TodoTaskTitleService } from 'src/todo-task-title/todo-task-title.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/enums/notification-type.enum';
 
@@ -17,12 +18,16 @@ export class TodoTaskService {
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     private taskTypeService: TaskTypeService,
+    private todoTaskTitleService: TodoTaskTitleService,
     private notificationService: NotificationService,
   ) {}
 
   async create(createTodoTaskDto: CreateTodoTaskDto, user: UserEntity): Promise<TodoTask> {
     // Verify task type exists
     await this.taskTypeService.findOne(createTodoTaskDto.taskTypeId);
+
+    // Verify title exists and set title text from it
+    const todoTaskTitle = await this.todoTaskTitleService.findOne(createTodoTaskDto.titleId);
     
     // Verify assigned user exists
     const assignedUser = await this.userRepository.findOne({ 
@@ -32,12 +37,21 @@ export class TodoTaskService {
     if (!assignedUser) {
       throw new NotFoundException(`User with ID "${createTodoTaskDto.assignedToId}" not found`);
     }
+
+    // Resolve informTo users
+    let informToUsers: UserEntity[] = [];
+    if (createTodoTaskDto.informToIds && createTodoTaskDto.informToIds.length > 0) {
+      informToUsers = await this.userRepository.findByIds(createTodoTaskDto.informToIds);
+    }
     
+    const { informToIds, ...taskData } = createTodoTaskDto;
     const todoTask = this.todoTaskRepository.create({
-      ...createTodoTaskDto,
+      ...taskData,
+      title: todoTaskTitle.name,
       createdById: user.id,
       createdTimestamp: new Date(),
       status: TodoTaskStatus.OPEN,
+      informTo: informToUsers,
     });
     
     const savedTask = await this.todoTaskRepository.save(todoTask);
@@ -46,22 +60,32 @@ export class TodoTaskService {
     let dueDateStr = createTodoTaskDto.dueDate ? new Date(createTodoTaskDto.dueDate).toLocaleString() : 'No due date';
     await this.notificationService.create({
       users: [createTodoTaskDto.assignedToId],
-      message: `Task "${createTodoTaskDto.title}" has been assigned to you with due date ${dueDateStr}.`,
+      message: `Task "${todoTaskTitle.name}" has been assigned to you with due date ${dueDateStr}.`,
       link: `/todotask/${savedTask.id}`,
       type: NotificationType.TASK
     });
+
+    // Notify informed users
+    if (informToUsers.length > 0) {
+      await this.notificationService.create({
+        users: informToUsers.map(u => u.id),
+        message: `You have been informed about task "${todoTaskTitle.name}" assigned to ${assignedUser.name || assignedUser.email}.`,
+        link: `/todotask/${savedTask.id}`,
+        type: NotificationType.TASK
+      });
+    }
     
     return savedTask;
   }
 
-  async findAll(user: UserEntity, status?: TodoTaskStatus, assignedToId?: string): Promise<TodoTask[]> {
-    // Print debug info
-  
+  async findAll(user: UserEntity, status?: TodoTaskStatus, assignedToId?: string, dateFrom?: string, dateTo?: string): Promise<TodoTask[]> {
     const query = this.todoTaskRepository.createQueryBuilder('todoTask')
+      .leftJoinAndSelect('todoTask.todoTaskTitle', 'todoTaskTitle')
       .leftJoinAndSelect('todoTask.taskType', 'taskType')
       .leftJoinAndSelect('todoTask.createdByUser', 'createdBy')
       .leftJoinAndSelect('todoTask.assignedTo', 'assignedTo')
-      .leftJoinAndSelect('todoTask.completedBy', 'completedBy');
+      .leftJoinAndSelect('todoTask.completedBy', 'completedBy')
+      .leftJoinAndSelect('todoTask.informTo', 'informTo');
     
     // Check if user has permission to view all tasks
     const hasViewAllPermission = user.role?.permission.some(
@@ -87,14 +111,45 @@ export class TodoTaskService {
       }
     }
     
+    // Apply date filters
+    if (dateFrom) {
+      query.andWhere('todoTask.createdTimestamp >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    }
+    if (dateTo) {
+      query.andWhere('todoTask.createdTimestamp <= :dateTo', { dateTo: new Date(dateTo) });
+    }
+
     const tasks = await query.orderBy('todoTask.createdTimestamp', 'DESC').getMany();
     return tasks;
+  }
+
+  async findInformedTasks(user: UserEntity, status?: TodoTaskStatus, dateFrom?: string, dateTo?: string): Promise<TodoTask[]> {
+    const query = this.todoTaskRepository.createQueryBuilder('todoTask')
+      .leftJoinAndSelect('todoTask.todoTaskTitle', 'todoTaskTitle')
+      .leftJoinAndSelect('todoTask.taskType', 'taskType')
+      .leftJoinAndSelect('todoTask.createdByUser', 'createdBy')
+      .leftJoinAndSelect('todoTask.assignedTo', 'assignedTo')
+      .leftJoinAndSelect('todoTask.completedBy', 'completedBy')
+      .leftJoinAndSelect('todoTask.informTo', 'informTo')
+      .innerJoin('todoTask.informTo', 'informToFilter', 'informToFilter.id = :userId', { userId: user.id });
+
+    if (status) {
+      query.andWhere('todoTask.status = :status', { status });
+    }
+    if (dateFrom) {
+      query.andWhere('todoTask.createdTimestamp >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    }
+    if (dateTo) {
+      query.andWhere('todoTask.createdTimestamp <= :dateTo', { dateTo: new Date(dateTo) });
+    }
+
+    return query.orderBy('todoTask.createdTimestamp', 'DESC').getMany();
   }
 
   async findOne(id: string, user: UserEntity): Promise<TodoTask> {
     const todoTask = await this.todoTaskRepository.findOne({ 
       where: { id },
-      relations: ['taskType', 'createdByUser', 'assignedTo', 'completedBy']
+      relations: ['todoTaskTitle', 'taskType', 'createdByUser', 'assignedTo', 'completedBy', 'informTo']
     });
     
     if (!todoTask) {
@@ -107,7 +162,9 @@ export class TodoTaskService {
         (p.resource === 'todo-task' && (p.method === 'view-all' || p.method === 'get' || p.method === 'manage'))
     );
     
-    if (!hasViewAllPermission && todoTask.assignedToId !== user.id && todoTask.createdById !== user.id) {
+    const isInformedUser = todoTask.informTo?.some(u => u.id === user.id);
+    
+    if (!hasViewAllPermission && todoTask.assignedToId !== user.id && todoTask.createdById !== user.id && !isInformedUser) {
       throw new ForbiddenException(`You don't have permission to view this task`);
     }
     
@@ -133,9 +190,13 @@ export class TodoTaskService {
       acknowledgeRemark: updateDto.acknowledgeRemark,
     });
     
-    // Send notification to creator
+    // Send notification to creator and informed users
+    const notifyUsers = [todoTask.createdById];
+    if (todoTask.informTo?.length > 0) {
+      notifyUsers.push(...todoTask.informTo.map(u => u.id).filter(uid => uid !== user.id));
+    }
     await this.notificationService.create({
-      users: [todoTask.createdById],
+      users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been acknowledged by ${user.name || user.email}`,
       link: `/todotask/${id}`,
       type: NotificationType.TASK
@@ -163,9 +224,13 @@ export class TodoTaskService {
       pendingRemark: updateDto.pendingRemark,
     });
     
-    // Send notification to creator
+    // Send notification to creator and informed users
+    const notifyUsers = [todoTask.createdById];
+    if (todoTask.informTo?.length > 0) {
+      notifyUsers.push(...todoTask.informTo.map(u => u.id).filter(uid => uid !== user.id));
+    }
     await this.notificationService.create({
-      users: [todoTask.createdById],
+      users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been marked as pending by ${user.name || user.email}`,
       link: `/todotask/${id}`,
       type: NotificationType.TASK
@@ -194,9 +259,13 @@ export class TodoTaskService {
       completionRemark: updateDto.completionRemark,
     });
     
-    // Send notification to creator
+    // Send notification to creator and informed users
+    const notifyUsers = [todoTask.createdById];
+    if (todoTask.informTo?.length > 0) {
+      notifyUsers.push(...todoTask.informTo.map(u => u.id).filter(uid => uid !== user.id));
+    }
     await this.notificationService.create({
-      users: [todoTask.createdById],
+      users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been completed by ${user.name || user.email}`,
       link: `/todotask/${id}`,
       type: NotificationType.TASK
@@ -228,9 +297,13 @@ export class TodoTaskService {
       droppedRemark: updateDto.droppedRemark,
     });
     
-    // Send notification to assigned user
+    // Send notification to assigned user and informed users
+    const notifyUsers = [todoTask.assignedToId];
+    if (todoTask.informTo?.length > 0) {
+      notifyUsers.push(...todoTask.informTo.map(u => u.id).filter(uid => uid !== user.id));
+    }
     await this.notificationService.create({
-      users: [todoTask.assignedToId],
+      users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been dropped by ${user.name || user.email}`,
       link: `/todotask/${id}`,
       type: NotificationType.TASK
@@ -282,26 +355,47 @@ export class TodoTaskService {
       });
     }
     
-    await this.todoTaskRepository.update(id, updateTodoTaskDto);
+    // Handle informToIds update
+    const { informToIds, ...updateData } = updateTodoTaskDto;
+    await this.todoTaskRepository.update(id, updateData);
+
+    if (informToIds !== undefined) {
+      const task = await this.todoTaskRepository.findOne({ where: { id }, relations: ['informTo'] });
+      if (task) {
+        let informToUsers: UserEntity[] = [];
+        if (informToIds.length > 0) {
+          informToUsers = await this.userRepository.findByIds(informToIds);
+        }
+        task.informTo = informToUsers;
+        await this.todoTaskRepository.save(task);
+      }
+    }
+
     return this.findOne(id, user);
   }
 
   async remove(id: string, user: UserEntity): Promise<void> {
-    const todoTask = await this.findOne(id, user);
+    const todoTask = await this.todoTaskRepository.findOne({ 
+      where: { id },
+      relations: ['informTo']
+    });
+
+    if (!todoTask) {
+      throw new NotFoundException(`Todo task with ID "${id}" not found`);
+    }
     
-    // Only creator or admin can delete tasks
-    const isSuperUser = user.role?.permission.some(
-      (p: any) => p.resource === 'todo-task' && p.method === 'manage-all'
+    // Only users with delete permission can delete tasks
+    const hasDeletePermission = user.role?.permission.some(
+      (p: any) => p.resource === 'todo-task' && p.method === 'delete'
     );
     
-    if (todoTask.createdById !== user.id && !isSuperUser) {
-      throw new ForbiddenException('Only the task creator or administrators can delete tasks');
+    if (!hasDeletePermission) {
+      throw new ForbiddenException('Only administrators can delete tasks');
     }
     
-    // Cannot delete acknowledged or completed tasks
-    if (todoTask.status !== TodoTaskStatus.OPEN) {
-      throw new ForbiddenException(`Cannot delete task that is in "${todoTask.status}" status`);
-    }
+    // Remove informTo relations first, then delete
+    todoTask.informTo = [];
+    await this.todoTaskRepository.save(todoTask);
     
     const result = await this.todoTaskRepository.delete(id);
     
@@ -312,10 +406,12 @@ export class TodoTaskService {
   
   async findAllByStatus(status: TodoTaskStatus, user: UserEntity): Promise<TodoTask[]> {
     const query = this.todoTaskRepository.createQueryBuilder('todoTask')
+      .leftJoinAndSelect('todoTask.todoTaskTitle', 'todoTaskTitle')
       .leftJoinAndSelect('todoTask.taskType', 'taskType')
       .leftJoinAndSelect('todoTask.createdByUser', 'createdBy')
       .leftJoinAndSelect('todoTask.assignedTo', 'assignedTo')
       .leftJoinAndSelect('todoTask.completedBy', 'completedBy')
+      .leftJoinAndSelect('todoTask.informTo', 'informTo')
       .where('todoTask.status = :status', { status });
     
     // Check if user has permission to view all tasks
@@ -324,7 +420,6 @@ export class TodoTaskService {
     );
     
     if (!hasViewAllPermission) {
-      // If no view-all permission, only show tasks assigned to this user
       query.andWhere('todoTask.assignedToId = :userId', { userId: user.id });
     }
     
@@ -344,10 +439,12 @@ export class TodoTaskService {
     }
     
     const query = this.todoTaskRepository.createQueryBuilder('todoTask')
+      .leftJoinAndSelect('todoTask.todoTaskTitle', 'todoTaskTitle')
       .leftJoinAndSelect('todoTask.taskType', 'taskType')
       .leftJoinAndSelect('todoTask.createdByUser', 'createdBy')
       .leftJoinAndSelect('todoTask.assignedTo', 'assignedTo')
       .leftJoinAndSelect('todoTask.completedBy', 'completedBy')
+      .leftJoinAndSelect('todoTask.informTo', 'informTo')
       .where('todoTask.assignedToId = :userId', { userId });
     
     if (status) {
@@ -373,10 +470,12 @@ export class TodoTaskService {
     }
     
     const query = this.todoTaskRepository.createQueryBuilder('todoTask')
+      .leftJoinAndSelect('todoTask.todoTaskTitle', 'todoTaskTitle')
       .leftJoinAndSelect('todoTask.taskType', 'taskType')
       .leftJoinAndSelect('todoTask.createdByUser', 'createdBy')
       .leftJoinAndSelect('todoTask.assignedTo', 'assignedTo')
       .leftJoinAndSelect('todoTask.completedBy', 'completedBy')
+      .leftJoinAndSelect('todoTask.informTo', 'informTo')
       .where('todoTask.createdById = :userId', { userId });
     
     if (status) {

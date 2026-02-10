@@ -546,6 +546,59 @@ export const PermissionConfiguration: PermissionConfigInterface = {
         }
       ]
     },
+    // Todo Task Title Management
+    {
+      name: 'Todo Task Title Management',
+      resource: 'todo-task-title',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all todo task titles',
+          route: [
+            {
+              path: '/todo-task-title',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Create todo task title',
+          route: [
+            {
+              path: '/todo-task-title',
+              method: MethodList.POST
+            }
+          ]
+        },
+        {
+          name: 'View todo task title by id',
+          route: [
+            {
+              path: '/todo-task-title/:id',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
+          name: 'Update todo task title',
+          route: [
+            {
+              path: '/todo-task-title/:id',
+              method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Delete todo task title',
+          route: [
+            {
+              path: '/todo-task-title/:id',
+              method: MethodList.DELETE
+            }
+          ]
+        }
+      ]
+    },
     
     {
       name: 'User management',
@@ -2934,6 +2987,17 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'View informed todo tasks',
+          route: [
+            {
+              path: '/todo-task/informed',
+              method: MethodList.GET,
+              resource: 'todo-task',
+              description: 'View todo tasks where the user is informed'
+            }
+          ]
+        },
+        {
           name: 'View todo task by id',
           route: [
             {
@@ -4603,6 +4667,69 @@ export const PermissionConfiguration: PermissionConfigInterface = {
         }
       ]
     },
+    // Todo Task Title Management for Project Manager
+    {
+      name: 'Todo Task Title Management',
+      resource: 'todo-task-title',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View all todo task titles',
+          route: [
+            {
+              path: '/todo-task-title',
+              method: MethodList.GET,
+              resource: 'todo-task-title',
+              description: 'View all todo task titles'
+            }
+          ]
+        },
+        {
+          name: 'Create todo task title',
+          route: [
+            {
+              path: '/todo-task-title',
+              method: MethodList.POST,
+              resource: 'todo-task-title',
+              description: 'Create a new todo task title'
+            }
+          ]
+        },
+        {
+          name: 'View todo task title by id',
+          route: [
+            {
+              path: '/todo-task-title/:id',
+              method: MethodList.GET,
+              resource: 'todo-task-title',
+              description: 'View todo task title by id'
+            }
+          ]
+        },
+        {
+          name: 'Update todo task title',
+          route: [
+            {
+              path: '/todo-task-title/:id',
+              method: MethodList.PATCH,
+              resource: 'todo-task-title',
+              description: 'Update a todo task title'
+            }
+          ]
+        },
+        {
+          name: 'Delete todo task title',
+          route: [
+            {
+              path: '/todo-task-title/:id',
+              method: MethodList.DELETE,
+              resource: 'todo-task-title',
+              description: 'Delete a todo task title'
+            }
+          ]
+        }
+      ]
+    },
     // Todo Task Management for Project Manager
     {
       name: 'Todo Task Management',
@@ -4650,6 +4777,17 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               method: MethodList.GET,
               resource: 'todo-task',
               description: 'View todo tasks created by a specific user'
+            }
+          ]
+        },
+        {
+          name: 'View informed todo tasks',
+          route: [
+            {
+              path: '/todo-task/informed',
+              method: MethodList.GET,
+              resource: 'todo-task',
+              description: 'View todo tasks where the user is informed'
             }
           ]
         },

@@ -39,12 +39,30 @@ export class TodoTaskController {
   @ApiOperation({ summary: 'Get all todo tasks (or tasks assigned to current user if no view-all permission)' })
   @ApiQuery({ name: 'status', enum: TodoTaskStatus, required: false })
   @ApiQuery({ name: 'assignedToId', required: false })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
   findAll(
     @GetUser() user: UserEntity,
     @Query('status') status?: TodoTaskStatus,
     @Query('assignedToId') assignedToId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ): Promise<TodoTask[]> {
-    return this.todoTaskService.findAll(user, status, assignedToId);
+    return this.todoTaskService.findAll(user, status, assignedToId, dateFrom, dateTo);
+  }
+
+  @Get('informed')
+  @ApiOperation({ summary: 'Get todo tasks where current user is in the inform-to list' })
+  @ApiQuery({ name: 'status', enum: TodoTaskStatus, required: false })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  findInformedTasks(
+    @GetUser() user: UserEntity,
+    @Query('status') status?: TodoTaskStatus,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ): Promise<TodoTask[]> {
+    return this.todoTaskService.findInformedTasks(user, status, dateFrom, dateTo);
   }
 
   @Get('status/:status')

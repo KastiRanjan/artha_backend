@@ -1,7 +1,11 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { TodoTaskStatus } from '../entities/todo-task.entity';
 
 export class UpdateTodoTaskDto {
+  @IsOptional()
+  @IsUUID()
+  titleId?: string;
+
   @IsOptional()
   @IsString()
   title?: string;
@@ -41,4 +45,9 @@ export class UpdateTodoTaskDto {
   @IsOptional()
   @IsString()
   dueDate?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  informToIds?: string[];
 }
