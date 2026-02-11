@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUsersDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { UserStatusEnum } from 'src/auth/user-status.enum';
 import { Connection, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserProfileEntity } from './entities/user.profile.entity';
@@ -202,6 +203,19 @@ export class UsersService {
     return this.userRepository.find({
       relations: ['role'],
       select: ['id', 'name', 'email', 'username', 'status', 'createdAt', 'updatedAt']
+    });
+  }
+
+  /**
+   * List active users (lightweight endpoint, no full user management permission required)
+   * Returns only active users with minimal fields needed for dropdowns/selects
+   */
+  async listActiveUsers() {
+    return this.userRepository.find({
+      where: { status: UserStatusEnum.ACTIVE },
+      relations: ['role'],
+      select: ['id', 'name', 'email', 'username', 'status'],
+      order: { name: 'ASC' }
     });
   }
 

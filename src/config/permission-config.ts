@@ -606,6 +606,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
+          name: 'List active users',
+          route: [
+            {
+              path: '/users/list-active',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'View all user',
           route: [
             {
@@ -3590,6 +3599,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
+          name: 'List active users',
+          route: [
+            {
+              path: '/users/list-active',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'View all user',
           route: [
             {
@@ -5200,6 +5218,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       hasSubmodules: false,
       permissions: [
         {
+          name: 'List active users',
+          route: [
+            {
+              path: '/users/list-active',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'View all user',
           route: [
             {
@@ -5491,6 +5518,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       resource: 'user',
       hasSubmodules: false,
       permissions: [
+        {
+          name: 'List active users',
+          route: [
+            {
+              path: '/users/list-active',
+              method: MethodList.GET
+            }
+          ]
+        },
         {
           name: 'View all user',
           route: [
@@ -6893,6 +6929,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       resource: 'user',
       hasSubmodules: false,
       permissions: [
+        {
+          name: 'List active users',
+          route: [
+            {
+              path: '/users/list-active',
+              method: MethodList.GET
+            }
+          ]
+        },
         {
           name: 'View all user',
           route: [

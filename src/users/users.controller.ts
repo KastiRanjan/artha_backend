@@ -140,6 +140,11 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('list-active')
+  listActiveUsers() {
+    return this.usersService.listActiveUsers();
+  }
+
   @Get('role/:roleName')
   async findByRole(@Param('roleName') roleName: string) {
         // Special case for managers - include both manager and projectmanager roles
