@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -201,10 +202,16 @@ export class AuthController {
     return this.authService.create(createUserDto);
   }
 
+  @UseGuards(JwtTwoFactorGuard)
+  @Get('/users/list-active')
+  listActiveUsers() {
+    return this.authService.listActiveUsers();
+  }
+
   @UseGuards(JwtTwoFactorGuard, PermissionGuard)
   @Put('/users/:id')
   update(
-    @Param('id')
+    @Param('id', ParseUUIDPipe)
     id: string,
     @Body()
     updateUserDto: UpdateUserDto
@@ -215,7 +222,7 @@ export class AuthController {
   @UseGuards(JwtTwoFactorGuard, PermissionGuard)
   @Get('/users/:id')
   findOne(
-    @Param('id')
+    @Param('id', ParseUUIDPipe)
     id: string
   ): Promise<UserSerializer> {
     return this.authService.findById(id);

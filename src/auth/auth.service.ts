@@ -351,6 +351,18 @@ export class AuthService {
   }
 
   /**
+   * List active users (lightweight, for dropdowns/selects)
+   */
+  async listActiveUsers() {
+    return this.userRepository.find({
+      where: { status: UserStatusEnum.ACTIVE },
+      relations: ['role'],
+      select: ['id', 'name', 'email', 'username', 'status'],
+      order: { name: 'ASC' }
+    });
+  }
+
+  /**
    * update user
    * @param id
    * @param updateUserDto

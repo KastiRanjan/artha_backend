@@ -11,8 +11,11 @@ import {
   Query,
   BadRequestException,
   Request,
-  Logger
+  Logger,
+  ParseUUIDPipe,
+  UseGuards
 } from '@nestjs/common';
+import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync, renameSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -141,6 +144,7 @@ export class UsersController {
   }
 
   @Get('list-active')
+  @UseGuards(JwtTwoFactorGuard)
   listActiveUsers() {
     return this.usersService.listActiveUsers();
   }
@@ -168,7 +172,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
   
