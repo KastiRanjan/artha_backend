@@ -26,6 +26,7 @@ import {
 } from './dto/client-user.dto';
 import { ClientUser } from './entities/client-user.entity';
 import { ClientReport } from './entities/client-report.entity';
+import { ClientReportFile } from './entities/client-report-file.entity';
 import { ClientAuthGuard } from './guards/client-auth.guard';
 import { GetClientUser } from './decorators/get-client-user.decorator';
 
@@ -87,7 +88,8 @@ export class ClientPortalController {
       name: profile.name,
       phoneNumber: profile.phoneNumber,
       customers: profile.customers,
-      status: profile.status
+      status: profile.status,
+      isDownloadDisabled: profile.isDownloadDisabled || false
     };
   }
 
@@ -158,6 +160,7 @@ export class ClientPortalController {
 
   /**
    * Download a report file (only if access is granted)
+   * Downloads the first/legacy file. Use /reports/:id/files/:fileId/download for specific files.
    */
   @Get('reports/:id/download')
   @UseGuards(ClientAuthGuard)
@@ -166,6 +169,11 @@ export class ClientPortalController {
     @GetClientUser() user: ClientUser,
     @Res({ passthrough: true }) response: Response
   ): Promise<StreamableFile> {
+    // Master download disable check
+    if (user.isDownloadDisabled) {
+      throw new BadRequestException('File downloads have been disabled for your account. Please contact the administrator.');
+    }
+
     const customerIds = (user as any).customerIds || [];
     if (!customerIds.length) {
       throw new ForbiddenException('No customer access');
@@ -178,7 +186,19 @@ export class ClientPortalController {
       throw new BadRequestException(reason);
     }
 
-    const filePath = join(process.cwd(), 'public', report.filePath);
+    // Try to use the files relation first, fall back to legacy filePath
+    let filePathToUse = report.filePath;
+    let fileNameToUse = report.originalFileName;
+    let fileTypeToUse = report.fileType;
+
+    if (report.files && report.files.length > 0) {
+      const firstFile = report.files[0];
+      filePathToUse = firstFile.filePath;
+      fileNameToUse = firstFile.displayFileName || firstFile.originalFileName;
+      fileTypeToUse = firstFile.fileType;
+    }
+
+    const filePath = join(process.cwd(), 'public', filePathToUse);
 
     if (!existsSync(filePath)) {
       throw new BadRequestException('File not found on server');
@@ -187,8 +207,58 @@ export class ClientPortalController {
     const file = createReadStream(filePath);
     
     response.set({
-      'Content-Type': report.fileType || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${report.originalFileName}"`
+      'Content-Type': fileTypeToUse || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${fileNameToUse}"`
+    });
+
+    return new StreamableFile(file);
+  }
+
+  /**
+   * Download a specific file from a report by file ID
+   */
+  @Get('reports/:id/files/:fileId/download')
+  @UseGuards(ClientAuthGuard)
+  async downloadReportFile(
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+    @GetClientUser() user: ClientUser,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    // Master download disable check
+    if (user.isDownloadDisabled) {
+      throw new BadRequestException('File downloads have been disabled for your account. Please contact the administrator.');
+    }
+
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      throw new ForbiddenException('No customer access');
+    }
+    
+    const { canDownload, report, reason } =
+      await this.clientReportService.canClientDownload(id, customerIds);
+
+    if (!canDownload) {
+      throw new BadRequestException(reason);
+    }
+
+    // Find the specific file
+    const reportFile = report.files?.find(f => f.id === fileId);
+    if (!reportFile) {
+      throw new BadRequestException('File not found in this report');
+    }
+
+    const filePath = join(process.cwd(), 'public', reportFile.filePath);
+
+    if (!existsSync(filePath)) {
+      throw new BadRequestException('File not found on server');
+    }
+
+    const file = createReadStream(filePath);
+    
+    response.set({
+      'Content-Type': reportFile.fileType || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${reportFile.displayFileName || reportFile.originalFileName}"`
     });
 
     return new StreamableFile(file);
@@ -208,13 +278,20 @@ export class ClientPortalController {
       throw new ForbiddenException('No customer access');
     }
     
-    const { canDownload, report, reason } =
+    const { canDownload: serviceCanDownload, report, reason } =
       await this.clientReportService.canClientDownload(id, customerIds);
+
+    // Also check master download disable
+    const isDisabled = user.isDownloadDisabled;
+    const canDownload = serviceCanDownload && !isDisabled;
+    const downloadMessage = isDisabled
+      ? 'File downloads have been disabled for your account. Please contact the administrator.'
+      : (canDownload ? undefined : reason);
 
     return {
       report,
       canDownload,
-      downloadMessage: canDownload ? undefined : reason
+      downloadMessage
     };
   }
 

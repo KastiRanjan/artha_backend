@@ -39,6 +39,9 @@ export class ClientUser extends CustomBaseEntity {
   })
   customers: Customer[];
 
+  @Column({ default: false })
+  isDownloadDisabled: boolean;
+
   @Column({
     type: 'enum',
     enum: ClientUserStatus,

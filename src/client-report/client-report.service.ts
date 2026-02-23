@@ -5,6 +5,7 @@ import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 import { ClientReport, ReportAccessStatus } from './entities/client-report.entity';
+import { ClientReportFile } from './entities/client-report-file.entity';
 import {
   CreateClientReportDto,
   UpdateClientReportDto,
@@ -19,6 +20,8 @@ export class ClientReportService {
   constructor(
     @InjectRepository(ClientReport)
     private readonly clientReportRepository: Repository<ClientReport>,
+    @InjectRepository(ClientReportFile)
+    private readonly clientReportFileRepository: Repository<ClientReportFile>,
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
     @InjectRepository(Customer)
@@ -26,7 +29,7 @@ export class ClientReportService {
   ) {}
 
   /**
-   * Create a new client report (Admin only)
+   * Create a new client report with a single file
    */
   async create(
     createDto: CreateClientReportDto,
@@ -39,15 +42,78 @@ export class ClientReportService {
 
     const report = this.clientReportRepository.create({
       ...restDto,
+      // Legacy fields for backward compatibility
       filePath: `/${filePath}`,
       originalFileName: file.originalname,
+      displayFileName: file.originalname,
       fileType: file.mimetype,
       fileSize: file.size,
       createdBy: userId,
       ...(documentTypeId && { documentType: { id: documentTypeId } })
     });
 
-    return this.clientReportRepository.save(report);
+    const savedReport = await this.clientReportRepository.save(report);
+
+    // Also create a file record in the files table
+    const reportFile = this.clientReportFileRepository.create({
+      filePath: `/${filePath}`,
+      originalFileName: file.originalname,
+      displayFileName: file.originalname,
+      fileType: file.mimetype,
+      fileSize: file.size,
+      reportId: savedReport.id,
+      createdBy: userId
+    });
+    await this.clientReportFileRepository.save(reportFile);
+
+    return this.findOne(savedReport.id);
+  }
+
+  /**
+   * Create a single client report with multiple files attached
+   */
+  async createMultiple(
+    createDto: CreateClientReportDto,
+    files: Express.Multer.File[],
+    userId: string
+  ): Promise<ClientReport> {
+    const { documentTypeId, ...restDto } = createDto;
+
+    // Use first file for legacy single-file columns
+    const firstFile = files[0];
+    const firstFilePath = firstFile.path.replace(/\\/g, '/').replace('public/', '');
+
+    const report = this.clientReportRepository.create({
+      ...restDto,
+      filePath: `/${firstFilePath}`,
+      originalFileName: firstFile.originalname,
+      displayFileName: firstFile.originalname,
+      fileType: firstFile.mimetype,
+      fileSize: firstFile.size,
+      createdBy: userId,
+      ...(documentTypeId && { documentType: { id: documentTypeId } })
+    });
+
+    const savedReport = await this.clientReportRepository.save(report);
+
+    // Create file records for all files
+    const reportFiles: ClientReportFile[] = [];
+    for (const file of files) {
+      const fp = file.path.replace(/\\/g, '/').replace('public/', '');
+      const reportFile = this.clientReportFileRepository.create({
+        filePath: `/${fp}`,
+        originalFileName: file.originalname,
+        displayFileName: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        reportId: savedReport.id,
+        createdBy: userId
+      });
+      reportFiles.push(reportFile);
+    }
+    await this.clientReportFileRepository.save(reportFiles);
+
+    return this.findOne(savedReport.id);
   }
 
   /**
@@ -59,6 +125,7 @@ export class ClientReportService {
       .leftJoinAndSelect('report.customer', 'customer')
       .leftJoinAndSelect('report.project', 'project')
       .leftJoinAndSelect('report.documentType', 'documentType')
+      .leftJoinAndSelect('report.files', 'files')
       .orderBy('report.createdAt', 'DESC');
 
     if (filterDto.customerId) {
@@ -104,6 +171,7 @@ export class ClientReportService {
       .leftJoinAndSelect('report.project', 'project')
       .leftJoinAndSelect('report.documentType', 'documentType')
       .leftJoinAndSelect('report.customer', 'customer')
+      .leftJoinAndSelect('report.files', 'files')
       .where('report.customerId IN (:...customerIds)', { customerIds })
       .andWhere('report.isVisible = :isVisible', { isVisible: true })
       .orderBy('report.createdAt', 'DESC')
@@ -119,6 +187,7 @@ export class ClientReportService {
       .leftJoinAndSelect('report.customer', 'customer')
       .leftJoinAndSelect('report.project', 'project')
       .leftJoinAndSelect('report.documentType', 'documentType')
+      .leftJoinAndSelect('report.files', 'files')
       .where('report.id = :id', { id })
       .getOne();
 
@@ -207,10 +276,22 @@ export class ClientReportService {
   async remove(id: string): Promise<void> {
     const report = await this.findOne(id);
 
-    // Delete the physical file
-    const fullPath = join(process.cwd(), 'public', report.filePath);
-    if (existsSync(fullPath)) {
-      unlinkSync(fullPath);
+    // Delete all physical files (from files relation)
+    if (report.files && report.files.length > 0) {
+      for (const file of report.files) {
+        const fp = join(process.cwd(), 'public', file.filePath);
+        if (existsSync(fp)) {
+          unlinkSync(fp);
+        }
+      }
+    }
+
+    // Also delete legacy single-file if it exists and wasn't covered above
+    if (report.filePath) {
+      const fullPath = join(process.cwd(), 'public', report.filePath);
+      if (existsSync(fullPath)) {
+        unlinkSync(fullPath);
+      }
     }
 
     await this.clientReportRepository.remove(report);
@@ -315,13 +396,27 @@ export class ClientReportService {
   ): Promise<ClientReport> {
     const report = await this.findOne(id);
 
-    // Delete old file
-    const oldFilePath = join(process.cwd(), 'public', report.filePath);
-    if (existsSync(oldFilePath)) {
-      unlinkSync(oldFilePath);
+    // Delete old physical files
+    if (report.files && report.files.length > 0) {
+      for (const oldFile of report.files) {
+        const fp = join(process.cwd(), 'public', oldFile.filePath);
+        if (existsSync(fp)) {
+          unlinkSync(fp);
+        }
+      }
+      // Remove old file records
+      await this.clientReportFileRepository.remove(report.files);
     }
 
-    // Update with new file
+    // Also delete legacy file if different
+    if (report.filePath) {
+      const oldFilePath = join(process.cwd(), 'public', report.filePath);
+      if (existsSync(oldFilePath)) {
+        unlinkSync(oldFilePath);
+      }
+    }
+
+    // Update legacy fields with new file
     const newFilePath = file.path.replace(/\\/g, '/').replace('public/', '');
     report.filePath = `/${newFilePath}`;
     report.originalFileName = file.originalname;
@@ -329,7 +424,105 @@ export class ClientReportService {
     report.fileSize = file.size;
     report.updatedBy = userId;
 
-    return this.clientReportRepository.save(report);
+    await this.clientReportRepository.save(report);
+
+    // Create new file record
+    const reportFile = this.clientReportFileRepository.create({
+      filePath: `/${newFilePath}`,
+      originalFileName: file.originalname,
+      displayFileName: file.originalname,
+      fileType: file.mimetype,
+      fileSize: file.size,
+      reportId: report.id,
+      createdBy: userId
+    });
+    await this.clientReportFileRepository.save(reportFile);
+
+    return this.findOne(id);
+  }
+
+  /**
+   * Add additional files to an existing report
+   */
+  async addFiles(
+    id: string,
+    files: Express.Multer.File[],
+    userId: string
+  ): Promise<ClientReport> {
+    const report = await this.findOne(id);
+
+    const reportFiles: ClientReportFile[] = [];
+    for (const file of files) {
+      const fp = file.path.replace(/\\/g, '/').replace('public/', '');
+      const reportFile = this.clientReportFileRepository.create({
+        filePath: `/${fp}`,
+        originalFileName: file.originalname,
+        displayFileName: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        reportId: report.id,
+        createdBy: userId
+      });
+      reportFiles.push(reportFile);
+    }
+    await this.clientReportFileRepository.save(reportFiles);
+
+    report.updatedBy = userId;
+    await this.clientReportRepository.save(report);
+
+    return this.findOne(id);
+  }
+
+  /**
+   * Remove a specific file from a report
+   */
+  async removeFile(
+    reportId: string,
+    fileId: string,
+    userId: string
+  ): Promise<ClientReport> {
+    const report = await this.findOne(reportId);
+    
+    const file = report.files?.find(f => f.id === fileId);
+    if (!file) {
+      throw new NotFoundException('File not found in this report');
+    }
+
+    // Delete physical file
+    const fullPath = join(process.cwd(), 'public', file.filePath);
+    if (existsSync(fullPath)) {
+      unlinkSync(fullPath);
+    }
+
+    await this.clientReportFileRepository.remove(file);
+
+    report.updatedBy = userId;
+    await this.clientReportRepository.save(report);
+
+    return this.findOne(reportId);
+  }
+
+  /**
+   * Update display name of a specific file
+   */
+  async updateFileDisplayName(
+    reportId: string,
+    fileId: string,
+    displayFileName: string,
+    userId: string
+  ): Promise<ClientReport> {
+    const report = await this.findOne(reportId);
+    
+    const file = report.files?.find(f => f.id === fileId);
+    if (!file) {
+      throw new NotFoundException('File not found in this report');
+    }
+
+    file.displayFileName = displayFileName;
+    file.updatedBy = userId;
+    await this.clientReportFileRepository.save(file);
+
+    return this.findOne(reportId);
   }
 
   /**

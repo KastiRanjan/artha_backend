@@ -203,6 +203,7 @@ export class ClientUserService {
     if (updateDto.name) user.name = updateDto.name;
     if (updateDto.phoneNumber) user.phoneNumber = updateDto.phoneNumber;
     if (updateDto.status) user.status = updateDto.status;
+    if (updateDto.isDownloadDisabled !== undefined) user.isDownloadDisabled = updateDto.isDownloadDisabled;
     user.updatedBy = updatedBy;
 
     return this.clientUserRepository.save(user);

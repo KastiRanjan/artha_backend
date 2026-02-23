@@ -56,6 +56,10 @@ export class UpdateClientUserDto {
   @IsArray()
   @IsUUID('4', { each: true })
   customerIds?: string[];
+
+  @ApiPropertyOptional({ description: 'Master switch to disable all file downloads for this user' })
+  @IsOptional()
+  isDownloadDisabled?: boolean;
 }
 
 export class ClientLoginDto {

@@ -1,8 +1,9 @@
-import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { ClientReportDocumentType } from 'src/client-report-document-type/entities/client-report-document-type.entity';
+import { ClientReportFile } from './client-report-file.entity';
 
 export enum ReportAccessStatus {
   PENDING = 'pending',       // Uploaded but payment not done
@@ -18,10 +19,11 @@ export class ClientReport extends CustomBaseEntity {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ length: 500 })
+  // Keep legacy single-file columns as nullable for backward compatibility with existing data
+  @Column({ length: 500, nullable: true })
   filePath: string;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, nullable: true })
   originalFileName: string;
 
   @Column({ length: 100, nullable: true })
@@ -29,6 +31,13 @@ export class ClientReport extends CustomBaseEntity {
 
   @Column({ type: 'bigint', nullable: true })
   fileSize: number;
+
+  @Column({ length: 255, nullable: true })
+  displayFileName: string;
+
+  // New: One report can have multiple files
+  @OneToMany(() => ClientReportFile, (file) => file.report, { cascade: true, eager: true })
+  files: ClientReportFile[];
 
   @ManyToOne(() => Customer, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customerId' })
@@ -55,7 +64,7 @@ export class ClientReport extends CustomBaseEntity {
   })
   accessStatus: ReportAccessStatus;
 
-  @Column({ default: true })
+  @Column({ default: false })
   isVisible: boolean;
 
   @Column({ type: 'timestamp', nullable: true })

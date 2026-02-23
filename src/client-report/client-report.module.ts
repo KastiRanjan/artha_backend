@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 
 import { ClientReport } from './entities/client-report.entity';
+import { ClientReportFile } from './entities/client-report-file.entity';
 import { ClientUser } from './entities/client-user.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Project } from 'src/projects/entities/project.entity';
@@ -16,7 +17,7 @@ import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ClientReport, ClientUser, Customer, Project]),
+    TypeOrmModule.forFeature([ClientReport, ClientReportFile, ClientUser, Customer, Project]),
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: process.env.JWT_SECRET || 'your-secret-key',

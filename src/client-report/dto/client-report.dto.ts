@@ -71,6 +71,11 @@ export class UpdateClientReportDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  displayFileName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsEnum(ReportAccessStatus)
   accessStatus?: ReportAccessStatus;
 
@@ -104,6 +109,13 @@ export class UpdateClientReportDto {
   @IsOptional()
   @IsNumber()
   fiscalYear?: number;
+}
+
+export class UpdateClientReportFileDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  displayFileName?: string;
 }
 
 export class UpdateReportAccessDto {

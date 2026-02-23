@@ -11,10 +11,11 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   Res,
   StreamableFile
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes } from '@nestjs/swagger';
 import { Response } from 'express';
 import { createReadStream, existsSync } from 'fs';
@@ -25,6 +26,7 @@ import {
   CreateClientReportDto,
   UpdateClientReportDto,
   UpdateReportAccessDto,
+  UpdateClientReportFileDto,
   ClientReportFilterDto
 } from './dto/client-report.dto';
 import { multerOptionsHelper } from 'src/common/helper/multer-options.helper';
@@ -40,10 +42,10 @@ export class ClientReportController {
   constructor(private readonly clientReportService: ClientReportService) {}
 
   /**
-   * Admin: Create a new report with file upload
+   * Any authenticated staff: Create a new report with file upload
    */
   @Post()
-  @UseGuards(JwtTwoFactorGuard, PermissionGuard)
+  @UseGuards(JwtTwoFactorGuard)
   @UseInterceptors(
     FileInterceptor(
       'file',
@@ -54,7 +56,10 @@ export class ClientReportController {
         'xls',
         'xlsx',
         'zip',
-        'rar'
+        'rar',
+        'png',
+        'jpg',
+        'jpeg'
       ])
     )
   )
@@ -65,6 +70,38 @@ export class ClientReportController {
     @GetUser() user: UserEntity
   ): Promise<ClientReport> {
     return this.clientReportService.create(createDto, file, user.id);
+  }
+
+  /**
+   * Any authenticated staff: Upload multiple files for a client
+   */
+  @Post('bulk-upload')
+  @UseGuards(JwtTwoFactorGuard)
+  @UseInterceptors(
+    FilesInterceptor(
+      'files',
+      20,
+      multerOptionsHelper('public/document/client-reports', 50000000, [
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'zip',
+        'rar',
+        'png',
+        'jpg',
+        'jpeg'
+      ])
+    )
+  )
+  @ApiConsumes('multipart/form-data')
+  async createMultiple(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() createDto: CreateClientReportDto,
+    @GetUser() user: UserEntity
+  ): Promise<ClientReport> {
+    return this.clientReportService.createMultiple(createDto, files, user.id);
   }
 
   /**
@@ -143,7 +180,10 @@ export class ClientReportController {
         'xls',
         'xlsx',
         'zip',
-        'rar'
+        'rar',
+        'png',
+        'jpg',
+        'jpeg'
       ])
     )
   )
@@ -154,6 +194,65 @@ export class ClientReportController {
     @GetUser() user: UserEntity
   ): Promise<ClientReport> {
     return this.clientReportService.replaceFile(id, file, user.id);
+  }
+
+  /**
+   * Admin: Add additional files to an existing report
+   */
+  @Post(':id/files')
+  @UseGuards(JwtTwoFactorGuard)
+  @UseInterceptors(
+    FilesInterceptor(
+      'files',
+      20,
+      multerOptionsHelper('public/document/client-reports', 50000000, [
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'zip',
+        'rar',
+        'png',
+        'jpg',
+        'jpeg'
+      ])
+    )
+  )
+  @ApiConsumes('multipart/form-data')
+  async addFiles(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @GetUser() user: UserEntity
+  ): Promise<ClientReport> {
+    return this.clientReportService.addFiles(id, files, user.id);
+  }
+
+  /**
+   * Admin: Remove a specific file from a report
+   */
+  @Delete(':id/files/:fileId')
+  @UseGuards(JwtTwoFactorGuard)
+  async removeFile(
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+    @GetUser() user: UserEntity
+  ): Promise<ClientReport> {
+    return this.clientReportService.removeFile(id, fileId, user.id);
+  }
+
+  /**
+   * Admin: Update a file's display name
+   */
+  @Patch(':id/files/:fileId')
+  @UseGuards(JwtTwoFactorGuard)
+  async updateFile(
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+    @Body() updateDto: UpdateClientReportFileDto,
+    @GetUser() user: UserEntity
+  ): Promise<ClientReport> {
+    return this.clientReportService.updateFileDisplayName(id, fileId, updateDto.displayFileName, user.id);
   }
 
   /**
