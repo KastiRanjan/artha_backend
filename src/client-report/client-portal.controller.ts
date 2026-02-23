@@ -22,8 +22,7 @@ import {
   ClientLoginDto,
   ClientForgotPasswordDto,
   ClientResetPasswordDto,
-  ClientChangePasswordDto,
-  SelectCustomerDto
+  ClientChangePasswordDto
 } from './dto/client-user.dto';
 import { ClientUser } from './entities/client-user.entity';
 import { ClientReport } from './entities/client-report.entity';
@@ -62,37 +61,7 @@ export class ClientPortalController {
       success: true,
       token: result.token,
       user: result.user,
-      customers: result.customers,
-      needsCustomerSelection: result.customers.length > 1 && !loginDto.customerId
-    });
-  }
-
-  /**
-   * Switch to a different customer
-   */
-  @Post('switch-customer')
-  @UseGuards(ClientAuthGuard)
-  async switchCustomer(
-    @Body() selectDto: SelectCustomerDto,
-    @GetClientUser() user: ClientUser,
-    @Res() response: Response
-  ) {
-    const result = await this.clientUserService.switchCustomer(user.id, selectDto.customerId);
-    
-    // Set new cookie with updated token
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: 24 * 60 * 60 * 1000
-    };
-    
-    response.cookie('ClientAuth', result.token, cookieOptions);
-    
-    return response.json({
-      success: true,
-      token: result.token,
-      customer: result.customer
+      customers: result.customers
     });
   }
 
@@ -117,36 +86,74 @@ export class ClientPortalController {
       email: profile.email,
       name: profile.name,
       phoneNumber: profile.phoneNumber,
-      selectedCustomerId: user.selectedCustomerId,
       customers: profile.customers,
       status: profile.status
     };
   }
 
+  // ===== Client Portal: Projects =====
+
+  @Get('projects')
+  @UseGuards(ClientAuthGuard)
+  async getMyProjects(@GetClientUser() user: ClientUser) {
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      return [];
+    }
+    return this.clientReportService.getClientProjects(customerIds);
+  }
+
+  @Get('projects/:id')
+  @UseGuards(ClientAuthGuard)
+  async getProjectDetail(
+    @Param('id') id: string,
+    @GetClientUser() user: ClientUser
+  ) {
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      throw new ForbiddenException('No customer access');
+    }
+    return this.clientReportService.getClientProjectById(id, customerIds);
+  }
+
+  // ===== Client Portal: Company =====
+
+  @Get('company')
+  @UseGuards(ClientAuthGuard)
+  async getCompanyDetails(@GetClientUser() user: ClientUser) {
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      return [];
+    }
+    return this.clientReportService.getAllCustomerDetails(customerIds);
+  }
+
   /**
-   * Get reports for the logged-in client's selected customer
+   * Get reports for the logged-in client (across all associated customers)
    */
   @Get('reports')
   @UseGuards(ClientAuthGuard)
   async getMyReports(@GetClientUser() user: ClientUser): Promise<ClientReport[]> {
-    if (!user.selectedCustomerId) {
-      throw new ForbiddenException('Please select a customer first');
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      return [];
     }
-    return this.clientReportService.findByCustomerId(user.selectedCustomerId);
+    return this.clientReportService.findByCustomerIds(customerIds);
   }
 
   /**
-   * Get report stats for the logged-in client
+   * Get report stats for the logged-in client (across all associated customers)
    */
   @Get('reports/stats')
   @UseGuards(ClientAuthGuard)
   async getMyStats(
     @GetClientUser() user: ClientUser
   ): Promise<{ total: number; accessible: number; pending: number }> {
-    if (!user.selectedCustomerId) {
-      throw new ForbiddenException('Please select a customer first');
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      return { total: 0, accessible: 0, pending: 0 };
     }
-    return this.clientReportService.getCustomerStats(user.selectedCustomerId);
+    return this.clientReportService.getCustomerStats(customerIds);
   }
 
   /**
@@ -159,12 +166,13 @@ export class ClientPortalController {
     @GetClientUser() user: ClientUser,
     @Res({ passthrough: true }) response: Response
   ): Promise<StreamableFile> {
-    if (!user.selectedCustomerId) {
-      throw new ForbiddenException('Please select a customer first');
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      throw new ForbiddenException('No customer access');
     }
     
     const { canDownload, report, reason } =
-      await this.clientReportService.canClientDownload(id, user.selectedCustomerId);
+      await this.clientReportService.canClientDownload(id, customerIds);
 
     if (!canDownload) {
       throw new BadRequestException(reason);
@@ -195,12 +203,13 @@ export class ClientPortalController {
     @Param('id') id: string,
     @GetClientUser() user: ClientUser
   ): Promise<{ report: ClientReport; canDownload: boolean; downloadMessage?: string }> {
-    if (!user.selectedCustomerId) {
-      throw new ForbiddenException('Please select a customer first');
+    const customerIds = (user as any).customerIds || [];
+    if (!customerIds.length) {
+      throw new ForbiddenException('No customer access');
     }
     
     const { canDownload, report, reason } =
-      await this.clientReportService.canClientDownload(id, user.selectedCustomerId);
+      await this.clientReportService.canClientDownload(id, customerIds);
 
     return {
       report,

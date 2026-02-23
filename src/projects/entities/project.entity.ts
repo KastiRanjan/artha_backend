@@ -81,4 +81,10 @@ export class Project extends CustomBaseEntity {
 
   @Column({ default: true })
   countsForAvailability: boolean;
+
+  @Column({ default: false })
+  isPaymentDone: boolean;
+
+  @Column({ default: false })
+  isPaymentTemporarilyEnabled: boolean;
 }

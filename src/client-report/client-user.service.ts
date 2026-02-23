@@ -100,27 +100,14 @@ export class ClientUserService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // If customerId provided, validate it belongs to this user
-    let selectedCustomerId = loginDto.customerId;
-    if (selectedCustomerId) {
-      const hasAccess = user.customers.some(c => c.id === selectedCustomerId);
-      if (!hasAccess) {
-        throw new ForbiddenException('You do not have access to this customer');
-      }
-    } else if (user.customers.length === 1) {
-      // Auto-select if only one customer
-      selectedCustomerId = user.customers[0].id;
-    }
-
     // Update last login
     user.lastLoginAt = new Date();
     await this.clientUserRepository.save(user);
 
-    // Generate JWT token
+    // Generate JWT token (no customerId — user sees all their customers)
     const payload = {
       sub: user.id,
       email: user.email,
-      customerId: selectedCustomerId, // May be undefined if multiple customers
       type: 'client'
     };
 
@@ -139,42 +126,6 @@ export class ClientUserService {
       },
       customers: user.customers
     };
-  }
-
-  /**
-   * Switch to a different customer (generates new token)
-   */
-  async switchCustomer(
-    userId: string,
-    customerId: string
-  ): Promise<{ token: string; customer: Customer }> {
-    const user = await this.clientUserRepository.findOne({
-      where: { id: userId },
-      relations: ['customers']
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const customer = user.customers.find(c => c.id === customerId);
-    if (!customer) {
-      throw new ForbiddenException('You do not have access to this customer');
-    }
-
-    // Generate new JWT token with selected customer
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      customerId: customerId,
-      type: 'client'
-    };
-
-    const token = this.jwtService.sign(payload, {
-      expiresIn: '24h'
-    });
-
-    return { token, customer };
   }
 
   /**

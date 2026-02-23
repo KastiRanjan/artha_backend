@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
@@ -12,6 +12,7 @@ import {
   ClientReportFilterDto
 } from './dto/client-report.dto';
 import { Project } from 'src/projects/entities/project.entity';
+import { Customer } from 'src/customers/entities/customer.entity';
 
 @Injectable()
 export class ClientReportService {
@@ -19,7 +20,9 @@ export class ClientReportService {
     @InjectRepository(ClientReport)
     private readonly clientReportRepository: Repository<ClientReport>,
     @InjectRepository(Project)
-    private readonly projectRepository: Repository<Project>
+    private readonly projectRepository: Repository<Project>,
+    @InjectRepository(Customer)
+    private readonly customerRepository: Repository<Customer>
   ) {}
 
   /**
@@ -92,15 +95,16 @@ export class ClientReportService {
   }
 
   /**
-   * Get reports for a specific client (Client Portal view)
-   * Only shows visible reports
+   * Get reports for a client's customers (Client Portal view)
+   * Only shows visible reports across all associated customers
    */
-  async findByCustomerId(customerId: string): Promise<ClientReport[]> {
+  async findByCustomerIds(customerIds: string[]): Promise<ClientReport[]> {
     return this.clientReportRepository
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.project', 'project')
       .leftJoinAndSelect('report.documentType', 'documentType')
-      .where('report.customerId = :customerId', { customerId })
+      .leftJoinAndSelect('report.customer', 'customer')
+      .where('report.customerId IN (:...customerIds)', { customerIds })
       .andWhere('report.isVisible = :isVisible', { isVisible: true })
       .orderBy('report.createdAt', 'DESC')
       .getMany();
@@ -217,11 +221,11 @@ export class ClientReportService {
    */
   async canClientDownload(
     reportId: string,
-    customerId: string
+    customerIds: string[]
   ): Promise<{ canDownload: boolean; report: ClientReport; reason?: string }> {
     const report = await this.findOne(reportId);
 
-    if (report.customerId !== customerId) {
+    if (!customerIds.includes(report.customerId)) {
       return {
         canDownload: false,
         report,
@@ -248,13 +252,27 @@ export class ClientReportService {
       };
     }
 
+    // Check project payment status if report is linked to a project
+    if (report.projectId) {
+      const project = await this.projectRepository.findOne({
+        where: { id: report.projectId }
+      });
+      if (project && !this.isPaymentSatisfied(project)) {
+        return {
+          canDownload: false,
+          report,
+          reason: 'Payment for the associated project is pending. Documents will be available after payment is confirmed.'
+        };
+      }
+    }
+
     return { canDownload: true, report };
   }
 
   /**
-   * Get download statistics for a customer
+   * Get download statistics across all customer accounts
    */
-  async getCustomerStats(customerId: string): Promise<{
+  async getCustomerStats(customerIds: string[]): Promise<{
     total: number;
     accessible: number;
     pending: number;
@@ -263,7 +281,7 @@ export class ClientReportService {
       .createQueryBuilder('report')
       .select('report.accessStatus', 'status')
       .addSelect('COUNT(*)', 'count')
-      .where('report.customerId = :customerId', { customerId })
+      .where('report.customerId IN (:...customerIds)', { customerIds })
       .andWhere('report.isVisible = :isVisible', { isVisible: true })
       .groupBy('report.accessStatus')
       .getRawMany();
@@ -323,5 +341,194 @@ export class ClientReportService {
       select: ['id', 'name', 'status'],
       order: { name: 'ASC' }
     });
+  }
+
+  /**
+   * Get projects with details for client portal (all customers)
+   */
+  async getClientProjects(customerIds: string[]): Promise<any[]> {
+    const projects = await this.projectRepository
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.natureOfWork', 'natureOfWork')
+      .leftJoinAndSelect('project.customer', 'customer')
+      .leftJoin('project.tasks', 'task')
+      .addSelect('COUNT(task.id)', 'totalTasks')
+      .addSelect(
+        "SUM(CASE WHEN task.status = 'done' THEN 1 ELSE 0 END)",
+        'completedTasks'
+      )
+      .where('project.customerId IN (:...customerIds)', { customerIds })
+      .groupBy('project.id')
+      .addGroupBy('natureOfWork.id')
+      .addGroupBy('customer.id')
+      .getRawAndEntities();
+
+    return projects.entities.map((project, index) => {
+      const raw = projects.raw[index];
+      const totalTasks = parseInt(raw.totalTasks || '0', 10);
+      const completedTasks = parseInt(raw.completedTasks || '0', 10);
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      return {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        natureOfWork: project.natureOfWork?.name || null,
+        fiscalYear: project.fiscalYear,
+        startingDate: project.startingDate,
+        endingDate: project.endingDate,
+        isPaymentDone: project.isPaymentDone,
+        isPaymentTemporarilyEnabled: project.isPaymentTemporarilyEnabled,
+        customerName: (project as any).customer?.name || null,
+        customerId: (project as any).customer?.id || null,
+        totalTasks,
+        completedTasks,
+        progress
+      };
+    });
+  }
+
+  /**
+   * Get single project details for client portal
+   */
+  async getClientProjectById(projectId: string, customerIds: string[]): Promise<any> {
+    const project = await this.projectRepository
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.natureOfWork', 'natureOfWork')
+      .leftJoinAndSelect('project.customer', 'customer')
+      .leftJoin('project.tasks', 'task')
+      .addSelect('COUNT(task.id)', 'totalTasks')
+      .addSelect(
+        "SUM(CASE WHEN task.status = 'done' THEN 1 ELSE 0 END)",
+        'completedTasks'
+      )
+      .where('project.id = :projectId', { projectId })
+      .andWhere('project.customerId IN (:...customerIds)', { customerIds })
+      .groupBy('project.id')
+      .addGroupBy('natureOfWork.id')
+      .addGroupBy('customer.id')
+      .getRawAndEntities();
+
+    if (!project.entities.length) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const entity = project.entities[0];
+    const raw = project.raw[0];
+    const totalTasks = parseInt(raw.totalTasks || '0', 10);
+    const completedTasks = parseInt(raw.completedTasks || '0', 10);
+    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Get reports count for this project
+    const reportStats = await this.clientReportRepository
+      .createQueryBuilder('report')
+      .select('report.accessStatus', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('report.projectId = :projectId', { projectId })
+      .andWhere('report.customerId IN (:...customerIds)', { customerIds })
+      .andWhere('report.isVisible = :isVisible', { isVisible: true })
+      .groupBy('report.accessStatus')
+      .getRawMany();
+
+    const reports = { total: 0, accessible: 0, pending: 0 };
+    reportStats.forEach((stat) => {
+      const count = parseInt(stat.count, 10);
+      reports.total += count;
+      if (stat.status === ReportAccessStatus.ACCESSIBLE) {
+        reports.accessible = count;
+      } else if (stat.status === ReportAccessStatus.PENDING) {
+        reports.pending = count;
+      }
+    });
+
+    return {
+      id: entity.id,
+      name: entity.name,
+      description: entity.description,
+      status: entity.status,
+      natureOfWork: entity.natureOfWork?.name || null,
+      fiscalYear: entity.fiscalYear,
+      startingDate: entity.startingDate,
+      endingDate: entity.endingDate,
+      isPaymentDone: entity.isPaymentDone,
+      isPaymentTemporarilyEnabled: entity.isPaymentTemporarilyEnabled,
+      customerName: (entity as any).customer?.name || null,
+      customerId: (entity as any).customer?.id || null,
+      totalTasks,
+      completedTasks,
+      progress,
+      reports
+    };
+  }
+
+  /**
+   * Get all customer (company) details for client portal
+   */
+  async getAllCustomerDetails(customerIds: string[]): Promise<any[]> {
+    const customers = await this.customerRepository.find({
+      where: { id: In(customerIds) },
+      relations: ['legalStatus', 'businessSize', 'industryNature']
+    });
+
+    const results = [];
+
+    for (const customer of customers) {
+      // Get project summary for each customer
+      const projectCounts = await this.projectRepository
+        .createQueryBuilder('project')
+        .select('project.status', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .where('project.customerId = :customerId', { customerId: customer.id })
+        .groupBy('project.status')
+        .getRawMany();
+
+      const projectSummary: Record<string, number> = {};
+      let totalProjects = 0;
+      projectCounts.forEach((pc) => {
+        const count = parseInt(pc.count, 10);
+        projectSummary[pc.status] = count;
+        totalProjects += count;
+      });
+
+      results.push({
+        id: customer.id,
+        name: customer.name,
+        shortName: customer.shortName,
+        panNo: customer.panNo,
+        registeredDate: customer.registeredDate,
+        status: customer.status,
+        address: {
+          country: customer.country,
+          state: customer.state,
+          district: customer.district,
+          localJurisdiction: customer.localJurisdiction,
+          wardNo: customer.wardNo,
+          locality: customer.locality
+        },
+        legalStatus: customer.legalStatus?.name || customer.legalStatusEnum || null,
+        businessSize: customer.businessSize?.name || customer.businessSizeEnum || null,
+        industryNature: customer.industryNature?.name || customer.industryNatureEnum || null,
+        contact: {
+          telephoneNo: customer.telephoneNo,
+          mobileNo: customer.mobileNo,
+          email: customer.email,
+          website: customer.website
+        },
+        projectSummary: {
+          total: totalProjects,
+          ...projectSummary
+        }
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Check if payment is done or temporarily enabled for a project
+   */
+  isPaymentSatisfied(project: Project): boolean {
+    return project.isPaymentDone || project.isPaymentTemporarilyEnabled;
   }
 }

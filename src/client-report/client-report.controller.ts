@@ -174,7 +174,7 @@ export class ClientReportController {
   async findByCustomer(
     @Param('customerId') customerId: string
   ): Promise<ClientReport[]> {
-    return this.clientReportService.findByCustomerId(customerId);
+    return this.clientReportService.findByCustomerIds([customerId]);
   }
 
   /**
@@ -185,7 +185,7 @@ export class ClientReportController {
   async getCustomerStats(
     @Param('customerId') customerId: string
   ): Promise<{ total: number; accessible: number; pending: number }> {
-    return this.clientReportService.getCustomerStats(customerId);
+    return this.clientReportService.getCustomerStats([customerId]);
   }
 
   /**

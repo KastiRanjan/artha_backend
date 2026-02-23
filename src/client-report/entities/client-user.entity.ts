@@ -39,9 +39,6 @@ export class ClientUser extends CustomBaseEntity {
   })
   customers: Customer[];
 
-  // Currently selected customer for the session (not persisted, set during login)
-  selectedCustomerId?: string;
-
   @Column({
     type: 'enum',
     enum: ClientUserStatus,

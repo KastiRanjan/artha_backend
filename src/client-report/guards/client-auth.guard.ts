@@ -46,9 +46,9 @@ export class ClientAuthGuard implements CanActivate {
         throw new UnauthorizedException('Account is not active');
       }
 
-      // Attach user to request with selected customerId from token
+      // Attach user to request with all customerIds from profile
       request.clientUser = user;
-      request.clientUser.selectedCustomerId = payload.customerId;
+      request.clientUser.customerIds = (user.customers || []).map((c: any) => c.id);
       
       return true;
     } catch (error) {

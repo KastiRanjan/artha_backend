@@ -71,4 +71,12 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   countsForAvailability?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPaymentDone?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPaymentTemporarilyEnabled?: boolean;
 }
