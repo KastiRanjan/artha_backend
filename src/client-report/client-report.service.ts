@@ -14,6 +14,7 @@ import {
 } from './dto/client-report.dto';
 import { Project } from 'src/projects/entities/project.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @Injectable()
 export class ClientReportService {
@@ -25,7 +26,9 @@ export class ClientReportService {
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
     @InjectRepository(Customer)
-    private readonly customerRepository: Repository<Customer>
+    private readonly customerRepository: Repository<Customer>,
+    @InjectRepository(UserEntity)
+    private readonly staffUserRepository: Repository<UserEntity>
   ) {}
 
   /**
@@ -114,6 +117,51 @@ export class ClientReportService {
     await this.clientReportFileRepository.save(reportFiles);
 
     return this.findOne(savedReport.id);
+  }
+
+  /**
+   * Get reports scoped to the current staff user's accessible customers.
+   * Superusers see all reports; everyone else only sees reports for customers
+   * they have at least one project assigned to.
+   */
+  async findForStaff(filterDto: ClientReportFilterDto, user: UserEntity): Promise<ClientReport[]> {
+    const query = this.clientReportRepository
+      .createQueryBuilder('report')
+      .leftJoinAndSelect('report.customer', 'customer')
+      .leftJoinAndSelect('report.project', 'project')
+      .leftJoinAndSelect('report.documentType', 'documentType')
+      .leftJoinAndSelect('report.files', 'files')
+      .orderBy('report.createdAt', 'DESC');
+
+    if (user.role?.name !== 'superuser') {
+      const rows = await this.projectRepository
+        .createQueryBuilder('project')
+        .select('DISTINCT project.customerId', 'customerId')
+        .innerJoin('project.users', 'pu', 'pu.id = :userId', { userId: user.id })
+        .getRawMany();
+
+      const customerIds = rows.map((r) => r.customerId).filter(Boolean);
+      if (customerIds.length === 0) return [];
+      query.andWhere('report.customerId IN (:...customerIds)', { customerIds });
+    }
+
+    if (filterDto.customerId) {
+      query.andWhere('report.customerId = :customerId', { customerId: filterDto.customerId });
+    }
+    if (filterDto.projectId) {
+      query.andWhere('report.projectId = :projectId', { projectId: filterDto.projectId });
+    }
+    if (filterDto.documentTypeId) {
+      query.andWhere('report.documentTypeId = :documentTypeId', { documentTypeId: filterDto.documentTypeId });
+    }
+    if (filterDto.accessStatus) {
+      query.andWhere('report.accessStatus = :accessStatus', { accessStatus: filterDto.accessStatus });
+    }
+    if (filterDto.fiscalYear) {
+      query.andWhere('report.fiscalYear = :fiscalYear', { fiscalYear: filterDto.fiscalYear });
+    }
+
+    return query.getMany();
   }
 
   /**
@@ -526,14 +574,52 @@ export class ClientReportService {
   }
 
   /**
-   * Get projects by customer ID (for report creation dropdown)
+   * Get projects by customer ID (for report creation dropdown).
+   * If user is not superuser, only returns projects they are assigned to.
    */
-  async getProjectsByCustomer(customerId: string): Promise<Project[]> {
-    return this.projectRepository.find({
-      where: { customer: { id: customerId } },
-      select: ['id', 'name', 'status'],
-      order: { name: 'ASC' }
-    });
+  async getProjectsByCustomer(customerId: string, user?: UserEntity): Promise<{ id: string; name: string; status: string }[]> {
+    const qb = this.projectRepository
+      .createQueryBuilder('project')
+      .select(['project.id', 'project.name', 'project.status'])
+      .where('project.customerId = :customerId', { customerId })
+      .orderBy('project.name', 'ASC');
+
+    if (user && user.role?.name !== 'superuser') {
+      qb.innerJoin('project.users', 'pu', 'pu.id = :userId', { userId: user.id });
+    }
+
+    return qb.getMany();
+  }
+
+  /**
+   * Return all projects (all statuses) accessible to the current staff user,
+   * with their customer info — used to populate the client + project dropdowns
+   * in the admin upload/edit form while respecting project-level access.
+   * Superusers receive all projects; everyone else only sees their assigned ones.
+   */
+  async getAccessibleProjectsForStaff(
+    user: UserEntity
+  ): Promise<{ id: string; name: string; status: string; customer: { id: string; name: string; shortName?: string } | null }[]> {
+    const qb = this.projectRepository
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.customer', 'customer')
+      .orderBy('customer.name', 'ASC')
+      .addOrderBy('project.name', 'ASC');
+
+    if (user.role?.name !== 'superuser') {
+      qb.innerJoin('project.users', 'pu', 'pu.id = :userId', { userId: user.id });
+    }
+
+    const projects = await qb.getMany();
+
+    return projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      customer: p.customer
+        ? { id: p.customer.id, name: p.customer.name, shortName: p.customer.shortName }
+        : null
+    }));
   }
 
   /**

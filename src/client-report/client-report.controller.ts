@@ -288,13 +288,37 @@ export class ClientReportController {
   }
 
   /**
-   * Get projects by customer (for dropdown when creating reports)
+   * Get projects by customer (for dropdown when creating reports).
+   * Filtered to user-assigned projects for non-superusers.
    */
   @Get('customer/:customerId/projects')
   @UseGuards(JwtTwoFactorGuard, PermissionGuard)
   async getProjectsByCustomer(
-    @Param('customerId') customerId: string
+    @Param('customerId') customerId: string,
+    @GetUser() user: UserEntity
   ) {
-    return this.clientReportService.getProjectsByCustomer(customerId);
+    return this.clientReportService.getProjectsByCustomer(customerId, user);
+  }
+
+  /**
+   * Get all projects accessible to the current staff user (all statuses),
+   * with customer info — for populating the client + project dropdowns.
+   */
+  @Get('staff/accessible-projects')
+  @UseGuards(JwtTwoFactorGuard)
+  async getAccessibleProjects(@GetUser() user: UserEntity) {
+    return this.clientReportService.getAccessibleProjectsForStaff(user);
+  }
+
+  /**
+   * Get reports scoped to the current staff user's accessible customers.
+   */
+  @Get('staff/reports')
+  @UseGuards(JwtTwoFactorGuard, PermissionGuard)
+  async findForStaff(
+    @Query() filterDto: ClientReportFilterDto,
+    @GetUser() user: UserEntity
+  ): Promise<ClientReport[]> {
+    return this.clientReportService.findForStaff(filterDto, user);
   }
 }

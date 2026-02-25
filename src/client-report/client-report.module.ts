@@ -7,6 +7,7 @@ import { ClientReportFile } from './entities/client-report-file.entity';
 import { ClientUser } from './entities/client-user.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { Project } from 'src/projects/entities/project.entity';
+import { UserEntity } from 'src/auth/entity/user.entity';
 import { ClientReportService } from './client-report.service';
 import { ClientUserService } from './client-user.service';
 import { ClientReportController } from './client-report.controller';
@@ -17,7 +18,7 @@ import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ClientReport, ClientReportFile, ClientUser, Customer, Project]),
+    TypeOrmModule.forFeature([ClientReport, ClientReportFile, ClientUser, Customer, Project, UserEntity]),
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: process.env.JWT_SECRET || 'your-secret-key',

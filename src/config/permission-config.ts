@@ -3222,6 +3222,28 @@ export const PermissionConfiguration: PermissionConfigInterface = {
               description: 'View projects for customer dropdown'
             }
           ]
+        },
+        {
+          name: 'Get single client report',
+          route: [
+            {
+              path: '/client-reports/:id',
+              method: MethodList.GET,
+              resource: 'client-reports',
+              description: 'View single client report by ID'
+            }
+          ]
+        },
+        {
+          name: 'Get staff accessible reports',
+          route: [
+            {
+              path: '/client-reports/staff/reports',
+              method: MethodList.GET,
+              resource: 'client-reports',
+              description: 'Get reports scoped to the current staff user\'s accessible customers'
+            }
+          ]
         }
       ]
     },
