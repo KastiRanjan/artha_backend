@@ -16,12 +16,15 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { UserEntity } from 'src/auth/entity/user.entity';
 import { ImportTaskDto } from './dto/import-task.dto';
 import { ImportTaskTemplateDto } from './dto/import-taskTemplate.dto';
 import { BulkUpdateTaskDto } from './dto/bulk-update-task.dto';
 import { MarkCompleteTaskDto } from './dto/mark-complete-task.dto';
 import { FirstVerifyTaskDto } from './dto/first-verify-task.dto';
 import { SecondVerifyTaskDto } from './dto/second-verify-task.dto';
+import { CompleteAllProjectTasksDto } from './dto/complete-all-project-tasks.dto';
 
 @ApiTags('tasks')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -89,6 +92,15 @@ export class TasksController {
   @Patch('/mark-complete')
   markComplete(@Body() markCompleteTaskDto: MarkCompleteTaskDto) {
     return this.tasksService.markTasksComplete(markCompleteTaskDto);
+  }
+
+  @Patch('/project/:projectId/complete-all')
+  completeAllProjectTasks(
+    @Param('projectId') projectId: string,
+    @GetUser() user: UserEntity,
+    @Body() completeAllProjectTasksDto: CompleteAllProjectTasksDto
+  ) {
+    return this.tasksService.completeAllProjectTasks(projectId, user, completeAllProjectTasksDto);
   }
 
   @Patch('/first-verify')

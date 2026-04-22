@@ -80,7 +80,7 @@ export class ProjectsController {
   }
 
   @Post(':id/complete')
-  @ApiOperation({ summary: 'Mark project as completed (project lead or manager only)' })
+  @ApiOperation({ summary: 'Mark project as completed (project lead, manager, or superuser)' })
   completeProject(@Param('id') id: string, @GetUser() user: UserEntity) {
     return this.projectsService.completeProject(id, user);
   }

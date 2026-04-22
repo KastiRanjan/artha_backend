@@ -545,10 +545,10 @@ export class ProjectsService {
     // Check if user is authorized (project lead or project manager)
     const isProjectLead = project.projectLead?.id === user.id;
     const isProjectManager = project.projectManager?.id === user.id;
-    const isSuperUser = user.role?.name === 'superuser';
+    const isSuperUser = (user.role?.name || '').toLowerCase() === 'superuser';
 
     if (!isProjectLead && !isProjectManager && !isSuperUser) {
-      throw new Error('Only project lead or project manager can mark project as completed');
+      throw new Error('Only project lead, project manager, or superuser can mark project as completed');
     }
 
     // Check if all tasks are completed

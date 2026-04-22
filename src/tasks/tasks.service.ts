@@ -16,6 +16,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { MarkCompleteTaskDto } from './dto/mark-complete-task.dto';
 import { FirstVerifyTaskDto } from './dto/first-verify-task.dto';
 import { SecondVerifyTaskDto } from './dto/second-verify-task.dto';
+import { CompleteAllProjectTasksDto } from './dto/complete-all-project-tasks.dto';
 import { Task } from './entities/task.entity';
 import { In } from 'typeorm'; // Add this import
 import { BulkUpdateTaskDto } from './dto/bulk-update-task.dto';
@@ -1428,6 +1429,161 @@ export class TasksService {
         failed: errors.length
       },
       message: `${results.length} task(s) marked complete${errors.length > 0 ? `, ${errors.length} failed` : ''}`
+    };
+  }
+
+  async completeAllProjectTasks(
+    projectId: string,
+    user: UserEntity,
+    payload?: CompleteAllProjectTasksDto
+  ): Promise<any> {
+    const project = await this.projectRepository.findOne({ where: { id: projectId } });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    const actor = await this.userRepository.findOne({ where: { id: user.id } });
+    if (!actor) {
+      throw new NotFoundException(`User with ID ${user.id} not found`);
+    }
+
+    const selectedTaskIds = Array.isArray(payload?.taskIds)
+      ? Array.from(new Set(payload.taskIds.map((id) => String(id))))
+      : [];
+
+    let tasks: Task[] = [];
+    if (selectedTaskIds.length > 0) {
+      tasks = await this.taskRepository.find({
+        where: {
+          id: In(selectedTaskIds),
+          project: { id: projectId }
+        }
+      });
+
+      if (tasks.length !== selectedTaskIds.length) {
+        const foundTaskIds = new Set(tasks.map((task) => String(task.id)));
+        const missingTaskIds = selectedTaskIds.filter((id) => !foundTaskIds.has(id));
+        throw new BadRequestException(
+          `Some selected tasks do not belong to this project or were not found: ${missingTaskIds.join(', ')}`
+        );
+      }
+    } else {
+      tasks = await this.taskRepository.find({
+        where: { project: { id: projectId } }
+      });
+    }
+
+    if (!tasks.length) {
+      return {
+        success: [],
+        summary: {
+          total: 0,
+          updated: 0,
+          completed: 0,
+          firstVerified: 0,
+          secondVerified: 0,
+          automatedDescriptionUpdated: 0
+        },
+        message: selectedTaskIds.length > 0
+          ? 'No matching tasks found for the selected task IDs'
+          : 'No tasks found for this project'
+      };
+    }
+
+    const automatedNote = 'Completed by automated system.';
+    const now = new Date();
+
+    let completed = 0;
+    let firstVerified = 0;
+    let secondVerified = 0;
+    let automatedDescriptionUpdated = 0;
+
+    const updatedTasks: Task[] = [];
+
+    for (const task of tasks) {
+      let changed = false;
+
+      const currentDescription = (task.description || '').trim();
+      if (!currentDescription.toLowerCase().includes(automatedNote.toLowerCase())) {
+        task.description = currentDescription
+          ? `${currentDescription}\n\n${automatedNote}`
+          : automatedNote;
+        automatedDescriptionUpdated++;
+        changed = true;
+      }
+
+      if (task.status !== 'done') {
+        task.status = 'done';
+        task.completedBy = actor.id;
+        task.completedAt = now;
+        completed++;
+        changed = true;
+      } else {
+        if (!task.completedBy) {
+          task.completedBy = actor.id;
+          changed = true;
+        }
+        if (!task.completedAt) {
+          task.completedAt = now;
+          changed = true;
+        }
+      }
+
+      if (!task.firstVerifiedBy) {
+        task.firstVerifiedBy = actor.id;
+        firstVerified++;
+        changed = true;
+      }
+      if (!task.firstVerifiedAt) {
+        task.firstVerifiedAt = now;
+        changed = true;
+      }
+
+      if (!task.secondVerifiedBy) {
+        task.secondVerifiedBy = actor.id;
+        secondVerified++;
+        changed = true;
+      }
+      if (!task.secondVerifiedAt) {
+        task.secondVerifiedAt = now;
+        changed = true;
+      }
+
+      if (changed) {
+        updatedTasks.push(task);
+      }
+    }
+
+    if (updatedTasks.length) {
+      await this.taskRepository.save(updatedTasks);
+
+      await this.projectTimelineService.log({
+        projectId,
+        userId: actor.id,
+        action: 'tasks_completed_by_automation',
+        details: `${updatedTasks.length} task(s) completed by automated system by ${actor.name || actor.username}.`
+      });
+    }
+
+    return {
+      success: updatedTasks.map((task) => ({
+        taskId: task.id,
+        taskName: task.name,
+        status: task.status,
+        completedBy: task.completedBy,
+        firstVerifiedBy: task.firstVerifiedBy,
+        secondVerifiedBy: task.secondVerifiedBy
+      })),
+      summary: {
+        total: tasks.length,
+        selected: selectedTaskIds.length || tasks.length,
+        updated: updatedTasks.length,
+        completed,
+        firstVerified,
+        secondVerified,
+        automatedDescriptionUpdated
+      },
+      message: `${updatedTasks.length} task(s) updated by automated system`
     };
   }
 

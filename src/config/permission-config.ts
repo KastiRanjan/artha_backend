@@ -1600,6 +1600,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'Complete all task',
+          route: [
+            { path: '/tasks/project/:projectId/complete-all', method: MethodList.PATCH }
+          ]
+        },
+        {
           name: 'first-verify-task',
           route: [
             { path: '/tasks/first-verify', method: MethodList.PATCH }
