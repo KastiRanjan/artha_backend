@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 
 import { UpdateWorklogDto } from './dto/update-worklog.dto';
+import { BulkWorklogReviewDto } from './dto/bulk-worklog-review.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
@@ -86,6 +87,16 @@ export class WorklogController {
   @Get('date/:date/all-users')
   findAllUsersByDate(@Param('date') date: string) {
     return this.worklogService.findAllUsersByDate(date);
+  }
+
+  @Patch('bulk-approve')
+  bulkApprove(@Body() bulkWorklogDto: BulkWorklogReviewDto, @GetUser() user: UserEntity) {
+    return this.worklogService.bulkApprove(bulkWorklogDto.worklogIds, user);
+  }
+
+  @Patch('bulk-reject')
+  bulkReject(@Body() bulkWorklogDto: BulkWorklogReviewDto, @GetUser() user: UserEntity) {
+    return this.worklogService.bulkReject(bulkWorklogDto.worklogIds, bulkWorklogDto.rejectedRemark, user);
   }
 
   @Patch(':id')

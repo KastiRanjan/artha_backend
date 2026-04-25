@@ -431,6 +431,38 @@ export class WorklogService {
     return worklogs;
   }
 
+  async bulkApprove(worklogIds: string[], user: UserEntity) {
+    const uniqueIds = Array.from(new Set((worklogIds || []).map((id) => String(id)).filter(Boolean)));
+    if (uniqueIds.length === 0) {
+      throw new BadRequestException('No worklog IDs were provided');
+    }
+
+    const results = [];
+    for (const id of uniqueIds) {
+      results.push(await this.update(id, { status: 'approved' } as UpdateWorklogDto, user));
+    }
+
+    return results;
+  }
+
+  async bulkReject(worklogIds: string[], rejectedRemark: string | undefined, user: UserEntity) {
+    const uniqueIds = Array.from(new Set((worklogIds || []).map((id) => String(id)).filter(Boolean)));
+    if (uniqueIds.length === 0) {
+      throw new BadRequestException('No worklog IDs were provided');
+    }
+
+    const results = [];
+    for (const id of uniqueIds) {
+      results.push(await this.update(id, { status: 'rejected', rejectedRemark: rejectedRemark || '' } as UpdateWorklogDto, user));
+    }
+
+    return results;
+  }
+
+  async findProjectWorklogs(projectId: string) {
+    return this.findAllWorklog(undefined, undefined, undefined, projectId);
+  }
+
   async findAllUsersByDate(date: string) {
     const startOfDay = moment(date).startOf('day').toDate();
     const endOfDay = moment(date).endOf('day').toDate();

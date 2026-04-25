@@ -16,6 +16,7 @@ import { NotificationModule } from 'src/notification/notification.module';
 import { ProjectsModule } from 'src/projects/projects.module';
 import { LeaveModule } from 'src/leave/leave.module';
 import { HolidayService } from 'src/holiday/holiday.service';
+import { ProjectWorklogController } from './project-worklog.controller';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { HolidayService } from 'src/holiday/holiday.service';
   LeaveModule,
   NotificationModule
   ],
-  controllers: [WorklogController],
+  controllers: [WorklogController, ProjectWorklogController],
   providers: [WorklogService, NotificationService, HolidayService],
   exports: [WorklogService]
 })

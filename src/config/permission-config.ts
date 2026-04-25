@@ -1885,7 +1885,32 @@ export const PermissionConfiguration: PermissionConfigInterface = {
       method: MethodList.GET
     }
   ]
-}
+        },
+        {
+          name: 'Access worklog pages',
+          route: [
+            { path: '/worklogs/user', method: MethodList.GET },
+            { path: '/worklogs/allworklog', method: MethodList.GET }
+          ]
+        },
+        {
+          name: 'Bulk approve worklogs',
+          route: [
+            { path: '/worklogs/bulk-approve', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'Bulk reject worklogs',
+          route: [
+            { path: '/worklogs/bulk-reject', method: MethodList.PATCH }
+          ]
+        },
+        {
+          name: 'View project worklogs',
+          route: [
+            { path: '/projects/:id/worklogs', method: MethodList.GET }
+          ]
+        }
       ]
     },
     {
