@@ -23,9 +23,13 @@ export class ProjectSignoffService {
     createDto: CreateProjectSignoffDto,
     signedOffBy: UserEntity
   ): Promise<ProjectSignoff> {
-    // Only project manager can sign off
-    if (signedOffBy.role.name !== 'projectmanager') {
-      throw new ForbiddenException('Only project manager can sign off projects');
+    const signerRole = signedOffBy?.role?.name?.toLowerCase() || '';
+    const isProjectManager = signerRole === 'projectmanager';
+    const isSuperUser = ['superuser', 'super_user', 'super-user'].includes(signerRole);
+
+    // Allow project manager or superuser to sign off.
+    if (!isProjectManager && !isSuperUser) {
+      throw new ForbiddenException('Only project manager or superuser can sign off projects');
     }
 
     // Verify project exists and is completed
@@ -42,8 +46,8 @@ export class ProjectSignoffService {
       throw new BadRequestException('Project must be completed before sign-off');
     }
 
-    // Check if manager is assigned to this project
-    if (project.projectManager?.id !== signedOffBy.id) {
+    // Superuser can sign off any project; manager must be the assigned manager.
+    if (!isSuperUser && project.projectManager?.id !== signedOffBy.id) {
       throw new ForbiddenException('Only the assigned project manager can sign off this project');
     }
 

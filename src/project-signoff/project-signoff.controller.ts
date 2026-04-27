@@ -27,7 +27,7 @@ export class ProjectSignoffController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create project sign-off (manager only)' })
+  @ApiOperation({ summary: 'Create project sign-off (project manager or superuser)' })
   create(
     @Body() createDto: CreateProjectSignoffDto,
     @GetUser() user: UserEntity
