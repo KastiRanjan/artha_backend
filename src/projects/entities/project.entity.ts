@@ -6,6 +6,7 @@ import { Task } from 'src/tasks/entities/task.entity';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Billing } from 'src/billing/entities/billing.entity';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
+import { NatureOfWorkGroup } from 'src/nature-of-work/entities/nature-of-work-group.entity';
 import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity()
@@ -26,6 +27,12 @@ export class Project extends CustomBaseEntity {
 
   @ManyToOne(() => NatureOfWork, { onDelete: 'SET NULL', nullable: true })
   natureOfWork: NatureOfWork;
+
+  @ManyToOne(() => NatureOfWorkGroup, { onDelete: 'SET NULL', nullable: true })
+  natureOfWorkGroup: NatureOfWorkGroup;
+
+  @Column({ nullable: true, type: 'uuid' })
+  natureOfWorkGroupId: string;
 
   @Column()
   fiscalYear: number;

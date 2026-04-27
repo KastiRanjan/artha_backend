@@ -6,6 +6,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Billing } from 'src/billing/entities/billing.entity';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
+import { NatureOfWorkGroup } from 'src/nature-of-work/entities/nature-of-work-group.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/enums/notification-type.enum';
 import { Repository, IsNull } from 'typeorm';
@@ -40,6 +41,8 @@ export class ProjectsService {
     private billingRepository: Repository<Billing>,
     @InjectRepository(NatureOfWork)
     private natureOfWorkRepository: Repository<NatureOfWork>,
+    @InjectRepository(NatureOfWorkGroup)
+    private natureOfWorkGroupRepository: Repository<NatureOfWorkGroup>,
     @InjectRepository(TaskSuperProject)
     private taskSuperProjectRepository: Repository<TaskSuperProject>,
     @InjectRepository(TaskGroupProject)
@@ -66,6 +69,7 @@ export class ProjectsService {
       client, // Add client property
       billing,
       natureOfWork: natureOfWorkId,
+      natureOfWorkGroup: natureOfWorkGroupId,
       name,
       ...projectData
     } = createProjectDto;
@@ -103,6 +107,16 @@ export class ProjectsService {
     }
 
     // Create a new project and assign the fetched users
+    // Handle NatureOfWorkGroup if provided
+    let natureOfWorkGroupEntity = null;
+    if (natureOfWorkGroupId) {
+      natureOfWorkGroupEntity = await this.natureOfWorkGroupRepository.findOne({ where: { id: natureOfWorkGroupId } });
+    } else if (natureOfWorkEntity && natureOfWorkEntity.groupId) {
+      // Auto-set group from nature of work if it has one
+      natureOfWorkGroupEntity = await this.natureOfWorkGroupRepository.findOne({ where: { id: natureOfWorkEntity.groupId } });
+    }
+
+    // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
       name,
@@ -111,7 +125,8 @@ export class ProjectsService {
       projectManager: manager,
       customer: clientEntity,
       billing: billingEntity,
-      natureOfWork: natureOfWorkEntity
+      natureOfWork: natureOfWorkEntity,
+      natureOfWorkGroup: natureOfWorkGroupEntity
     });
 
     const savedProject = await this.projectRepository.save(project);
@@ -158,14 +173,14 @@ export class ProjectsService {
         where: {
           status: status
         },
-        relations: ['users', 'tasks', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork'],
+        relations: ['users', 'tasks', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork', 'natureOfWorkGroup'],
         order: {
           name: 'ASC' // Order alphabetically by name
         }
       });
     } else {
       const users = await this.userRepository.findOne({
-        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager', 'projects.billing', 'projects.customer', 'projects.users.role', 'projects.natureOfWork'],
+        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager', 'projects.billing', 'projects.customer', 'projects.users.role', 'projects.natureOfWork', 'projects.natureOfWorkGroup'],
         where: {
           id: user.id
         }
@@ -198,7 +213,8 @@ export class ProjectsService {
         'tasks.parentTask.groupProject',
         'billing', 
         'customer', 
-        'natureOfWork'
+        'natureOfWork',
+        'natureOfWorkGroup'
       ]
     });
     
@@ -230,6 +246,7 @@ export class ProjectsService {
       client, // Add client property
       billing,
       natureOfWork,
+      natureOfWorkGroup,
       ...otherUpdates
     } = updateProjectDto;
 
@@ -315,14 +332,32 @@ export class ProjectsService {
         throw new Error(`Nature of work with ID ${natureOfWork} not found`);
       }
       project.natureOfWork = natureOfWorkEntity;
-    }
-    
-    if (updateProjectDto.natureOfWork) {
-      const natureOfWorkEntity = await this.natureOfWorkRepository.findOne({ where: { id: updateProjectDto.natureOfWork } });
-      if (!natureOfWorkEntity) {
-        throw new Error(`Nature of work with ID ${updateProjectDto.natureOfWork} not found`);
+
+      // If explicit group is not provided during update, inherit from selected nature of work.
+      if (natureOfWorkGroup === undefined) {
+        if (natureOfWorkEntity.groupId) {
+          const inheritedGroup = await this.natureOfWorkGroupRepository.findOne({ where: { id: natureOfWorkEntity.groupId } });
+          project.natureOfWorkGroup = inheritedGroup || (undefined as any);
+          project.natureOfWorkGroupId = inheritedGroup?.id || (undefined as any);
+        } else {
+          project.natureOfWorkGroup = undefined as any;
+          project.natureOfWorkGroupId = undefined as any;
+        }
       }
-      project.natureOfWork = natureOfWorkEntity;
+    }
+
+    if (natureOfWorkGroup !== undefined) {
+      if (!natureOfWorkGroup) {
+        project.natureOfWorkGroup = undefined as any;
+        project.natureOfWorkGroupId = undefined as any;
+      } else {
+        const natureOfWorkGroupEntity = await this.natureOfWorkGroupRepository.findOne({ where: { id: natureOfWorkGroup } });
+        if (!natureOfWorkGroupEntity) {
+          throw new Error(`Nature of work group with ID ${natureOfWorkGroup} not found`);
+        }
+        project.natureOfWorkGroup = natureOfWorkGroupEntity;
+        project.natureOfWorkGroupId = natureOfWorkGroupEntity.id;
+      }
     }
 
     // Save the updated project back to the repository

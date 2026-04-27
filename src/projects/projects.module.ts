@@ -12,6 +12,7 @@ import { ProjectsService } from './projects.service';
 import { Billing } from 'src/billing/entities/billing.entity';
 import { BillingService } from 'src/billing/billing.service';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
+import { NatureOfWorkGroup } from 'src/nature-of-work/entities/nature-of-work-group.entity';
 import { NatureOfWorkService } from 'src/nature-of-work/nature-of-work.service';
 import { CustomersModule } from 'src/customers/customers.module';
 import { Customer } from 'src/customers/entities/customer.entity';
@@ -37,6 +38,7 @@ import { UserAvailabilityService } from './user-availability.service';
       Notification, 
       Billing, 
       NatureOfWork,
+      NatureOfWorkGroup,
       Customer,
       TaskSuperProject,
       TaskGroupProject,

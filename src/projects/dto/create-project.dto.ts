@@ -29,6 +29,10 @@ export class CreateProjectDto {
   @IsUUID()
   natureOfWork: string; // Reference to NatureOfWork entity
 
+  @IsOptional()
+  @IsUUID()
+  natureOfWorkGroup?: string; // Reference to NatureOfWorkGroup entity (optional)
+
   @IsNotEmpty()
   @IsInt()
   fiscalYear: number;
