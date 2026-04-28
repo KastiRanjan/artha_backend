@@ -89,7 +89,7 @@ import { ClientReportDocumentTypeModule } from './client-report-document-type/cl
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/',
-      exclude: ['/api*', '/socket.io*']
+      exclude: ['/api*', '/socket.io*', '/document/client-reports*']
     }),
   AuthModule,
   RolesModule,

@@ -13,7 +13,9 @@ import {
   UploadedFile,
   UploadedFiles,
   Res,
-  StreamableFile
+  StreamableFile,
+  BadRequestException,
+  ForbiddenException
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes } from '@nestjs/swagger';
@@ -320,5 +322,84 @@ export class ClientReportController {
     @GetUser() user: UserEntity
   ): Promise<ClientReport[]> {
     return this.clientReportService.findForStaff(filterDto, user);
+  }
+
+  /**
+   * Staff: Download legacy/first file for a report with permission checks.
+   */
+  @Get(':id/download')
+  @UseGuards(JwtTwoFactorGuard)
+  async downloadForStaff(
+    @Param('id') id: string,
+    @GetUser() user: UserEntity,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const report = await this.clientReportService.findOne(id);
+    const canAccess = await this.clientReportService.canStaffAccessReport(report, user);
+
+    if (!canAccess) {
+      throw new ForbiddenException('You do not have permission to access this file.');
+    }
+
+    let filePathToUse = report.filePath;
+    let fileNameToUse = report.originalFileName;
+    let fileTypeToUse = report.fileType;
+
+    if (report.files && report.files.length > 0) {
+      const firstFile = report.files[0];
+      filePathToUse = firstFile.filePath;
+      fileNameToUse = firstFile.displayFileName || firstFile.originalFileName;
+      fileTypeToUse = firstFile.fileType;
+    }
+
+    const filePath = join(process.cwd(), 'public', filePathToUse);
+    if (!existsSync(filePath)) {
+      throw new BadRequestException('File not found on server');
+    }
+
+    const file = createReadStream(filePath);
+    response.set({
+      'Content-Type': fileTypeToUse || 'application/octet-stream',
+      'Content-Disposition': `inline; filename="${fileNameToUse}"`
+    });
+
+    return new StreamableFile(file);
+  }
+
+  /**
+   * Staff: Download a specific file from a report with permission checks.
+   */
+  @Get(':id/files/:fileId/download')
+  @UseGuards(JwtTwoFactorGuard)
+  async downloadFileForStaff(
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+    @GetUser() user: UserEntity,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const report = await this.clientReportService.findOne(id);
+    const canAccess = await this.clientReportService.canStaffAccessReport(report, user);
+
+    if (!canAccess) {
+      throw new ForbiddenException('You do not have permission to access this file.');
+    }
+
+    const reportFile = report.files?.find((f) => f.id === fileId);
+    if (!reportFile) {
+      throw new BadRequestException('File not found in this report');
+    }
+
+    const filePath = join(process.cwd(), 'public', reportFile.filePath);
+    if (!existsSync(filePath)) {
+      throw new BadRequestException('File not found on server');
+    }
+
+    const file = createReadStream(filePath);
+    response.set({
+      'Content-Type': reportFile.fileType || 'application/octet-stream',
+      'Content-Disposition': `inline; filename="${reportFile.displayFileName || reportFile.originalFileName}"`
+    });
+
+    return new StreamableFile(file);
   }
 }

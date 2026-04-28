@@ -247,6 +247,29 @@ export class ClientReportService {
   }
 
   /**
+   * Check whether the given staff user can access a report.
+   * Superusers can access all reports.
+   */
+  async canStaffAccessReport(report: ClientReport, user: UserEntity): Promise<boolean> {
+    if (user.role?.name === 'superuser') {
+      return true;
+    }
+
+    const rows = await this.projectRepository
+      .createQueryBuilder('project')
+      .select('DISTINCT project.customerId', 'customerId')
+      .innerJoin('project.users', 'pu', 'pu.id = :userId', { userId: user.id })
+      .getRawMany();
+
+    const customerIds = rows.map((r) => r.customerId).filter(Boolean);
+    if (customerIds.length === 0) {
+      return false;
+    }
+
+    return customerIds.includes(report.customerId);
+  }
+
+  /**
    * Update report details (Admin only)
    */
   async update(
@@ -256,9 +279,14 @@ export class ClientReportService {
   ): Promise<ClientReport> {
     const report = await this.findOne(id);
 
-    const { documentTypeId, ...restDto } = updateDto;
+    const { projectId, documentTypeId, ...restDto } = updateDto;
     
     Object.assign(report, restDto);
+
+    // Handle relation-backed foreign keys separately to avoid duplicate column writes.
+    if (projectId !== undefined) {
+      report.project = projectId ? { id: projectId } as any : null;
+    }
     
     // Handle documentType relation separately
     if (documentTypeId !== undefined) {
