@@ -64,8 +64,8 @@ export class ProjectsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.projectsService.remove(id);
+  remove(@Param('id') id: string, @Query('deleteTasks') deleteTasks?: string) {
+    return this.projectsService.remove(id, deleteTasks === 'true');
   }
 
   @Get('users/:uid')

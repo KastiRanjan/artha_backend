@@ -27,6 +27,7 @@ import { TaskGroup } from 'src/task-groups/entities/task-group.entity';
 import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 import { ProjectUserAssignment } from './entities/project-user-assignment.entity';
 import { UserAvailabilityService } from './user-availability.service';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 
 @Module({
   imports: [
@@ -46,7 +47,8 @@ import { UserAvailabilityService } from './user-availability.service';
       TaskSuper,
       TaskGroup,
       TaskTemplate,
-      ProjectUserAssignment
+      ProjectUserAssignment,
+      Worklog
     ]),
     CustomersModule,
     BusinessSizeModule,

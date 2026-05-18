@@ -166,21 +166,39 @@ export class TasksService {
       }
     }
 
-    // Check for both group and groupProject
-    let group = null;
+    // STRICT: Only accept TaskGroupProject (project-scoped), never template TaskGroup
     let groupProject = null;
     
     if (groupId) {
-      // First check if it's a template group
-      group = await this.taskGroupRepository.findOne({ 
-        where: { id: groupId }
+      // Only look for project-scoped TaskGroupProject
+      groupProject = await this.taskGroupProjectRepository.findOne({
+        where: { id: groupId },
+        relations: ['taskSuper']
       });
       
-      // If not found, check if it's a project-specific group
-      if (!group) {
-        groupProject = await this.taskGroupProjectRepository.findOne({
+      if (groupProject) {
+        // Validate that the groupProject belongs to the same project
+        if (groupProject.projectId !== projectId) {
+          throw new BadRequestException(
+            `Invalid groupId: TaskGroupProject belongs to different project. Expected: ${projectId}, Got: ${groupProject.projectId}`
+          );
+        }
+      } else {
+        // Check if someone mistakenly sent a template TaskGroup ID
+        const templateGroup = await this.taskGroupRepository.findOne({
           where: { id: groupId }
         });
+        
+        if (templateGroup) {
+          throw new BadRequestException(
+            `Invalid groupId: Cannot use template TaskGroup ID directly. Please use the project-scoped TaskGroupProject ID. ` +
+            `Fetch it using GET /projects/:projectId/task-groups-project`
+          );
+        } else {
+          throw new NotFoundException(
+            `TaskGroupProject with ID ${groupId} not found in project ${projectId}`
+          );
+        }
       }
     }
 
@@ -1148,26 +1166,37 @@ export class TasksService {
     task.rank = updateTaskDto.rank !== undefined ? updateTaskDto.rank : task.rank;
     task.budgetedHours = updateTaskDto.budgetedHours !== undefined ? updateTaskDto.budgetedHours : task.budgetedHours;
     
-    // Update task group if provided
+    // Update task group if provided - ONLY accept TaskGroupProject (project-scoped)
     if (updateTaskDto.groupId) {
-      // First check if it's a template group
-      const group = await this.taskGroupRepository.findOne({ 
-        where: { id: updateTaskDto.groupId }
+      // Strictly check for project-specific TaskGroupProject ONLY
+      // Template TaskGroup IDs should NEVER be assigned to tasks
+      const groupProject = await this.taskGroupProjectRepository.findOne({
+        where: { id: updateTaskDto.groupId },
+        relations: ['taskSuper']
       });
       
-      // TaskGroup is no longer directly related to Task, only via groupProject
-      // If found, don't try to set task.group as it no longer exists
-      if (group) {
-        // Clear the groupProject since we're no longer associating with a group
-        task.groupProject = null;
+      if (groupProject) {
+        // Ensure the task's project matches the groupProject's project
+        if (task.project?.id !== groupProject.projectId) {
+          throw new BadRequestException(
+            `Cannot assign TaskGroup from different project. Task project: ${task.project?.id}, TaskGroup project: ${groupProject.projectId}`
+          );
+        }
+        task.groupProject = groupProject;
       } else {
-        // If not found, check if it's a project-specific group
-        const groupProject = await this.taskGroupProjectRepository.findOne({
+        // Check if someone mistakenly sent a template TaskGroup ID
+        const templateGroup = await this.taskGroupRepository.findOne({
           where: { id: updateTaskDto.groupId }
         });
         
-        if (groupProject) {
-          task.groupProject = groupProject;
+        if (templateGroup) {
+          throw new BadRequestException(
+            `Invalid groupId: Cannot assign template TaskGroup directly to tasks. Please use the project-scoped TaskGroupProject ID instead. Fetch project groups using GET /projects/:projectId/task-groups-project.`
+          );
+        } else {
+          throw new NotFoundException(
+            `TaskGroupProject with ID ${updateTaskDto.groupId} not found`
+          );
         }
       }
     }

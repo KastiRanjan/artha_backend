@@ -27,6 +27,7 @@ import { ProjectUserAssignment } from './entities/project-user-assignment.entity
 import { AssignUserToProjectDto } from './dto/assign-user-to-project.dto';
 import { ReleaseUserFromProjectDto } from './dto/release-user-from-project.dto';
 import { UpdateUserAssignmentDto } from './dto/update-user-assignment.dto';
+import { Worklog } from 'src/worklog/entities/worklog.entity';
 dotenv.config();
 
 @Injectable()
@@ -57,6 +58,8 @@ export class ProjectsService {
     private taskTemplateRepository: Repository<TaskTemplate>,
     @InjectRepository(ProjectUserAssignment)
     private assignmentRepository: Repository<ProjectUserAssignment>,
+    @InjectRepository(Worklog)
+    private worklogRepository: Repository<Worklog>,
     private readonly notificationService: NotificationService,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
@@ -375,16 +378,55 @@ export class ProjectsService {
     return ProjectDateFormatter.addNepaliDates(updatedProject);
   }
 
-  async remove(id: string) {
+  async remove(id: string, deleteTasks = false) {
     // Find the project by its ID
     const project = await this.projectRepository.findOne({
-      where: { id }
+      where: { id },
+      relations: ['users', 'tasks', 'tasks.assignees', 'tasks.assignees.role']
     });
 
     // If the project is not found, you can throw an error or handle it accordingly
     if (!project) {
       throw new Error(`Project with ID ${id} not found`);
     }
+
+    const assignedTasks = (project.tasks || []).filter((task) => (task.assignees || []).length > 0);
+
+    if (assignedTasks.length > 0 && !deleteTasks) {
+      throw new BadRequestException({
+        code: 'PROJECT_HAS_ASSIGNED_TASKS',
+        message: 'Project has tasks assigned to users. Confirm task and worklog deletion before deleting the project.',
+        tasks: assignedTasks.map((task) => ({
+          id: task.id,
+          name: task.name,
+          status: task.status,
+          assignees: task.assignees.map((user) => ({
+            id: user.id,
+            name: user.name,
+            role: user.role?.name
+          }))
+        }))
+      });
+    }
+
+    if ((project.tasks || []).length > 0) {
+      const taskIds = project.tasks.map((task) => task.id);
+      await this.worklogRepository
+        .createQueryBuilder()
+        .delete()
+        .where('"taskId" IN (:...taskIds)', { taskIds })
+        .execute();
+      await this.taskRepository.remove(project.tasks);
+    }
+
+    await this.worklogRepository
+      .createQueryBuilder()
+      .delete()
+      .where('"projectId" = :id', { id })
+      .execute();
+    await this.taskGroupProjectRepository.delete({ projectId: id });
+    await this.taskSuperProjectRepository.delete({ projectId: id });
+    await this.assignmentRepository.delete({ projectId: id });
 
     // Remove the project
     await this.projectRepository.remove(project);

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TaskGroupsService } from './task-groups.service';
 import { TaskGroupsController } from './task-groups.controller';
+import { TaskGroupProjectController } from './task-group-project.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TaskGroup } from './entities/task-group.entity';
 import { TaskGroupProject } from './entities/task-group-project.entity';
@@ -11,7 +12,7 @@ import { TaskSuperProject } from 'src/task-super/entities/task-super-project.ent
 
 @Module({
   imports: [TypeOrmModule.forFeature([TaskGroup, TaskGroupProject, Task, TaskTemplate, TaskSuper, TaskSuperProject])],
-  controllers: [TaskGroupsController],
+  controllers: [TaskGroupsController, TaskGroupProjectController],
   providers: [TaskGroupsService]
 })
 export class TaskGroupsModule {}
