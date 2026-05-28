@@ -19,7 +19,7 @@ export class EmailTemplateSeedService implements OnModuleInit {
     try {
       // Check if notice-board template exists by slug
       const existingTemplateBySlug = await this.emailTemplateRepository.findOne({ 
-        where: { slug: 'notice-board' } 
+        where: { slug: 'notice-board-notification' } 
       });
       
       // Also check by title since that might be a unique constraint
@@ -31,9 +31,9 @@ export class EmailTemplateSeedService implements OnModuleInit {
         // Create notice-board email template directly using repository to avoid validation errors
         const noticeTemplate = this.emailTemplateRepository.create({
           title: 'Notice Board Notification',
-          sender: 'no-reply@example.com', // Update with your actual sender email
+          sender: process.env.MAIL_FROM || 'noreply@artha.com',
           subject: 'New Notice: {{noticeTitle}}',
-          slug: 'notice-board',
+          slug: 'notice-board-notification',
           body: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #333;">{{noticeTitle}}</h1>
@@ -59,6 +59,13 @@ export class EmailTemplateSeedService implements OnModuleInit {
         await this.emailTemplateRepository.save(noticeTemplate);
         this.logger.log('Notice board email template created successfully');
       } else {
+        if (existingTemplateByTitle && existingTemplateByTitle.slug !== 'notice-board-notification') {
+          existingTemplateByTitle.slug = 'notice-board-notification';
+          existingTemplateByTitle.sender = existingTemplateByTitle.sender || process.env.MAIL_FROM || 'noreply@artha.com';
+          existingTemplateByTitle.subject = existingTemplateByTitle.subject || 'New Notice: {{noticeTitle}}';
+          await this.emailTemplateRepository.save(existingTemplateByTitle);
+          this.logger.log('Notice board email template slug repaired');
+        }
         this.logger.log('Notice board email template already exists, skipping creation');
       }
     } catch (error) {

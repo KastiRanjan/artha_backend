@@ -41,12 +41,64 @@ export class EmailTemplateService
    * @param slug
    */
   async findBySlug(slug) {
-    return await this.repository.findOne({
+    const template = await this.repository.findOne({
       select: ['body'],
       where: {
         slug
       }
     });
+
+    if (template) {
+      return template;
+    }
+
+    if (slug === 'notice-board-notification') {
+      const noticeTemplate = await this.repository.findOne({
+        where: {
+          title: 'Notice Board Notification'
+        }
+      });
+
+      if (noticeTemplate) {
+        await this.repository.update(noticeTemplate.id, {
+          slug: 'notice-board-notification',
+          subject: 'New Notice: {{noticeTitle}}',
+          sender: noticeTemplate.sender || process.env.MAIL_FROM || 'noreply@artha.com',
+          body: noticeTemplate.body || this.getDefaultNoticeBoardTemplateBody()
+        });
+
+        return this.repository.findOne({
+          select: ['body'],
+          where: {
+            slug
+          }
+        });
+      }
+    }
+
+    return null;
+  }
+
+  getDefaultNoticeBoardTemplateBody() {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">{{noticeTitle}}</h1>
+        <p>Hello {{name}},</p>
+        <p>A new notice has been posted that requires your attention.</p>
+        <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #007bff; background-color: #f8f9fa;">
+          <p>{{noticeDescription}}</p>
+        </div>
+        {{#if imageUrl}}
+        <div style="margin: 20px 0;">
+          <img src="{{imageUrl}}" alt="Notice Image" style="max-width: 100%; height: auto;" />
+        </div>
+        {{/if}}
+        <p>Please log in to your account to view this notice in detail.</p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+          <p>This is an automated message, please do not reply to this email.</p>
+        </div>
+      </div>
+    `;
   }
 
   /**

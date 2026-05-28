@@ -560,7 +560,7 @@ export class ClientReportService {
     reportId: string,
     fileId: string,
     userId: string
-  ): Promise<ClientReport | null> {
+  ): Promise<ClientReport> {
     const report = await this.findOne(reportId);
     
     const file = report.files?.find(f => f.id === fileId);
@@ -577,18 +577,6 @@ export class ClientReportService {
     await this.clientReportFileRepository.delete(file.id);
 
     const remainingFiles = (report.files || []).filter(f => f.id !== fileId);
-    if (remainingFiles.length === 0) {
-      if (report.filePath && report.filePath !== file.filePath) {
-        const legacyPath = join(process.cwd(), 'public', report.filePath);
-        if (existsSync(legacyPath)) {
-          unlinkSync(legacyPath);
-        }
-      }
-
-      await this.clientReportRepository.remove(report);
-      return null as any;
-    }
-
     const deletedLegacyFile = report.filePath === file.filePath;
 
     if (deletedLegacyFile) {
@@ -607,11 +595,9 @@ export class ClientReportService {
   }
 
   private async cleanMissingFilesFromReports(reports: ClientReport[]): Promise<ClientReport[]> {
-    const cleanedReports = await Promise.all(
+    return Promise.all(
       reports.map(report => this.cleanMissingFilesFromReport(report))
     );
-
-    return cleanedReports.filter(report => this.reportHasExistingFile(report));
   }
 
   private async cleanMissingFilesFromReport(report: ClientReport): Promise<ClientReport> {
@@ -650,17 +636,6 @@ export class ClientReportService {
     return report;
   }
 
-  private reportHasExistingFile(report: ClientReport): boolean {
-    if (report.files?.length > 0) {
-      return true;
-    }
-
-    if (!report.filePath) {
-      return false;
-    }
-
-    return existsSync(join(process.cwd(), 'public', report.filePath));
-  }
 
   /**
    * Update display name of a specific file
