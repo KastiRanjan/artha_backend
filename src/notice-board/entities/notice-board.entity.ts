@@ -52,6 +52,14 @@ export class NoticeBoard extends CustomBaseEntity {
     @Column({ default: false })
     emailSent: boolean;
 
+    @Column({ type: 'simple-json', nullable: true })
+    emailFailedRecipients: Array<{
+        id: string;
+        name: string;
+        email: string;
+        reason: string;
+    }>;
+
     @CreateDateColumn()
     createdAt: Date;
 

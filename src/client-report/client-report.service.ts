@@ -572,6 +572,18 @@ export class ClientReportService {
 
     await this.clientReportFileRepository.remove(file);
 
+    const remainingFiles = (report.files || []).filter(f => f.id !== fileId);
+    const deletedLegacyFile = report.filePath === file.filePath;
+
+    if (deletedLegacyFile) {
+      const nextFile = remainingFiles[0];
+      report.filePath = nextFile?.filePath || null;
+      report.originalFileName = nextFile?.originalFileName || null;
+      report.displayFileName = nextFile?.displayFileName || nextFile?.originalFileName || null;
+      report.fileType = nextFile?.fileType || null;
+      report.fileSize = nextFile?.fileSize || null;
+    }
+
     report.updatedBy = userId;
     await this.clientReportRepository.save(report);
 

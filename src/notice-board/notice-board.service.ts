@@ -8,6 +8,20 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { RoleEntity } from 'src/role/entities/role.entity';
 import { MailService } from 'src/mail/mail.service';
 import { NotificationType } from 'src/notification/enums/notification-type.enum';
+import { NotificationService } from 'src/notification/notification.service';
+
+type EmailFailedRecipient = {
+  id: string;
+  name: string;
+  email: string;
+  reason: string;
+};
+
+type NoticeEmailResult = {
+  attempted: number;
+  successful: number;
+  failedRecipients: EmailFailedRecipient[];
+};
 
 @Injectable()
 export class NoticeBoardService {
@@ -19,6 +33,7 @@ export class NoticeBoardService {
     @InjectRepository(RoleEntity)
     private readonly roleRepository: Repository<RoleEntity>,
     private readonly mailService: MailService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(createNoticeBoardDto: CreateNoticeBoardDto, currentUser: UserEntity) {
@@ -90,9 +105,10 @@ export class NoticeBoardService {
     const savedNotice = await this.noticeBoardRepository.save(noticeBoard);
 
     // Send email if requested
+    let emailResult: NoticeEmailResult | null = null;
     if (createNoticeBoardDto.sendEmail && savedNotice.users.length > 0) {
       console.log('Sending email notifications for notice:', savedNotice.id);
-      const emailResult = await this.sendNoticeBoardEmails(savedNotice);
+      emailResult = await this.sendNoticeBoardEmails(savedNotice);
       console.log('Email sending result:', emailResult);
     } else {
       console.log('Not sending emails. sendEmail flag:', createNoticeBoardDto.sendEmail, 'User count:', savedNotice.users.length);
@@ -100,12 +116,24 @@ export class NoticeBoardService {
 
     // Send real-time notification to all relevant users
     if (savedNotice.users && savedNotice.users.length > 0) {
-      await (this as any).notificationService.create({
-        users: savedNotice.users.map(u => u.id),
-        message: `A notice has been published: "${savedNotice.title}"`,
-        link: `/noticeboard/}`,
-        type: NotificationType.NOTICEBOARD
-      });
+      try {
+        await this.notificationService.create({
+          users: savedNotice.users.map(u => u.id),
+          message: `A notice has been published: "${savedNotice.title}"`,
+          link: `/notice-board/${savedNotice.id}`,
+          type: NotificationType.NOTICEBOARD
+        });
+      } catch (notificationError) {
+        console.error('Notice created, but failed to create real-time notification:', notificationError);
+      }
+    }
+
+    if (emailResult?.failedRecipients.length) {
+      return {
+        ...savedNotice,
+        emailDelivery: emailResult,
+        message: this.buildEmailFailureMessage(emailResult.failedRecipients),
+      };
     }
 
     return savedNotice;
@@ -213,9 +241,10 @@ export class NoticeBoardService {
     }
 
     // Send email if requested
+    let emailResult: NoticeEmailResult | null = null;
     if (updateNoticeBoardDto.sendEmail && noticeBoard.users.length > 0) {
       console.log('Sending email notifications for updated notice:', noticeBoard.id);
-      const emailResult = await this.sendNoticeBoardEmails(noticeBoard);
+      emailResult = await this.sendNoticeBoardEmails(noticeBoard);
       console.log('Email sending result:', emailResult);
     } else {
       console.log('Not sending emails for update. sendEmail flag:', updateNoticeBoardDto.sendEmail, 'User count:', noticeBoard.users.length);
@@ -223,15 +252,27 @@ export class NoticeBoardService {
 
     // Send real-time notification to all relevant users on update
     if (noticeBoard.users && noticeBoard.users.length > 0) {
-      await (this as any).notificationService.create({
-        users: noticeBoard.users.map(u => u.id),
-        message: `Notice updated: "${noticeBoard.title}"`,
-        link: `/noticeboard/${noticeBoard.id}`,
-        type: NotificationType.NOTICEBOARD
-      });
+      try {
+        await this.notificationService.create({
+          users: noticeBoard.users.map(u => u.id),
+          message: `Notice updated: "${noticeBoard.title}"`,
+          link: `/notice-board/${noticeBoard.id}`,
+          type: NotificationType.NOTICEBOARD
+        });
+      } catch (notificationError) {
+        console.error('Notice updated, but failed to create real-time notification:', notificationError);
+      }
     }
 
     const updatedNotice = await this.noticeBoardRepository.save(noticeBoard);
+    if (emailResult?.failedRecipients.length) {
+      return {
+        ...updatedNotice,
+        emailDelivery: emailResult,
+        message: this.buildEmailFailureMessage(emailResult.failedRecipients),
+      };
+    }
+
     return updatedNotice;
   }
 
@@ -323,13 +364,14 @@ export class NoticeBoardService {
     };
   }
 
-  private async sendNoticeBoardEmails(notice: NoticeBoard) {
+  private async sendNoticeBoardEmails(notice: NoticeBoard): Promise<NoticeEmailResult> {
+    const failedRecipients: EmailFailedRecipient[] = [];
+    let successful = 0;
+
     try {
       console.log(`Attempting to send emails to ${notice.users.length} users`);
       console.log(`Email sent status before sending: ${notice.emailSent}`);
-      
-      let allEmailsSuccessful = true;
-      
+
       for (const user of notice.users) {
         console.log(`Sending email to ${user.email} for notice "${notice.title}"`);
         
@@ -351,24 +393,65 @@ export class NoticeBoardService {
           
           console.log(`Email sent result for ${user.email}: ${emailResult}`);
           
-          if (!emailResult) {
-            allEmailsSuccessful = false;
+          if (emailResult) {
+            successful += 1;
+          } else {
+            failedRecipients.push({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              reason: 'Mail service returned failed status',
+            });
           }
-        } catch (emailError) {
+        } catch (emailError: any) {
           console.error(`Failed to send email to ${user.email}:`, emailError);
-          allEmailsSuccessful = false;
+          failedRecipients.push({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            reason: emailError?.message || 'Unknown mail error',
+          });
         }
       }
 
-      // Update the emailSent flag
-      notice.emailSent = true;
+      // emailSent means every targeted email was delivered successfully.
+      notice.emailSent = failedRecipients.length === 0;
+      notice.emailFailedRecipients = failedRecipients;
       const savedNotice = await this.noticeBoardRepository.save(notice);
       console.log(`Email sent flag updated for notice ID: ${notice.id}, new value: ${savedNotice.emailSent}`);
 
-      return allEmailsSuccessful;
-    } catch (error) {
+      return {
+        attempted: notice.users.length,
+        successful,
+        failedRecipients,
+      };
+    } catch (error: any) {
       console.error('Failed to send notice board emails:', error);
-      return false;
+      const recipients = notice.users || [];
+      const fallbackFailures = recipients.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        reason: error?.message || 'Unknown mail error',
+      }));
+
+      notice.emailSent = false;
+      notice.emailFailedRecipients = fallbackFailures;
+      await this.noticeBoardRepository.save(notice);
+
+      return {
+        attempted: recipients.length,
+        successful,
+        failedRecipients: fallbackFailures,
+      };
     }
+  }
+
+  private buildEmailFailureMessage(failedRecipients: EmailFailedRecipient[]) {
+    const failedUsers = failedRecipients
+      .map(user => `${user.name || user.email} (${user.email})`)
+      .join(', ');
+
+    return `Notice was created, but email failed for: ${failedUsers}`;
   }
 }

@@ -6,11 +6,13 @@ import { NoticeBoard } from './entities/notice-board.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { RoleEntity } from 'src/role/entities/role.entity';
 import { MailModule } from 'src/mail/mail.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([NoticeBoard, UserEntity, RoleEntity]),
-    MailModule
+    MailModule,
+    NotificationModule
   ],
   controllers: [NoticeBoardController],
   providers: [NoticeBoardService],
