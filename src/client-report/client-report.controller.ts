@@ -239,7 +239,7 @@ export class ClientReportController {
     @Param('id') id: string,
     @Param('fileId') fileId: string,
     @GetUser() user: UserEntity
-  ): Promise<ClientReport> {
+  ): Promise<ClientReport | null> {
     return this.clientReportService.removeFile(id, fileId, user.id);
   }
 

@@ -45,15 +45,19 @@ export class MailService {
     this.logger.log(`Attempting to send email to ${payload.to} with subject: ${payload.subject}`);
     
     const { to, subject, slug, context } = payload;
-    const mailBody = await this.emailTemplateService.findBySlug(slug);
+    let mailBody = await this.emailTemplateService.findBySlug(slug);
     
     if (!mailBody) {
-      this.logger.error(`Email template with slug '${slug}' not found - attempting to create it`);
-      
-      // Let's just log the issue without checking all templates
-      this.logger.log(`Please run 'npm run seed:email-template' to create the missing template`);
-      
-      return false;
+      this.logger.warn(`Email template with slug '${slug}' not found`);
+
+      if (slug === 'notice-board-notification') {
+        mailBody = await this.createDefaultNoticeBoardTemplate();
+      }
+
+      if (!mailBody) {
+        this.logger.error(`Email template with slug '${slug}' not found and could not be created`);
+        return false;
+      }
     }
     
     const emailContent = this.stringInject(mailBody.body, context);
@@ -100,5 +104,33 @@ export class MailService {
       console.error('Failed to send email', error);
       return false;
     }
+  }
+
+  private async createDefaultNoticeBoardTemplate() {
+    try {
+      this.logger.log('Creating default notice-board email template');
+      await this.emailTemplateService.create({
+        title: 'Notice Board Notification',
+        sender: process.env.MAIL_FROM || 'noreply@artha.com',
+        subject: 'Notice Board Notification',
+        body: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+            <p>Dear {{name}},</p>
+            <p>A new notice has been published.</p>
+            <h2>{{noticeTitle}}</h2>
+            <p>{{noticeDescription}}</p>
+            {{#if imageUrl}}
+              <p><img src="{{imageUrl}}" alt="Notice attachment" style="max-width: 100%; height: auto;" /></p>
+            {{/if}}
+            <p>This is an automated message, please do not reply to this email.</p>
+          </div>
+        `,
+        isDefault: true,
+      });
+    } catch (error: any) {
+      this.logger.warn(`Default notice-board template creation skipped: ${error?.message || error}`);
+    }
+
+    return this.emailTemplateService.findBySlug('notice-board-notification');
   }
 }

@@ -161,7 +161,8 @@ export class ClientReportService {
       query.andWhere('report.fiscalYear = :fiscalYear', { fiscalYear: filterDto.fiscalYear });
     }
 
-    return query.getMany();
+    const reports = await query.getMany();
+    return this.cleanMissingFilesFromReports(reports);
   }
 
   /**
@@ -206,7 +207,8 @@ export class ClientReportService {
       });
     }
 
-    return query.getMany();
+    const reports = await query.getMany();
+    return this.cleanMissingFilesFromReports(reports);
   }
 
   /**
@@ -214,7 +216,7 @@ export class ClientReportService {
    * Only shows visible reports across all associated customers
    */
   async findByCustomerIds(customerIds: string[]): Promise<ClientReport[]> {
-    return this.clientReportRepository
+    const reports = await this.clientReportRepository
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.project', 'project')
       .leftJoinAndSelect('report.documentType', 'documentType')
@@ -224,6 +226,8 @@ export class ClientReportService {
       .andWhere('report.isVisible = :isVisible', { isVisible: true })
       .orderBy('report.createdAt', 'DESC')
       .getMany();
+
+    return this.cleanMissingFilesFromReports(reports);
   }
 
   /**
@@ -243,7 +247,7 @@ export class ClientReportService {
       throw new NotFoundException('Report not found');
     }
 
-    return report;
+    return this.cleanMissingFilesFromReport(report);
   }
 
   /**
@@ -556,7 +560,7 @@ export class ClientReportService {
     reportId: string,
     fileId: string,
     userId: string
-  ): Promise<ClientReport> {
+  ): Promise<ClientReport | null> {
     const report = await this.findOne(reportId);
     
     const file = report.files?.find(f => f.id === fileId);
@@ -570,9 +574,21 @@ export class ClientReportService {
       unlinkSync(fullPath);
     }
 
-    await this.clientReportFileRepository.remove(file);
+    await this.clientReportFileRepository.delete(file.id);
 
     const remainingFiles = (report.files || []).filter(f => f.id !== fileId);
+    if (remainingFiles.length === 0) {
+      if (report.filePath && report.filePath !== file.filePath) {
+        const legacyPath = join(process.cwd(), 'public', report.filePath);
+        if (existsSync(legacyPath)) {
+          unlinkSync(legacyPath);
+        }
+      }
+
+      await this.clientReportRepository.remove(report);
+      return null as any;
+    }
+
     const deletedLegacyFile = report.filePath === file.filePath;
 
     if (deletedLegacyFile) {
@@ -588,6 +604,62 @@ export class ClientReportService {
     await this.clientReportRepository.save(report);
 
     return this.findOne(reportId);
+  }
+
+  private async cleanMissingFilesFromReports(reports: ClientReport[]): Promise<ClientReport[]> {
+    const cleanedReports = await Promise.all(
+      reports.map(report => this.cleanMissingFilesFromReport(report))
+    );
+
+    return cleanedReports.filter(report => this.reportHasExistingFile(report));
+  }
+
+  private async cleanMissingFilesFromReport(report: ClientReport): Promise<ClientReport> {
+    const existingFiles: ClientReportFile[] = [];
+    const missingFiles: ClientReportFile[] = [];
+
+    for (const file of report.files || []) {
+      const fullPath = join(process.cwd(), 'public', file.filePath);
+      if (existsSync(fullPath)) {
+        existingFiles.push(file);
+      } else {
+        missingFiles.push(file);
+      }
+    }
+
+    if (missingFiles.length > 0) {
+      await this.clientReportFileRepository.delete(missingFiles.map(file => file.id));
+      report.files = existingFiles;
+    }
+
+    if (report.filePath) {
+      const legacyPath = join(process.cwd(), 'public', report.filePath);
+      const legacyFileExists = existsSync(legacyPath);
+
+      if (!legacyFileExists) {
+        const nextFile = existingFiles[0];
+        report.filePath = nextFile?.filePath || null;
+        report.originalFileName = nextFile?.originalFileName || null;
+        report.displayFileName = nextFile?.displayFileName || nextFile?.originalFileName || null;
+        report.fileType = nextFile?.fileType || null;
+        report.fileSize = nextFile?.fileSize || null;
+        await this.clientReportRepository.save(report);
+      }
+    }
+
+    return report;
+  }
+
+  private reportHasExistingFile(report: ClientReport): boolean {
+    if (report.files?.length > 0) {
+      return true;
+    }
+
+    if (!report.filePath) {
+      return false;
+    }
+
+    return existsSync(join(process.cwd(), 'public', report.filePath));
   }
 
   /**
