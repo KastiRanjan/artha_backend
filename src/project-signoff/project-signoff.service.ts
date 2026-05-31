@@ -23,15 +23,6 @@ export class ProjectSignoffService {
     createDto: CreateProjectSignoffDto,
     signedOffBy: UserEntity
   ): Promise<ProjectSignoff> {
-    const signerRole = signedOffBy?.role?.name?.toLowerCase() || '';
-    const isProjectManager = signerRole === 'projectmanager';
-    const isSuperUser = ['superuser', 'super_user', 'super-user'].includes(signerRole);
-
-    // Allow project manager or superuser to sign off.
-    if (!isProjectManager && !isSuperUser) {
-      throw new ForbiddenException('Only project manager or superuser can sign off projects');
-    }
-
     // Verify project exists and is completed
     const project = await this.projectRepository.findOne({
       where: { id: createDto.projectId },
@@ -46,8 +37,12 @@ export class ProjectSignoffService {
       throw new BadRequestException('Project must be completed before sign-off');
     }
 
-    // Superuser can sign off any project; manager must be the assigned manager.
-    if (!isSuperUser && project.projectManager?.id !== signedOffBy.id) {
+    const signerRole = signedOffBy?.role?.name?.toLowerCase() || '';
+    const isSuperUser = ['superuser', 'super_user', 'super-user'].includes(signerRole);
+    const isAssignedProjectManager = project.projectManager?.id === signedOffBy.id;
+
+    // Superuser can sign off any project; otherwise the user must be assigned as this project's manager.
+    if (!isSuperUser && !isAssignedProjectManager) {
       throw new ForbiddenException('Only the assigned project manager can sign off this project');
     }
 
@@ -59,7 +54,7 @@ export class ProjectSignoffService {
     // Filter to only evaluable users (exclude protected roles)
     const evaluableUsers = projectUsers.filter(user => {
       const userRole = user?.role?.name?.toLowerCase();
-      return !protectedRoles.includes(userRole);
+      return user.id !== project.projectManager?.id && !protectedRoles.includes(userRole);
     });
 
     const evaluations = await this.evaluationRepository.find({
@@ -68,7 +63,7 @@ export class ProjectSignoffService {
 
     if (evaluations.length < evaluableUsers.length) {
       throw new BadRequestException(
-        `All evaluable team members must be evaluated before sign-off. ${evaluations.length}/${evaluableUsers.length} completed (excluding project managers, administrators, and superusers)`
+        `All evaluable team members must be evaluated before sign-off. ${evaluations.length}/${evaluableUsers.length} completed (excluding the assigned project manager, project managers, administrators, and superusers)`
       );
     }
 
@@ -148,8 +143,8 @@ export class ProjectSignoffService {
   async remove(id: string, user: UserEntity): Promise<void> {
     const signoff = await this.findOne(id);
 
-    // Only manager can delete
-    if (user.role.name !== 'projectmanager') {
+    // Only the signing manager or a project manager role can delete.
+    if (signoff.signedOffById !== user.id && user.role.name !== 'projectmanager') {
       throw new ForbiddenException('Only project manager can delete sign-off');
     }
 

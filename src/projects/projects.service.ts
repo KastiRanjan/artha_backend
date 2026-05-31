@@ -91,9 +91,9 @@ export class ProjectsService {
     const lead = projectLead ? await this.userRepository.findOne({ where: { id: projectLead } }) : null;
     let manager = null;
     if (projectManager) {
-      manager = await this.userRepository.findOne({ where: { id: projectManager }, relations: ['role'] });
-      if (!manager || manager.role?.name !== 'projectmanager') {
-        throw new Error('Assigned projectManager must have role "projectmanager"');
+      manager = await this.userRepository.findOne({ where: { id: projectManager } });
+      if (!manager) {
+        throw new BadRequestException('Assigned projectManager user was not found');
       }
     }
     // Use either customer or client property (frontend sends client, backend uses customer)
@@ -310,9 +310,9 @@ export class ProjectsService {
     }
     
     if (projectManager) {
-      const manager = await this.userRepository.findOne({ where: { id: projectManager }, relations: ['role'] });
-      if (!manager || manager.role?.name !== 'projectmanager') {
-        throw new Error('Assigned projectManager must have role "manager"');
+      const manager = await this.userRepository.findOne({ where: { id: projectManager } });
+      if (!manager) {
+        throw new BadRequestException('Assigned projectManager user was not found');
       }
       project.projectManager = manager;
     }

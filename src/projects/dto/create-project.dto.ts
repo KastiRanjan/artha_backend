@@ -54,7 +54,6 @@ export class CreateProjectDto {
   @IsOptional()
   projectLead?: string;
 
-  // Project Manager: Only users with role 'manager' should be assigned
   @IsOptional()
   projectManager?: string;
 

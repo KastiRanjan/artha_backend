@@ -66,9 +66,10 @@ export class ProjectEvaluationService {
     // Get evaluator role and position
     const evaluatorRole = evaluatedBy.role.name.toLowerCase();
     const isProjectLead = project.projectLead?.id === evaluatedBy.id;
+    const isAssignedProjectManager = project.projectManager?.id === evaluatedBy.id;
     // Manager-level roles include: projectmanager, manager, administrator, and superuser
     const managerRoles = ['projectmanager', 'manager', 'administrator', 'admin', 'superuser'];
-    const isManagerLevel = managerRoles.includes(evaluatorRole);
+    const isManagerLevel = managerRoles.includes(evaluatorRole) || isAssignedProjectManager;
     
     // Prevent self-evaluation
     if (evaluatedUser.id === evaluatedBy.id) {
