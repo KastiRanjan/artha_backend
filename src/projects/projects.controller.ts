@@ -48,7 +48,7 @@ export class ProjectsController {
   @Get()
   findAll(
     @GetUser() user: UserEntity,
-    @Query('status') status: 'active' | 'suspended' | 'archived' | 'signed_off'
+    @Query('status') status?: 'active' | 'suspended' | 'archived' | 'signed_off' | 'all'
   ) {
     return this.projectsService.findAll(status, user);
   }

@@ -166,16 +166,15 @@ export class ProjectsService {
   }
 
   async findAll(
-    status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed',
+    status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed' | 'all' | undefined,
     user: UserEntity
   ) {
     let projects = null;
 
     if (user.role.name === 'superuser') {
+      const whereCondition = (!status || status === 'all') ? {} : { status: status };
       projects = await this.projectRepository.find({
-        where: {
-          status: status
-        },
+        where: whereCondition,
         relations: ['users', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork', 'natureOfWorkGroup'],
         order: {
           name: 'ASC' // Order alphabetically by name
@@ -188,7 +187,9 @@ export class ProjectsService {
           id: user.id
         }
       });
-      projects = users.projects.filter(project => project.status === status);
+      projects = (!status || status === 'all') 
+        ? users.projects 
+        : users.projects.filter(project => project.status === status);
       // Sort alphabetically by name for non-superuser
       projects = projects.sort((a, b) => a.name.localeCompare(b.name));
     }
