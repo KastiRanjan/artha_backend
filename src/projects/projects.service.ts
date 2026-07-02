@@ -176,7 +176,7 @@ export class ProjectsService {
         where: {
           status: status
         },
-        relations: ['users', 'tasks', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork', 'natureOfWorkGroup'],
+        relations: ['users', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork', 'natureOfWorkGroup'],
         order: {
           name: 'ASC' // Order alphabetically by name
         }
