@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { LessThanOrEqual, MoreThanOrEqual, Repository, Between } from 'typeorm';
+import { LessThanOrEqual, MoreThanOrEqual, Repository, Between, In } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Project } from 'src/projects/entities/project.entity';
@@ -178,17 +178,7 @@ export class WorklogService {
       return projectStatus !== 'signed_off' && projectStatus !== 'completed';
     });
     // Populate approvedBy, requestTo, rejectBy with user objects
-    for (const worklog of filteredWorklogs) {
-      if (worklog.approvedBy) {
-        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
-      }
-      if (worklog.requestTo) {
-        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
-      }
-      if (worklog.rejectBy) {
-        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
-      }
-    }
+    await this.populateUsers(filteredWorklogs);
     return filteredWorklogs;
   }
 
@@ -211,17 +201,7 @@ export class WorklogService {
         createdAt: 'DESC'
       }
     });
-    for (const worklog of worklogs) {
-      if (worklog.approvedBy) {
-        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
-      }
-      if (worklog.requestTo) {
-        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
-      }
-      if (worklog.rejectBy) {
-        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
-      }
-    }
+    await this.populateUsers(worklogs);
     return worklogs;
   }
 
@@ -257,17 +237,7 @@ export class WorklogService {
     if (!worklogs || worklogs.length === 0) {
       throw new NotFoundException(`No worklogs found for task ID ${id}`);
     }
-    for (const worklog of worklogs) {
-      if (worklog.approvedBy) {
-        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
-      }
-      if (worklog.requestTo) {
-        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
-      }
-      if (worklog.rejectBy) {
-        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
-      }
-    }
+    await this.populateUsers(worklogs);
     return worklogs;
   }
 
@@ -417,17 +387,7 @@ export class WorklogService {
         startTime: 'ASC'
       }
     });
-    for (const worklog of worklogs) {
-      if (worklog.approvedBy) {
-        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
-      }
-      if (worklog.requestTo) {
-        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
-      }
-      if (worklog.rejectBy) {
-        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
-      }
-    }
+    await this.populateUsers(worklogs);
     return worklogs;
   }
 
@@ -475,17 +435,7 @@ export class WorklogService {
         startTime: 'ASC'
       }
     });
-    for (const worklog of worklogs) {
-      if (worklog.approvedBy) {
-        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
-      }
-      if (worklog.requestTo) {
-        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
-      }
-      if (worklog.rejectBy) {
-        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
-      }
-    }
+    await this.populateUsers(worklogs);
     return worklogs;
   }
   
@@ -512,21 +462,35 @@ export class WorklogService {
         createdAt: 'DESC'
       }
     });
-    for (const worklog of worklogs) {
-      if (worklog.approvedBy) {
-        (worklog as any).approvedByUser = await this.userRepository.findOne({ where: { id: worklog.approvedBy } });
-      }
-      if (worklog.requestTo) {
-        (worklog as any).requestToUser = await this.userRepository.findOne({ where: { id: worklog.requestTo } });
-      }
-      if (worklog.rejectBy) {
-        (worklog as any).rejectByUser = await this.userRepository.findOne({ where: { id: worklog.rejectBy } });
-      }
-    }
+    await this.populateUsers(worklogs);
     return worklogs;
   }
 
   async remove(id: string) {
     return this.worklogRepository.delete(id);
+  }
+
+  private async populateUsers(worklogs: Worklog[]) {
+    if (!worklogs || worklogs.length === 0) return;
+
+    const uniqueIds = new Set<string>();
+    worklogs.forEach(w => {
+      if (w.approvedBy) uniqueIds.add(w.approvedBy);
+      if (w.requestTo) uniqueIds.add(w.requestTo);
+      if (w.rejectBy) uniqueIds.add(w.rejectBy);
+    });
+
+    if (uniqueIds.size > 0) {
+      const users = await this.userRepository.find({
+        where: { id: In(Array.from(uniqueIds)) }
+      });
+      const userMap = new Map(users.map(u => [u.id, u]));
+      
+      worklogs.forEach(w => {
+        if (w.approvedBy) (w as any).approvedByUser = userMap.get(w.approvedBy);
+        if (w.requestTo) (w as any).requestToUser = userMap.get(w.requestTo);
+        if (w.rejectBy) (w as any).rejectByUser = userMap.get(w.rejectBy);
+      });
+    }
   }
 }
