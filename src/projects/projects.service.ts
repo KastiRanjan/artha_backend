@@ -29,6 +29,8 @@ import { ReleaseUserFromProjectDto } from './dto/release-user-from-project.dto';
 import { UpdateUserAssignmentDto } from './dto/update-user-assignment.dto';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
 dotenv.config();
+import * as ExcelJS from 'exceljs';
+import { CalendarUtil } from 'src/calendar/calendar.util';
 
 @Injectable()
 export class ProjectsService {
@@ -1008,5 +1010,128 @@ export class ProjectsService {
         assignedDate: 'DESC'
       }
     });
+  }
+
+  async exportProject(id: string): Promise<ExcelJS.Workbook> {
+    const project = await this.projectRepository.findOne({
+      where: { id },
+      relations: [
+        'users',
+        'tasks',
+        'tasks.assignees',
+        'worklogs',
+        'worklogs.user',
+        'worklogs.task',
+        'customer',
+        'projectLead',
+        'projectManager',
+      ],
+    });
+
+    if (!project) {
+      throw new BadRequestException('Project not found');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Artha System';
+    workbook.created = new Date();
+
+    // Sheet 1: Project Details
+    const detailsSheet = workbook.addWorksheet('Project Details');
+    detailsSheet.columns = [
+      { header: 'Property', key: 'property', width: 25 },
+      { header: 'Value', key: 'value', width: 50 },
+    ];
+    detailsSheet.addRows([
+      { property: 'Project Name', value: project.name },
+      { property: 'Status', value: project.status },
+      { property: 'Starting Date', value: project.startingDate ? `${new Date(project.startingDate).toLocaleDateString()} / ${CalendarUtil.adToBs(new Date(project.startingDate).toISOString().split('T')[0])} BS` : 'N/A' },
+      { property: 'Ending Date', value: project.endingDate ? `${new Date(project.endingDate).toLocaleDateString()} / ${CalendarUtil.adToBs(new Date(project.endingDate).toISOString().split('T')[0])} BS` : 'N/A' },
+      { property: 'Fiscal Year', value: project.fiscalYear },
+      { property: 'Customer', value: project.customer?.name || 'N/A' },
+      { property: 'Project Lead', value: project.projectLead?.name || 'N/A' },
+      { property: 'Project Manager', value: project.projectManager?.name || 'N/A' },
+      { property: 'Description', value: project.description?.replace(/(<([^>]+)>)/ig, '') }, // Strip HTML tags if any
+    ]);
+    detailsSheet.getRow(1).font = { bold: true };
+
+    // Sheet 2: Members & Work Hours
+    const membersSheet = workbook.addWorksheet('Members and Hours');
+    membersSheet.columns = [
+      { header: 'Name', key: 'name', width: 25 },
+      { header: 'Email', key: 'email', width: 35 },
+      { header: 'Total Logged Hours', key: 'hours', width: 20 },
+    ];
+
+    const userHoursMap = new Map<string, number>();
+    
+    // Initialize map with all project members
+    project.users?.forEach(user => {
+      userHoursMap.set(user.id, 0);
+    });
+
+    // Calculate hours from worklogs
+    project.worklogs?.forEach(log => {
+      if (log.user && log.startTime && log.endTime) {
+        const start = new Date(log.startTime).getTime();
+        const end = new Date(log.endTime).getTime();
+        const hours = (end - start) / (1000 * 60 * 60);
+        const current = userHoursMap.get(log.user.id) || 0;
+        userHoursMap.set(log.user.id, current + hours);
+      }
+    });
+
+    const memberRows = project.users?.map(user => ({
+      name: user.name,
+      email: user.email,
+      hours: (userHoursMap.get(user.id) || 0).toFixed(2),
+    })) || [];
+
+    membersSheet.addRows(memberRows);
+    membersSheet.getRow(1).font = { bold: true };
+
+    // Sheet 3: Tasks
+    const tasksSheet = workbook.addWorksheet('Tasks');
+    tasksSheet.columns = [
+      { header: 'Task Name', key: 'name', width: 40 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Priority', key: 'priority', width: 15 },
+      { header: 'Budgeted Hours', key: 'budgeted', width: 15 },
+      { header: 'Assignees', key: 'assignees', width: 40 },
+      { header: 'Due Date', key: 'dueDate', width: 20 },
+    ];
+
+    const taskRows = project.tasks?.map(task => {
+      let assigneesStr = 'Unassigned';
+      if (task.assignees && task.assignees.length > 0) {
+        assigneesStr = task.assignees.map(a => {
+          let hours = 0;
+          project.worklogs?.forEach(log => {
+            if (log.task?.id === task.id && log.user?.id === a.id && log.startTime && log.endTime) {
+              const start = new Date(log.startTime).getTime();
+              const end = new Date(log.endTime).getTime();
+              hours += (end - start) / (1000 * 60 * 60);
+            }
+          });
+          return `${a.name} (${hours.toFixed(2)} hrs)`;
+        }).join(', ');
+      }
+      
+      const dueDateBs = task.dueDate ? CalendarUtil.adToBs(new Date(task.dueDate).toISOString().split('T')[0]) : '';
+      
+      return {
+        name: task.name,
+        status: task.status,
+        priority: task.priority,
+        budgeted: task.budgetedHours || 0,
+        assignees: assigneesStr,
+        dueDate: task.dueDate ? `${new Date(task.dueDate).toLocaleDateString()} / ${dueDateBs} BS` : 'N/A',
+      };
+    }) || [];
+
+    tasksSheet.addRows(taskRows);
+    tasksSheet.getRow(1).font = { bold: true };
+
+    return workbook;
   }
 }

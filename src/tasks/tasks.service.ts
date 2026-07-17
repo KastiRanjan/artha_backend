@@ -1118,8 +1118,10 @@ export class TasksService {
       .getMany();
   }
 
-  // Combine tasks
-  const combinedTasks = [...userTasks, ...additionalParentTasks];
+  // Combine tasks and deduplicate by ID to prevent duplicate rows in the frontend
+  const combinedTasksMap = new Map<string, Task>();
+  [...userTasks, ...additionalParentTasks].forEach(t => combinedTasksMap.set(t.id, t));
+  const combinedTasks = Array.from(combinedTasksMap.values());
 
   // Fetch all subtasks for these parent tasks in one go
   const storyTaskIds = combinedTasks.filter(t => t.taskType === 'story').map(t => t.id);

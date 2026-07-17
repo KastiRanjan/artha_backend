@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Leave, LeaveStatus } from './entities/leave.entity';
@@ -103,6 +108,43 @@ export class LeaveService {
     
   }
 
+  /** Roles allowed to view/act on other users' leave records. */
+  private static readonly PRIVILEGED_ROLES = [
+    'manager',
+    'projectmanager',
+    'admin',
+    'administrator',
+    'superuser'
+  ];
+
+  private isPrivileged(user?: UserEntity): boolean {
+    const role = user?.role?.name?.toLowerCase();
+    return !!role && LeaveService.PRIVILEGED_ROLES.includes(role);
+  }
+
+  /**
+   * Enforce that `requester` may access records belonging to `ownerId`.
+   * The owner themselves, or any privileged role, is allowed. Everyone else
+   * is rejected. When `requester` is undefined the check is skipped (internal
+   * calls only) — controllers always pass the authenticated user.
+   */
+  private assertCanAccessUser(ownerId: string, requester?: UserEntity): void {
+    if (!requester) return;
+    if (requester.id === ownerId) return;
+    if (this.isPrivileged(requester)) return;
+    throw new ForbiddenException(
+      'You are not allowed to access this user\'s leave records'
+    );
+  }
+
+  private assertCanMutateLeave(leave: Leave, requester?: UserEntity): void {
+    if (!requester) return;
+    const ownerId = leave.user?.id;
+    if (requester.id === ownerId) return;
+    if (this.isPrivileged(requester)) return;
+    throw new ForbiddenException('You are not allowed to modify this leave request');
+  }
+
   async create(createLeaveDto: CreateLeaveDto, user: UserEntity): Promise<Leave> {
     // Validate leave type exists and is active
     const leaveType = await this.leaveTypeRepository.findOne({
@@ -177,7 +219,11 @@ export class LeaveService {
     const overlappingApproved = await this.leaveRepository
       .createQueryBuilder('leave')
       .where('leave.user = :userId', { userId: user.id })
-      .andWhere('leave.status IN (:...statuses)', { statuses: ['approved', 'approved_by_pm'] })
+      // Block against any live request (pending, manager-approved, or fully
+      // approved). 'approved_by_pm' was a dead value that never matched the enum.
+      .andWhere('leave.status IN (:...statuses)', {
+        statuses: ['pending', 'approved_by_manager', 'approved']
+      })
       .andWhere('leave.startDate <= :endDate AND leave.endDate >= :startDate', { 
         startDate: startDate.format('YYYY-MM-DD'), 
         endDate: endDate.format('YYYY-MM-DD') 
@@ -325,7 +371,12 @@ export class LeaveService {
     }, 0);
   }
 
-  async getLeaveBalance(userId: string, leaveTypeName: string, year?: number): Promise<{
+  async getLeaveBalance(
+    userId: string,
+    leaveTypeName: string,
+    year?: number,
+    requester?: UserEntity
+  ): Promise<{
     leaveType: LeaveType;
     allocatedDays: number;
     carriedOverDays: number;
@@ -335,6 +386,7 @@ export class LeaveService {
     remainingDays: number;
   }> {
     this.validateUUID(userId, 'User ID');
+    this.assertCanAccessUser(userId, requester);
     const leaveType = await this.leaveTypeRepository.findOne({
       where: { name: leaveTypeName, isActive: true }
     });
@@ -374,7 +426,11 @@ export class LeaveService {
     };
   }
 
-  async getAllLeaveBalances(userId: string, year?: number): Promise<Array<{
+  async getAllLeaveBalances(
+    userId: string,
+    year?: number,
+    requester?: UserEntity
+  ): Promise<Array<{
     leaveType: LeaveType;
     allocatedDays: number;
     carriedOverDays: number;
@@ -384,6 +440,7 @@ export class LeaveService {
     remainingDays: number;
   }>> {
     this.validateUUID(userId, 'User ID');
+    this.assertCanAccessUser(userId, requester);
     const currentYear = year || moment().year();
     
     const balances = await this.userLeaveBalanceService.getUserAllLeaveBalances(userId, currentYear);
@@ -408,24 +465,69 @@ export class LeaveService {
     });
   }
 
-  async findOne(id: string): Promise<Leave> {
+  async findOne(id: string, requester?: UserEntity): Promise<Leave> {
     this.validateUUID(id, 'Leave ID');
-    const leave = await this.leaveRepository.findOne({ 
+    const leave = await this.leaveRepository.findOne({
       where: { id },
       relations: ['user', 'leaveType', 'requestedManager', 'managerApprover', 'adminApprover']
     });
     if (!leave) throw new NotFoundException('Leave not found');
+    // Owner, the requested approver, or a privileged role may view it.
+    if (requester && !this.isPrivileged(requester)
+        && requester.id !== leave.user?.id
+        && requester.id !== leave.requestedManagerId) {
+      throw new ForbiddenException('You are not allowed to view this leave request');
+    }
     return leave;
   }
 
-  async update(id: string, updateLeaveDto: UpdateLeaveDto): Promise<Leave> {
+  async update(
+    id: string,
+    updateLeaveDto: UpdateLeaveDto,
+    requester?: UserEntity
+  ): Promise<Leave> {
+    this.validateUUID(id, 'Leave ID');
     const leave = await this.leaveRepository.findOne({
       where: { id },
-      relations: ['user', 'requestedManager']
+      relations: ['user', 'leaveType', 'requestedManager']
     });
-    
+
     if (!leave) throw new NotFoundException('Leave not found');
-    
+    this.assertCanMutateLeave(leave, requester);
+
+    // A fully-approved/rejected leave is locked — editing would desync balances.
+    if (!['pending', 'approved_by_manager'].includes(leave.status)) {
+      throw new BadRequestException(
+        'Only pending or manager-approved requests can be edited'
+      );
+    }
+
+    // Whitelist the fields a client may change (guards against mass-assignment).
+    const patch: UpdateLeaveDto = {
+      startDate: updateLeaveDto.startDate,
+      endDate: updateLeaveDto.endDate,
+      type: updateLeaveDto.type,
+      reason: updateLeaveDto.reason
+    };
+
+    // If the date span changed, re-reserve pending balance for the delta.
+    const newStart = patch.startDate ?? leave.startDate;
+    const newEnd = patch.endDate ?? leave.endDate;
+    const oldDays =
+      this.createMoment(leave.endDate).diff(this.createMoment(leave.startDate), 'days') + 1;
+    const newDays =
+      this.createMoment(newEnd).diff(this.createMoment(newStart), 'days') + 1;
+    if (newDays < 1) throw new BadRequestException('End date must be on or after start date');
+    const balanceYear = this.createMoment(newStart).year();
+    if (newDays !== oldDays) {
+      await this.userLeaveBalanceService.revertPendingDays(
+        leave.user.id, leave.leaveType.id, balanceYear, oldDays
+      );
+      await this.userLeaveBalanceService.updatePendingDays(
+        leave.user.id, leave.leaveType.id, balanceYear, newDays
+      );
+    }
+
     // Store the original status before update
     const originalStatus = leave.status;
     
@@ -452,18 +554,23 @@ export class LeaveService {
       });
     }
     
-    Object.assign(leave, updateLeaveDto);
+    // Only assign whitelisted, defined fields.
+    Object.keys(patch).forEach((k) => {
+      if (patch[k] !== undefined) (leave as any)[k] = patch[k];
+    });
     return this.leaveRepository.save(leave);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, requester?: UserEntity): Promise<void> {
+    this.validateUUID(id, 'Leave ID');
     const leave = await this.leaveRepository.findOne({
       where: { id },
       relations: ['user', 'leaveType']
     });
-    
+
     if (!leave) throw new NotFoundException('Leave not found');
-    
+    this.assertCanMutateLeave(leave, requester);
+
     // If leave is pending, revert the pending days
     if (leave.status === 'pending' || leave.status === 'approved_by_manager') {
       const startDate = this.createMoment(leave.startDate);
@@ -586,11 +693,19 @@ export class LeaveService {
       relations: ['user', 'leaveType']
     });
     if (!leave) throw new NotFoundException('Leave not found');
-    
+
+    // Only a live request reserves *pending* balance. Rejecting an already
+    // approved/rejected leave here would wrongly decrement pending days.
+    if (!['pending', 'approved_by_manager'].includes(leave.status)) {
+      throw new BadRequestException(
+        `Cannot reject a leave in '${leave.status}' status`
+      );
+    }
+
     leave.status = 'rejected';
-    
+
     const savedLeave = await this.leaveRepository.save(leave);
-    
+
     // Revert pending days in user leave balance
     const startDate = this.createMoment(leave.startDate);
     const endDate = this.createMoment(leave.endDate);
@@ -798,9 +913,15 @@ export class LeaveService {
     return user;
   }
 
-  // Get user's own leaves
-  async getUserLeaves(userId: string, status?: string): Promise<Leave[]> {
+  // Get a user's leaves. `requester` (when supplied) must be the owner or a
+  // privileged role — prevents enumerating other employees' leave via /user/:id.
+  async getUserLeaves(
+    userId: string,
+    status?: string,
+    requester?: UserEntity
+  ): Promise<Leave[]> {
     this.validateUUID(userId, 'User ID');
+    this.assertCanAccessUser(userId, requester);
     const where: any = { user: { id: userId } };
     if (status && status !== 'all') where.status = status;
 

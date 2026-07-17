@@ -1241,6 +1241,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
           ]
         },
         {
+          name: 'Export project to Excel',
+          route: [
+            {
+              path: '/projects/:id/export',
+              method: MethodList.GET
+            }
+          ]
+        },
+        {
           name: 'Assign user to project',
           route: [
             {

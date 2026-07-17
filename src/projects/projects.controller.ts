@@ -7,8 +7,11 @@ import {
   Param,
   Delete,
   UseGuards,
-  Query
+  Query,
+  Res,
+  ForbiddenException
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ProjectsService } from './projects.service';
 import { ProjectTimelineService } from './project-timeline.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -56,6 +59,29 @@ export class ProjectsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.projectsService.findOne(id);
+  }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: 'Export project details, tasks, and workhours to Excel (Superuser only)' })
+  async exportProject(
+    @Param('id') id: string,
+    @GetUser() user: UserEntity,
+    @Res() res: Response
+  ) {
+    if (user.role?.name !== 'superuser') {
+      throw new ForbiddenException('Only superusers can export project details');
+    }
+    const workbook = await this.projectsService.exportProject(id);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Project_${id}_Export.xlsx"`
+    );
+    await workbook.xlsx.write(res);
+    res.end();
   }
 
   @Patch(':id')
