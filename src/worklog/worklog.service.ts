@@ -38,6 +38,7 @@ export class WorklogService {
 	  const project = await this.projectRepository.findOne({ where: { id: actualProjectId }, relations: ['projectLead'] });
 	  if (!task) throw new NotFoundException(`Task with ID ${taskId} not found`);
 	  if (!project) throw new NotFoundException(`Project with ID ${actualProjectId} not found`);
+	  if (project.status !== 'active') throw new BadRequestException(`Worklogs can only be added to active projects. This project is ${project.status}.`);
 	  // Check worklog permissions based on project settings
 	  const isSubtask = task.parentTask !== null;
 	  const isMainTask = task.taskType === 'story' && task.parentTask === null;

@@ -243,6 +243,16 @@ export class ProjectsService {
       throw new Error(`Project with ID ${id} not found`);
     }
 
+    // If the project is inactive and is not being changed to active, restrict updates
+    let effectiveUpdateDto = updateProjectDto;
+    if (project.status !== 'active' && updateProjectDto.status !== 'active') {
+      const { status, isPaymentDone, isPaymentTemporarilyEnabled } = updateProjectDto;
+      effectiveUpdateDto = {};
+      if (status !== undefined) effectiveUpdateDto.status = status;
+      if (isPaymentDone !== undefined) effectiveUpdateDto.isPaymentDone = isPaymentDone;
+      if (isPaymentTemporarilyEnabled !== undefined) effectiveUpdateDto.isPaymentTemporarilyEnabled = isPaymentTemporarilyEnabled;
+    }
+
     // Restructure updateProjectDto to extract properties we need to handle specially
     const {
       users,
@@ -254,7 +264,7 @@ export class ProjectsService {
       natureOfWork,
       natureOfWorkGroup,
       ...otherUpdates
-    } = updateProjectDto;
+    } = effectiveUpdateDto as UpdateProjectDto;
 
     // Update project properties with the new values for simple fields
     Object.assign(project, otherUpdates);
