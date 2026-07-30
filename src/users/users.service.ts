@@ -370,28 +370,29 @@ export class UsersService {
         console.warn('Invalid userId provided for activity tracking');
         return { affected: 0, success: false, message: 'Invalid user ID' };
       }
-      // Try a more robust approach for TypeORM 0.2.x
+      
       let user;
       try {
-        // First try the object syntax
         user = await this.userRepository.findOne({ where: { id: userId } });
       } catch (findError) {
         try {
-          // Fall back to direct ID approach if the object syntax fails
           user = await this.userRepository.findOne(userId);
         } catch (secondError) {
           console.error('Both findOne attempts failed:', secondError.message);
-          // Return success false but don't throw to prevent UI disruption
           return { affected: 0, success: false, message: 'Failed to locate user record' };
         }
       }
       
       if (!user) {
         console.warn(`User not found with ID: ${userId}`);
-        // Create a silent failure for activity tracking to avoid disrupting the user experience
         return { affected: 0, success: false, message: 'User not found' };
       }
       
+      // Throttle DB updates: Skip update if user.lastActiveAt was updated within the last 5 minutes (300,000 ms)
+      const FIVE_MINUTES_MS = 5 * 60 * 1000;
+      if (user.lastActiveAt && (timestamp.getTime() - new Date(user.lastActiveAt).getTime() < FIVE_MINUTES_MS)) {
+        return { affected: 0, success: true, message: 'Activity update throttled (already recent)' };
+      }
       
       try {
         // Update only the lastActiveAt field
@@ -402,11 +403,9 @@ export class UsersService {
         return { ...updateResult, success: true };
       } catch (updateError) {
         console.error('Failed to update lastActiveAt:', updateError.message);
-        // Return success false but don't throw to prevent UI disruption
         return { affected: 0, success: false, message: 'Failed to update activity time' };
       }
     } catch (error) {
-
       return { affected: 0, success: false, message: error.message || 'Unknown error' };
     }
   }

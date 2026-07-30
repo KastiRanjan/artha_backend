@@ -212,9 +212,62 @@ export const PermissionConfiguration: PermissionConfigInterface = {
     {
       path: '/client-portal/change-password',
       method: MethodList.POST
+    },
+    // DSA routes
+    {
+      path: '/dsa',
+      method: MethodList.POST
+    },
+    {
+      path: '/dsa/project/:projectId',
+      method: MethodList.GET
+    },
+    {
+      path: '/dsa/:id',
+      method: MethodList.GET
+    },
+    {
+      path: '/dsa/:id/approve',
+      method: MethodList.PATCH
+    },
+    {
+      path: '/dsa/:id/reject',
+      method: MethodList.PATCH
+    },
+    {
+      path: '/dsa/:id/settle',
+      method: MethodList.PATCH
+    },
+    {
+      path: '/dsa/:id/verify',
+      method: MethodList.PATCH
     }
   ],
   modules: [
+    {
+      name: 'Reports Management',
+      resource: 'reports',
+      hasSubmodules: false,
+      permissions: [
+        {
+          name: 'View reports dashboard',
+          route: [
+            {
+              path: '/reports',
+              method: MethodList.GET
+            },
+            {
+              path: '/reports/worklog',
+              method: MethodList.GET
+            },
+            {
+              path: '/reports/manager',
+              method: MethodList.GET
+            }
+          ]
+        }
+      ]
+    },
     {
       name: 'Task Super Project Management',
       resource: 'task-super-project',

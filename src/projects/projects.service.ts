@@ -157,11 +157,13 @@ export class ProjectsService {
       type: NotificationType.PROJECT
     });
     // Log project creation in timeline
+    const userNames = users ? users.map(u => u.name).filter(Boolean) : [];
+    const memberSummary = userNames.length > 0 ? userNames.join(', ') : `${userIds?.length || 0} team members`;
     await this.projectTimelineService.log({
       projectId: savedProject.id,
       userId: lead?.id,
       action: 'project_created',
-      details: `Project created with users: ${userIds?.join(', ')}`
+      details: `Project initialized with ${memberSummary}`
     });
     // Save the project with associated users
     return savedProject;

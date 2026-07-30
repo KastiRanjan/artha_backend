@@ -23,8 +23,8 @@ export const LoginThrottleFactory = {
     return new RateLimiterMemory({
       keyPrefix: 'login_fail_throttle',
       points: 5,
-      duration: 60 * 60 * 24 * 30,
-      blockDuration: 3000
+      duration: 60 * 15, // 15 minutes throttle window
+      blockDuration: 300 // 5 minutes block duration when exceeded
     });
   }
 };

@@ -54,7 +54,7 @@ import { UploadModule } from './upload/upload.module';
 import { DepartmentModule } from './department/department.module';
 import { ProjectEvaluationModule } from './project-evaluation/project-evaluation.module';
 import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
-// import { DsaModule } from './dsa/dsa.module';
+import { DsaModule } from './dsa/dsa.module';
 import { ClientReportModule } from './client-report/client-report.module';
 import { ClientReportDocumentTypeModule } from './client-report-document-type/client-report-document-type.module';
 // import { SocketTestGateway } from './socket-test.gateway';
@@ -127,7 +127,7 @@ import { ClientReportDocumentTypeModule } from './client-report-document-type/cl
   DepartmentModule,
   ProjectEvaluationModule,
   ProjectSignoffModule,
-  // DsaModule,
+  DsaModule,
   ClientReportModule,
   ClientReportDocumentTypeModule
   ],
