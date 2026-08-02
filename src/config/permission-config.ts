@@ -1299,6 +1299,10 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id/export',
               method: MethodList.GET
+            },
+            {
+              path: '/projects/export',
+              method: MethodList.GET
             }
           ]
         },

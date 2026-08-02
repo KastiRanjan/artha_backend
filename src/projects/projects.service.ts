@@ -171,34 +171,94 @@ export class ProjectsService {
 
   async findAll(
     status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed' | 'all' | undefined,
-    user: UserEntity
+    user: UserEntity,
+    fields?: string
   ) {
     let projects = null;
+
+    const requestedFields = fields ? fields.split(',') : [];
+    const includeTasks = requestedFields.length === 0 || requestedFields.includes('completion') || requestedFields.includes('tasks');
+
+    const baseRelations = ['projectLead', 'customer', 'billing', 'projectManager', 'natureOfWork', 'natureOfWorkGroup'];
+    const superuserRelations = [...baseRelations, 'users', 'users.role'];
 
     if (user.role.name === 'superuser') {
       const whereCondition = (!status || status === 'all') ? {} : { status: status };
       projects = await this.projectRepository.find({
         where: whereCondition,
-        relations: ['users', 'projectLead', 'customer', 'billing', 'projectManager', 'users.role', 'natureOfWork', 'natureOfWorkGroup'],
+        relations: superuserRelations,
         order: {
           name: 'ASC' // Order alphabetically by name
         }
       });
     } else {
+      const userRelations = ['projects', ...baseRelations.map(r => `projects.${r}`), 'projects.users', 'projects.users.role'];
       const users = await this.userRepository.findOne({
-        relations: ['projects', 'projects.projectLead', 'projects.users', 'projects.projectManager', 'projects.billing', 'projects.customer', 'projects.users.role', 'projects.natureOfWork', 'projects.natureOfWorkGroup'],
+        relations: userRelations,
         where: {
           id: user.id
         }
       });
       projects = (!status || status === 'all') 
-        ? users.projects 
-        : users.projects.filter(project => project.status === status);
+        ? (users?.projects || [])
+        : (users?.projects || []).filter(project => project.status === status);
       // Sort alphabetically by name for non-superuser
-      projects = projects.sort((a, b) => a.name.localeCompare(b.name));
+      projects = (projects || []).sort((a, b) => a.name.localeCompare(b.name));
     }
-    // Add Nepali date formatting to each project
-    return projects.map(project => ProjectDateFormatter.addNepaliDates(project));
+
+    // Fast 3ms SQL aggregation query for project task completion stats (avoids heavy tasks relation)
+    const taskStatsMap = new Map<string, { total: number; completed: number }>();
+    try {
+      const rawStats = await this.taskRepository.createQueryBuilder('task')
+        .innerJoin('task.project', 'project')
+        .select('project.id', 'projectId')
+        .addSelect('COUNT(task.id)', 'total')
+        .addSelect("SUM(CASE WHEN task.status = 'done' THEN 1 ELSE 0 END)", 'completed')
+        .where('task.parentTaskId IS NULL')
+        .groupBy('project.id')
+        .getRawMany();
+
+      rawStats.forEach((row) => {
+        const pId = row.projectId || row.project_id;
+        if (pId !== undefined && pId !== null) {
+          taskStatsMap.set(String(pId), {
+            total: Number(row.total || 0),
+            completed: Number(row.completed || 0),
+          });
+        }
+      });
+    } catch (e) {
+      console.error('Failed to compute task completion stats:', e);
+    }
+
+    const activeUsersMap = new Map<string, any[]>();
+    try {
+      const activeAssignments = await this.assignmentRepository.find({
+        where: { isActive: true },
+        relations: ['user', 'user.role'],
+      });
+      activeAssignments.forEach((assign) => {
+        if (assign.projectId && assign.user) {
+          const pKey = String(assign.projectId);
+          const list = activeUsersMap.get(pKey) || [];
+          if (!list.some(u => String(u.id) === String(assign.user.id))) {
+            list.push(assign.user);
+          }
+          activeUsersMap.set(pKey, list);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to fetch active assignments:', e);
+    }
+
+    // Add Nepali date formatting, task completion stats, and active users to each project
+    return projects.map((project) => {
+      const formatted = ProjectDateFormatter.addNepaliDates(project);
+      const pIdStr = String(project.id);
+      (formatted as any).taskCompletionStats = taskStatsMap.get(pIdStr) || { total: 0, completed: 0 };
+      (formatted as any).activeUsers = activeUsersMap.get(pIdStr) || [];
+      return formatted;
+    });
   }
 
   async findOne(id: string) {
@@ -226,11 +286,17 @@ export class ProjectsService {
       ]
     });
     
-    if (!project) {
-      return null;
+    const formatted = ProjectDateFormatter.addNepaliDates(project);
+    try {
+      const activeAssignments = await this.assignmentRepository.find({
+        where: { projectId: id, isActive: true },
+        relations: ['user', 'user.role'],
+      });
+      (formatted as any).activeUsers = activeAssignments.map((a) => a.user).filter(Boolean);
+    } catch (e) {
+      (formatted as any).activeUsers = [];
     }
-    
-    return ProjectDateFormatter.addNepaliDates(project);
+    return formatted;
   }
 
   async update(id: string, updateProjectDto: UpdateProjectDto) {

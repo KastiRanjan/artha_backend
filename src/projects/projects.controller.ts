@@ -9,6 +9,7 @@ import {
   UseGuards,
   Query,
   Res,
+  Header,
   ForbiddenException
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -49,11 +50,13 @@ export class ProjectsController {
   }
 
   @Get()
+  @Header('Cache-Control', 'no-cache, no-store, must-revalidate')
   findAll(
     @GetUser() user: UserEntity,
-    @Query('status') status?: 'active' | 'suspended' | 'archived' | 'signed_off' | 'all'
+    @Query('status') status?: 'active' | 'suspended' | 'archived' | 'signed_off' | 'all',
+    @Query('fields') fields?: string
   ) {
-    return this.projectsService.findAll(status, user);
+    return this.projectsService.findAll(status, user, fields);
   }
 
   @Get(':id')
