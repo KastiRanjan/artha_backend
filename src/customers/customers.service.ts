@@ -64,8 +64,11 @@ export class CustomersService {
   }
 
   findByStatus(status: string) {
+    if (status && status.toLowerCase() === 'all') {
+      return this.findAll();
+    }
     return this.customerRepository.find({
-      where: { status },
+      where: { status: status as any },
       relations: ['businessSize', 'industryNature', 'legalStatus']
     });
   }

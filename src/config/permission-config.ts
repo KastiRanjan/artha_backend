@@ -1299,7 +1299,12 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/projects/:id/export',
               method: MethodList.GET
-            },
+            }
+          ]
+        },
+        {
+          name: 'Export projects helper',
+          route: [
             {
               path: '/projects/export',
               method: MethodList.GET
@@ -2162,6 +2167,15 @@ export const PermissionConfiguration: PermissionConfigInterface = {
             {
               path: '/clients/:id',
               method: MethodList.PATCH
+            }
+          ]
+        },
+        {
+          name: 'Export clients helper',
+          route: [
+            {
+              path: '/clients/export',
+              method: MethodList.GET
             }
           ]
         }

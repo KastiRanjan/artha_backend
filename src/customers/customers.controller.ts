@@ -29,9 +29,9 @@ export class CustomersController {
   }
 
   @Get()
-  @ApiQuery({ name: 'status', required: false, enum: ['active', 'suspended', 'archive'] })
+  @ApiQuery({ name: 'status', required: false })
   findAll(@Query('status') status?: string) {
-    if (status) {
+    if (status && status.toLowerCase() !== 'all') {
       return this.customersService.findByStatus(status);
     }
     return this.customersService.findAll();

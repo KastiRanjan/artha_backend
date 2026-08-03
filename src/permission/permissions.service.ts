@@ -1,4 +1,4 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException, OnApplicationBootstrap } from '@nestjs/common';
 import { Not, ObjectLiteral } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -20,13 +20,22 @@ import { LoadPermissionMisc } from 'src/permission/misc/load-permission.misc';
 @Injectable()
 export class PermissionsService
   extends LoadPermissionMisc
-  implements CommonServiceInterface<Permission>
+  implements CommonServiceInterface<Permission>, OnApplicationBootstrap
 {
   constructor(
     @InjectRepository(PermissionRepository)
     private repository: PermissionRepository
   ) {
     super();
+  }
+
+  async onApplicationBootstrap() {
+    try {
+      await this.syncPermission();
+      console.log('Permissions auto-synced with permission-config.ts');
+    } catch (e) {
+      console.error('Failed to auto-sync permissions on startup:', e);
+    }
   }
 
   /**
