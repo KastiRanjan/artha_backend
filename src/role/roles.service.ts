@@ -15,6 +15,8 @@ import {
 import { CommonServiceInterface } from 'src/common/interfaces/common-service.interface';
 import { PermissionsService } from 'src/permission/permissions.service';
 import { Pagination } from 'src/paginate';
+import { PermissionEntity } from 'src/permission/entities/permission.entity';
+import { PermissionConfiguration } from 'src/config/permission-config';
 
 @Injectable()
 export class RolesService implements CommonServiceInterface<RoleSerializer> {
@@ -140,5 +142,40 @@ export class RolesService implements CommonServiceInterface<RoleSerializer> {
       permissions
     };
     return this.repository.updateItem(role, updateRoleDto, permissionEntities);
+  }
+
+  /**
+   * Synchronize default role permissions from configuration
+   */
+  async syncRoleDefaults(): Promise<{ message: string; results: any[] }> {
+    const roleDefaults = PermissionConfiguration.roleDefaults || {};
+    const roles = await this.repository.find({ relations: ['permission'] });
+    const permissionRepo = this.repository.manager.getRepository(PermissionEntity);
+    const allPermissions = await permissionRepo.find();
+
+    const results = [];
+
+    for (const role of roles) {
+      const defaults = roleDefaults[role.name];
+      if (defaults === 'ALL') {
+        role.permission = allPermissions;
+        await this.repository.save(role);
+        results.push({ role: role.name, permissionsCount: allPermissions.length });
+      } else if (Array.isArray(defaults)) {
+        const defaultSet = new Set(defaults.map((d: string) => d.toLowerCase().trim()));
+        const matched = allPermissions.filter((p) => {
+          const desc = p.description?.toLowerCase().trim();
+          return desc && defaultSet.has(desc);
+        });
+        role.permission = matched;
+        await this.repository.save(role);
+        results.push({ role: role.name, permissionsCount: matched.length });
+      }
+    }
+
+    return {
+      message: 'Role permissions synchronized from config defaults successfully',
+      results
+    };
   }
 }

@@ -1,0 +1,41 @@
+/**
+ * Default permissions for Audit Senior role.
+ * Includes task execution, worklogs, leave, calendar, and project visibility.
+ */
+export const auditseniorDefaults: string[] = [
+  "Get all task super projects",
+  "Get task super project by id",
+  "Get task super projects by project id",
+  "Get all task group projects",
+  "Get task group project by id",
+  "Get task group projects by project id",
+  "Get task group projects by task super project id",
+  "View task rankings",
+  "Update task rankings",
+  "Get all task super",
+  "Add task super",
+  "Edit task super",
+  "Get task super by id",
+  "Delete task super by id",
+  "List active users",
+  "View all user",
+  "Get user by id",
+  "Get user profile",
+  "Get user bank details",
+  "Get user education details",
+  "Get user documents",
+  "View all Projects",
+  "View project by id",
+  "View project user assignments",
+  "View user availability",
+  "View user availability timeline",
+  "View specific user availability",
+  "View available users",
+  "View all tasks",
+  "Get tasks by project id",
+  "View all legal statuses",
+  "Create legal status",
+  "View legal status by id",
+  "Update legal status",
+  "Delete legal status"
+];

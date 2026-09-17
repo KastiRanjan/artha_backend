@@ -74,6 +74,11 @@ export class RolesController {
     return this.rolesService.updatePermissions(id, permissions);
   }
 
+  @Post('sync-defaults')
+  async syncDefaults() {
+    return this.rolesService.syncRoleDefaults();
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

@@ -1,4 +1,4 @@
-import { Factory } from 'typeorm-seeding';
+﻿import { Factory } from 'typeorm-seeding';
 import { Connection } from 'typeorm';
 import { RoleEntity } from 'src/role/entities/role.entity';
 import { PermissionConfiguration } from 'src/config/permission-config';
@@ -7,10 +7,7 @@ import { PermissionEntity } from 'src/permission/entities/permission.entity';
 export default class CreateRoleSeed {
   public async run(factory: Factory, connection: Connection): Promise<any> {
     const roles = PermissionConfiguration.roles;
-    const projectmanagerPermission =
-      PermissionConfiguration.projectmanagerPermission;
-    const auditseniorPermission = PermissionConfiguration.auditseniorPermission;
-    const auditjuniorPermission = PermissionConfiguration.auditjuniorPermission;
+    const roleDefaults = PermissionConfiguration.roleDefaults || {};
 
     await connection
       .createQueryBuilder()
@@ -20,93 +17,29 @@ export default class CreateRoleSeed {
       .orIgnore()
       .execute();
 
-    // Assign all permission to superUser
-    const role = await connection
-      .getRepository(RoleEntity)
-      .createQueryBuilder('role')
-      .where('role.name = :name', {
-        name: 'superuser'
-      })
-      .getOne();
+    const allPermissions = await connection
+      .getRepository(PermissionEntity)
+      .find();
 
-    // Assign all permission to projectManager
-    const projectManager = await connection
-      .getRepository(RoleEntity)
-      .createQueryBuilder('role')
-      .where('role.name = :name', {
-        name: 'projectmanager'
-      })
-      .getOne();
+    for (const roleDef of roles) {
+      const role = await connection
+        .getRepository(RoleEntity)
+        .findOne({ name: roleDef.name });
 
-    // Assign all permission to auditSenior
-    const auditSenior = await connection
-      .getRepository(RoleEntity)
-      .createQueryBuilder('role')
-      .where('role.name = :name', {
-        name: 'auditsenior'
-      })
-      .getOne();
+      if (!role) continue;
 
-    // Assign all permission to auditJunior
-    const auditJunior = await connection
-      .getRepository(RoleEntity)
-      .createQueryBuilder('role')
-      .where('role.name = :name', {
-        name: 'auditjunior'
-      })
-      .getOne();
-
-    if (role) {
-      role.permission = await connection
-        .getRepository(PermissionEntity)
-        .createQueryBuilder('permission')
-        .getMany();
-
-      await role.save();
-    }
-
-    if (projectManager) {
-      const projectManagerPermissions = projectmanagerPermission.flatMap(
-        (permission) => permission.permissions?.map((p) => p.name)
-      );
-      projectManager.permission = await connection
-        .getRepository(PermissionEntity)
-        .createQueryBuilder('permission')
-        .where('permission.description IN (:...descriptions)', {
-          descriptions: projectManagerPermissions
-        })
-        .getMany();
-
-      await projectManager.save();
-    }
-    if (auditSenior) {
-      const auditSeniorPermissions = auditseniorPermission.flatMap(
-        (permission) => permission.permissions?.map((p) => p.name)
-      );
-      auditSenior.permission = await connection
-        .getRepository(PermissionEntity)
-        .createQueryBuilder('permission')
-        .where('permission.description IN (:...descriptions)', {
-          descriptions: auditSeniorPermissions
-        })
-        .getMany();
-
-      await auditSenior.save();
-    }
-
-    if (auditJunior) {
-      const auditJuniorPermissions = auditjuniorPermission.flatMap(
-        (permission) => permission.permissions?.map((p) => p.name)
-      );
-      auditJunior.permission = await connection
-        .getRepository(PermissionEntity)
-        .createQueryBuilder('permission')
-        .where('permission.description IN (:...descriptions)', {
-          descriptions: auditJuniorPermissions
-        })
-        .getMany();
-
-      await auditJunior.save();
+      const defaults = roleDefaults[roleDef.name];
+      if (defaults === 'ALL') {
+        role.permission = allPermissions;
+        await role.save();
+      } else if (Array.isArray(defaults) && defaults.length > 0) {
+        const defaultSet = new Set(defaults.map((d: string) => d.toLowerCase().trim()));
+        role.permission = allPermissions.filter((p) => {
+          const desc = p.description?.toLowerCase().trim();
+          return desc && defaultSet.has(desc);
+        });
+        await role.save();
+      }
     }
   }
 }

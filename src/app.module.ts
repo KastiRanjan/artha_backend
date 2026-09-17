@@ -17,6 +17,7 @@ import { AppController } from 'src/app.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { CustomValidationPipe } from 'src/common/pipes/custom-validation.pipe';
 import { I18nExceptionFilterPipe } from 'src/common/pipes/i18n-exception-filter.pipe';
+import { PermissionGuard } from 'src/common/guard/permission.guard';
 import * as ormConfig from 'src/config/ormconfig';
 import winstonConfig from 'src/config/winston';
 import { DashboardModule } from 'src/dashboard/dashboard.module';
@@ -139,6 +140,10 @@ import { ClientReportDocumentTypeModule } from './client-report-document-type/cl
     {
       provide: APP_FILTER,
       useClass: I18nExceptionFilterPipe
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard
     },
   ],
   controllers: [AppController]
