@@ -1,7 +1,8 @@
-import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
 import { Project } from 'src/projects/entities/project.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { DsaExpenseItem } from './dsa-expense-item.entity';
 
 export enum DsaStatus {
   REQUESTED = 'requested',
@@ -46,6 +47,23 @@ export class Dsa extends CustomBaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   approvedAmount: number;
 
+  // Explicit Financial Pipeline Fields (Advance vs Claims)
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  advanceRequestedAmount?: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  advanceApprovedAmount?: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  totalClaimedAmount?: number;
+
+  // Positive: Company pays employee; Negative: Employee refunds company
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  netSettlementAmount?: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  idempotencyKey?: string;
+
   @ManyToOne(() => UserEntity, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'approvedById' })
   approvedBy: UserEntity;
@@ -83,6 +101,9 @@ export class Dsa extends CustomBaseEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   settledAt: Date;
+
+  @OneToMany(() => DsaExpenseItem, (item) => item.dsa, { cascade: true })
+  expenseItems: DsaExpenseItem[];
 
   @ManyToOne(() => UserEntity, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'verifiedById' })

@@ -139,8 +139,8 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query('status') status?: string) {
+    return this.usersService.findAll(status);
   }
 
   @Get('list-active')

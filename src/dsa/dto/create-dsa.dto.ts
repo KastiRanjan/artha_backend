@@ -1,4 +1,13 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray, IsUUID, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { DsaType } from '../entities/dsa.entity';
 
 export class CreateDsaDto {
@@ -23,4 +32,8 @@ export class CreateDsaDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
 }

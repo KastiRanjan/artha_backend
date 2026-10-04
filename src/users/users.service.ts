@@ -197,12 +197,15 @@ export class UsersService {
     return savedData;
   }
 
-  async findAll() {
-    // This method should be implemented based on your requirements
-    // For now, return a basic message or implement pagination
+  async findAll(status?: string) {
+    const where: any = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
     return this.userRepository.find({
-      relations: ['role'],
-      select: ['id', 'name', 'email', 'username', 'status', 'createdAt', 'updatedAt']
+      where,
+      relations: ['role', 'profile', 'profile.department', 'bank_detail', 'projects'],
+      order: { name: 'ASC' }
     });
   }
 

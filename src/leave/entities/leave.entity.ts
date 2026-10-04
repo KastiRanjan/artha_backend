@@ -2,7 +2,14 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 't
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { LeaveType } from 'src/leave-type/entities/leave-type.entity';
 
-export type LeaveStatus = 'pending' | 'approved_by_manager' | 'approved' | 'rejected';
+export type LeaveStatus =
+  | 'pending'
+  | 'clarification_requested'
+  | 'approved_by_manager'
+  | 'approved'
+  | 'rejected';
+
+export type FractionalType = 'first_half' | 'second_half' | 'custom_hours';
 
 @Entity('leaves')
 export class Leave {
@@ -27,7 +34,7 @@ export class Leave {
   @Column({ type: 'text', nullable: true })
   reason?: string;
 
-  @Column({ type: 'varchar', length: 20, default: 'pending' })
+  @Column({ type: 'varchar', length: 30, default: 'pending' })
   status: LeaveStatus;
 
   @Column({ type: 'boolean', default: false })
@@ -35,6 +42,22 @@ export class Leave {
 
   @Column({ type: 'json', nullable: true })
   customDates?: string[];
+
+  // Fractional Leave Support
+  @Column({ type: 'boolean', default: false })
+  isFractional: boolean;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  fractionalType?: FractionalType;
+
+  @Column({ type: 'time', nullable: true })
+  startTime?: string;
+
+  @Column({ type: 'time', nullable: true })
+  endTime?: string;
+
+  @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true, default: null })
+  fractionalDuration?: number;
 
   @Column({ type: 'uuid', nullable: true })
   requestedManagerId: string;
@@ -63,6 +86,26 @@ export class Leave {
 
   @Column({ type: 'timestamp', nullable: true })
   adminApprovalTime?: Date;
+
+  // Clarification Support
+  @Column({ type: 'text', nullable: true })
+  clarificationNotes?: string;
+
+  @Column({ type: 'text', nullable: true })
+  clarificationResponse?: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  clarificationRequestedById?: string;
+
+  @ManyToOne(() => UserEntity, { nullable: true })
+  @JoinColumn({ name: 'clarificationRequestedById' })
+  clarificationRequestedBy?: UserEntity;
+
+  @Column({ type: 'timestamp', nullable: true })
+  clarificationRequestedAt?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  clarificationRespondedAt?: Date;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

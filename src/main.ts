@@ -32,11 +32,11 @@ async function bootstrap() {
 
   // Dynamic CORS origins based on environment
   const corsOrigins = [];
-  
+
   // Add configured URLs from environment
   if (process.env.FRONTEND_URL) {
     corsOrigins.push(process.env.FRONTEND_URL);
-    
+
     // Also add client subdomain for client portal
     // If FRONTEND_URL is https://task.artha.com.np, add https://client.artha.com.np
     try {
@@ -59,20 +59,21 @@ async function bootstrap() {
       console.log('Could not parse FRONTEND_URL for client subdomain');
     }
   }
-  
+
   // Explicitly add CLIENT_PORTAL_URL if provided
   if (process.env.CLIENT_PORTAL_URL) {
     corsOrigins.push(process.env.CLIENT_PORTAL_URL);
   }
-  
+
   if (process.env.BACKEND_URL) {
     corsOrigins.push(process.env.BACKEND_URL);
   }
-  
+
   // Add localhost origins for development
   if (!isProduction || isLocalhost) {
     corsOrigins.push(
       'http://localhost:5173',
+      'http://localhost:5174',
       'http://localhost:3000',
       'http://localhost:4173',
       'http://127.0.0.1:5173',
@@ -86,8 +87,8 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true, // Essential for cookies
     allowedHeaders: [
-      'Content-Type', 
-      'Authorization', 
+      'Content-Type',
+      'Authorization',
       'X-Requested-With',
       'Accept',
       'Origin',
@@ -112,7 +113,7 @@ async function bootstrap() {
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: [
-          "'self'", 
+          "'self'",
           ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
           ...(process.env.BACKEND_URL ? [process.env.BACKEND_URL] : [])
         ]
@@ -149,7 +150,7 @@ async function bootstrap() {
   useContainer(app.select(AppModule), {
     fallbackOnErrors: true
   });
-  
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -168,11 +169,11 @@ async function bootstrap() {
   console.log(`🔒 SameSite: ${process.env.IS_SAME_SITE}`);
   console.log(`📡 CORS Origins:`, corsOrigins);
   console.log(`🛡️  Security (CSP): ${isProduction || isCloudflareSetup ? 'Enabled' : 'Disabled'}`);
-  
+
   await app.listen(port);
   console.log(`✅ Application listening on port: ${port}`);
   console.log(`📚 Swagger docs available at: http://localhost:${port}/api-docs`);
-  
+
   if (isCloudflareSetup) {
     console.log(`🌐 Public access via: ${process.env.BACKEND_URL}/api-docs`);
   }

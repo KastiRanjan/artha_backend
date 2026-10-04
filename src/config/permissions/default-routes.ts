@@ -225,6 +225,22 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     path: "/leave/:id/approve",
     method: MethodList.PATCH
   },
+  {
+    path: "/leave/:id/clarification/request",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/leave/:id/clarification/respond",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/leave/balance/ledger/my",
+    method: MethodList.GET
+  },
+  {
+    path: "/leave/balance/ledger/:userId",
+    method: MethodList.GET
+  },
 
   // --- Calendar & Holidays ---
   {

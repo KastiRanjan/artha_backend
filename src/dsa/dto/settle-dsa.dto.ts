@@ -15,4 +15,12 @@ export class SettleDsaDto {
   @IsOptional()
   @IsString()
   billImage?: string;
+
+  /**
+   * JSON stringified array of itemized expenses:
+   * Array<{ category: string; expenseDate: string; amount: number; receiptNumber?: string; remarks?: string }>
+   */
+  @IsOptional()
+  @IsString()
+  expenseItems?: string;
 }

@@ -6,6 +6,7 @@ import { UserLeaveBalanceService } from './user-leave-balance.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Leave } from './entities/leave.entity';
 import { UserLeaveBalance } from './entities/user-leave-balance.entity';
+import { LeaveBalanceLedger } from './entities/leave-balance-ledger.entity';
 import { LeaveType } from '../leave-type/entities/leave-type.entity';
 import { Project } from '../projects/entities/project.entity';
 import { Holiday } from '../holiday/entities/holiday.entity';
@@ -16,8 +17,17 @@ import { UserEntity } from '../auth/entity/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Leave, UserLeaveBalance, LeaveType, Project, Holiday, Notification, UserEntity]),
-    NotificationModule
+    TypeOrmModule.forFeature([
+      Leave,
+      UserLeaveBalance,
+      LeaveBalanceLedger,
+      LeaveType,
+      Project,
+      Holiday,
+      Notification,
+      UserEntity,
+    ]),
+    NotificationModule,
   ],
   controllers: [LeaveController],
   providers: [LeaveService, UserLeaveBalanceService, NotificationService],

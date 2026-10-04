@@ -2,6 +2,11 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { UserLeaveBalance } from './entities/user-leave-balance.entity';
+import {
+  LeaveBalanceLedger,
+  LeaveLedgerAction,
+  LeaveLedgerChangeType,
+} from './entities/leave-balance-ledger.entity';
 import { LeaveType } from '../leave-type/entities/leave-type.entity';
 import { UserEntity } from '../auth/entity/user.entity';
 import { AllocateLeaveDto } from './dto/allocate-leave.dto';
@@ -13,6 +18,8 @@ export class UserLeaveBalanceService {
   constructor(
     @InjectRepository(UserLeaveBalance)
     private readonly userLeaveBalanceRepository: Repository<UserLeaveBalance>,
+    @InjectRepository(LeaveBalanceLedger)
+    private readonly ledgerRepository: Repository<LeaveBalanceLedger>,
     @InjectRepository(LeaveType)
     private readonly leaveTypeRepository: Repository<LeaveType>,
     @InjectRepository(UserEntity)
@@ -20,9 +27,42 @@ export class UserLeaveBalanceService {
   ) {}
 
   /**
+   * Helper to append an immutable audit log entry into the ledger
+   */
+  private async recordLedgerEntry(params: {
+    userId: string;
+    leaveTypeId: string;
+    year: number;
+    action: LeaveLedgerAction;
+    changeType: LeaveLedgerChangeType;
+    days: number;
+    resultingBalance: number;
+    referenceId?: string;
+    remarks?: string;
+    createdById?: string;
+  }): Promise<LeaveBalanceLedger> {
+    const entry = this.ledgerRepository.create({
+      userId: params.userId,
+      leaveTypeId: params.leaveTypeId,
+      year: params.year,
+      action: params.action,
+      changeType: params.changeType,
+      days: params.days,
+      resultingBalance: params.resultingBalance,
+      referenceId: params.referenceId,
+      remarks: params.remarks,
+      createdById: params.createdById,
+    });
+    return this.ledgerRepository.save(entry);
+  }
+
+  /**
    * Allocate leave to a user for a specific year
    */
-  async allocateLeave(allocateLeaveDto: AllocateLeaveDto): Promise<UserLeaveBalance> {
+  async allocateLeave(
+    allocateLeaveDto: AllocateLeaveDto,
+    allocatedById?: string,
+  ): Promise<UserLeaveBalance> {
     const { userId, leaveTypeId, year, allocatedDays, carriedOverDays = 0 } = allocateLeaveDto;
 
     // Validate user exists
@@ -32,8 +72,8 @@ export class UserLeaveBalanceService {
     }
 
     // Validate leave type exists
-    const leaveType = await this.leaveTypeRepository.findOne({ 
-      where: { id: leaveTypeId, isActive: true } 
+    const leaveType = await this.leaveTypeRepository.findOne({
+      where: { id: leaveTypeId, isActive: true },
     });
     if (!leaveType) {
       throw new NotFoundException(`Leave type with ID ${leaveTypeId} not found or inactive`);
@@ -41,8 +81,11 @@ export class UserLeaveBalanceService {
 
     // Check if allocation already exists
     let balance = await this.userLeaveBalanceRepository.findOne({
-      where: { userId, leaveTypeId, year }
+      where: { userId, leaveTypeId, year },
     });
+
+    const isNew = !balance;
+    const oldAllocated = balance ? Number(balance.allocatedDays) : 0;
 
     if (balance) {
       // Update existing allocation
@@ -57,24 +100,43 @@ export class UserLeaveBalanceService {
         allocatedDays,
         carriedOverDays,
         usedDays: 0,
-        pendingDays: 0
+        pendingDays: 0,
       });
     }
 
-    return this.userLeaveBalanceRepository.save(balance);
+    const savedBalance = await this.userLeaveBalanceRepository.save(balance);
+
+    // Record audit in ledger
+    const delta = isNew ? allocatedDays : allocatedDays - oldAllocated;
+    await this.recordLedgerEntry({
+      userId,
+      leaveTypeId,
+      year,
+      action: isNew ? LeaveLedgerAction.ALLOCATION : LeaveLedgerAction.MANUAL_ADJUSTMENT,
+      changeType: delta >= 0 ? LeaveLedgerChangeType.CREDIT : LeaveLedgerChangeType.DEBIT,
+      days: Math.abs(delta),
+      resultingBalance: savedBalance.remainingDays,
+      remarks: isNew
+        ? `Initial allocation of ${allocatedDays} days for year ${year}`
+        : `Allocation adjusted from ${oldAllocated} to ${allocatedDays} days`,
+      createdById: allocatedById,
+    });
+
+    return savedBalance;
   }
 
   /**
    * Allocate leave to all active users for a specific leave type
    */
   async allocateLeaveToAllUsers(
-    leaveTypeId: string, 
-    year: number, 
-    allocatedDays: number
+    leaveTypeId: string,
+    year: number,
+    allocatedDays: number,
+    allocatedById?: string,
   ): Promise<UserLeaveBalance[]> {
     // Validate leave type
-    const leaveType = await this.leaveTypeRepository.findOne({ 
-      where: { id: leaveTypeId, isActive: true } 
+    const leaveType = await this.leaveTypeRepository.findOne({
+      where: { id: leaveTypeId, isActive: true },
     });
     if (!leaveType) {
       throw new NotFoundException(`Leave type with ID ${leaveTypeId} not found or inactive`);
@@ -82,18 +144,21 @@ export class UserLeaveBalanceService {
 
     // Get all active users
     const users = await this.userRepository.find({
-      where: { status: 'active' }
+      where: { status: 'active' },
     });
 
     const balances: UserLeaveBalance[] = [];
-    
+
     for (const user of users) {
-      const balance = await this.allocateLeave({
-        userId: user.id,
-        leaveTypeId,
-        year,
-        allocatedDays
-      });
+      const balance = await this.allocateLeave(
+        {
+          userId: user.id,
+          leaveTypeId,
+          year,
+          allocatedDays,
+        },
+        allocatedById,
+      );
       balances.push(balance);
     }
 
@@ -104,13 +169,13 @@ export class UserLeaveBalanceService {
    * Get user leave balance for a specific leave type and year
    */
   async getUserLeaveBalance(
-    userId: string, 
-    leaveTypeId: string, 
-    year: number
+    userId: string,
+    leaveTypeId: string,
+    year: number,
   ): Promise<UserLeaveBalance | null> {
     const balance = await this.userLeaveBalanceRepository.findOne({
       where: { userId, leaveTypeId, year },
-      relations: ['user', 'leaveType']
+      relations: ['user', 'leaveType'],
     });
 
     return balance;
@@ -135,68 +200,121 @@ export class UserLeaveBalanceService {
    * Update used days when leave is approved
    */
   async updateUsedDays(
-    userId: string, 
-    leaveTypeId: string, 
-    year: number, 
-    days: number
+    userId: string,
+    leaveTypeId: string,
+    year: number,
+    days: number,
+    leaveId?: string,
+    approvedById?: string,
   ): Promise<void> {
     const balance = await this.getUserLeaveBalance(userId, leaveTypeId, year);
-    
+
     if (!balance) {
       throw new NotFoundException(
-        `No leave balance found for user ${userId}, leave type ${leaveTypeId}, year ${year}`
+        `No leave balance found for user ${userId}, leave type ${leaveTypeId}, year ${year}`,
       );
     }
 
     balance.usedDays = Number(balance.usedDays) + days;
     balance.pendingDays = Math.max(0, Number(balance.pendingDays) - days);
-    
-    await this.userLeaveBalanceRepository.save(balance);
+
+    const savedBalance = await this.userLeaveBalanceRepository.save(balance);
+
+    // Record consumption in ledger
+    await this.recordLedgerEntry({
+      userId,
+      leaveTypeId,
+      year,
+      action: LeaveLedgerAction.LEAVE_CONSUMPTION,
+      changeType: LeaveLedgerChangeType.DEBIT,
+      days,
+      resultingBalance: savedBalance.remainingDays,
+      referenceId: leaveId,
+      remarks: `Leave approved: converted ${days} pending day(s) to used day(s)`,
+      createdById: approvedById,
+    });
   }
 
   /**
    * Update pending days when leave is requested
    */
   async updatePendingDays(
-    userId: string, 
-    leaveTypeId: string, 
-    year: number, 
-    days: number
+    userId: string,
+    leaveTypeId: string,
+    year: number,
+    days: number,
+    leaveId?: string,
   ): Promise<void> {
     const balance = await this.getUserLeaveBalance(userId, leaveTypeId, year);
-    
+
     if (!balance) {
       throw new NotFoundException(
-        `No leave balance found for user ${userId}, leave type ${leaveTypeId}, year ${year}`
+        `No leave balance found for user ${userId}, leave type ${leaveTypeId}, year ${year}`,
       );
     }
 
     balance.pendingDays = Number(balance.pendingDays) + days;
-    
-    await this.userLeaveBalanceRepository.save(balance);
+
+    const savedBalance = await this.userLeaveBalanceRepository.save(balance);
+
+    // Record hold reservation in ledger
+    await this.recordLedgerEntry({
+      userId,
+      leaveTypeId,
+      year,
+      action: LeaveLedgerAction.LEAVE_RESERVATION,
+      changeType: LeaveLedgerChangeType.HOLD,
+      days,
+      resultingBalance: savedBalance.remainingDays,
+      referenceId: leaveId,
+      remarks: `Leave requested: reserved ${days} day(s) as pending`,
+    });
   }
 
   /**
-   * Revert pending days when leave is rejected or deleted
+   * Revert pending days when leave is rejected, deleted, or cancelled
    */
   async revertPendingDays(
-    userId: string, 
-    leaveTypeId: string, 
-    year: number, 
-    days: number
+    userId: string,
+    leaveTypeId: string,
+    year: number,
+    days: number,
+    leaveId?: string,
+    action: LeaveLedgerAction = LeaveLedgerAction.LEAVE_CANCELLATION,
+    actorId?: string,
   ): Promise<void> {
     const balance = await this.getUserLeaveBalance(userId, leaveTypeId, year);
-    
+
     if (balance) {
       balance.pendingDays = Math.max(0, Number(balance.pendingDays) - days);
-      await this.userLeaveBalanceRepository.save(balance);
+      const savedBalance = await this.userLeaveBalanceRepository.save(balance);
+
+      // Record release in ledger
+      await this.recordLedgerEntry({
+        userId,
+        leaveTypeId,
+        year,
+        action,
+        changeType: LeaveLedgerChangeType.RELEASE,
+        days,
+        resultingBalance: savedBalance.remainingDays,
+        referenceId: leaveId,
+        remarks:
+          action === LeaveLedgerAction.LEAVE_REJECTION
+            ? `Leave rejected: released ${days} pending day(s) back to available`
+            : `Leave cancelled/modified: released ${days} pending day(s)`,
+        createdById: actorId,
+      });
     }
   }
 
   /**
    * Carry over unused leave to next year
    */
-  async carryOverLeave(carryOverDto: CarryOverLeaveDto): Promise<{
+  async carryOverLeave(
+    carryOverDto: CarryOverLeaveDto,
+    performedById?: string,
+  ): Promise<{
     success: number;
     failed: number;
     details: any[];
@@ -212,9 +330,9 @@ export class UserLeaveBalanceService {
     if (leaveTypeIds && leaveTypeIds.length > 0) {
       leaveTypeFilter.id = In(leaveTypeIds);
     }
-    
+
     const leaveTypes = await this.leaveTypeRepository.find({
-      where: leaveTypeFilter
+      where: leaveTypeFilter,
     });
 
     if (leaveTypes.length === 0) {
@@ -225,11 +343,11 @@ export class UserLeaveBalanceService {
     let users: UserEntity[];
     if (userIds && userIds.length > 0) {
       users = await this.userRepository.find({
-        where: { id: In(userIds), status: 'active' }
+        where: { id: In(userIds), status: 'active' },
       });
     } else {
       users = await this.userRepository.find({
-        where: { status: 'active' }
+        where: { status: 'active' },
       });
     }
 
@@ -241,54 +359,66 @@ export class UserLeaveBalanceService {
       for (const leaveType of leaveTypes) {
         try {
           const oldBalance = await this.getUserLeaveBalance(user.id, leaveType.id, fromYear);
-          
+
           if (!oldBalance) {
             details.push({
               userId: user.id,
               userName: user.name,
               leaveType: leaveType.name,
               status: 'skipped',
-              message: 'No balance found for previous year'
+              message: `No balance found for year ${fromYear}`,
             });
             continue;
           }
 
           const remainingDays = oldBalance.remainingDays;
-          
+
           if (remainingDays <= 0) {
             details.push({
               userId: user.id,
               userName: user.name,
               leaveType: leaveType.name,
               status: 'skipped',
-              message: 'No remaining days to carry over'
+              message: 'No remaining days to carry over',
             });
             continue;
           }
 
-          // Calculate days to carry over
           let daysToCarryOver = remainingDays;
           if (leaveType.maxCarryOverDays && leaveType.maxCarryOverDays > 0) {
             daysToCarryOver = Math.min(remainingDays, leaveType.maxCarryOverDays);
           }
 
-          // Check if allocation exists for new year
           let newBalance = await this.getUserLeaveBalance(user.id, leaveType.id, toYear);
-          
+
           if (newBalance) {
-            // Update existing allocation
-            newBalance.carriedOverDays = daysToCarryOver;
+            newBalance.carriedOverDays = Number(newBalance.carriedOverDays) + daysToCarryOver;
             await this.userLeaveBalanceRepository.save(newBalance);
           } else {
-            // Create new allocation with carry over
-            await this.allocateLeave({
+            newBalance = this.userLeaveBalanceRepository.create({
               userId: user.id,
               leaveTypeId: leaveType.id,
               year: toYear,
-              allocatedDays: leaveType.maxDaysPerYear || 0,
-              carriedOverDays: daysToCarryOver
+              allocatedDays: 0,
+              carriedOverDays: daysToCarryOver,
+              usedDays: 0,
+              pendingDays: 0,
             });
+            await this.userLeaveBalanceRepository.save(newBalance);
           }
+
+          // Record carry over in ledger
+          await this.recordLedgerEntry({
+            userId: user.id,
+            leaveTypeId: leaveType.id,
+            year: toYear,
+            action: LeaveLedgerAction.CARRY_OVER,
+            changeType: LeaveLedgerChangeType.CREDIT,
+            days: daysToCarryOver,
+            resultingBalance: newBalance.remainingDays,
+            remarks: `Carried over ${daysToCarryOver} unused day(s) from year ${fromYear} to ${toYear}`,
+            createdById: performedById,
+          });
 
           successCount++;
           details.push({
@@ -296,7 +426,9 @@ export class UserLeaveBalanceService {
             userName: user.name,
             leaveType: leaveType.name,
             status: 'success',
-            carriedOverDays: daysToCarryOver
+            carriedOverDays: daysToCarryOver,
+            fromYear,
+            toYear,
           });
         } catch (error) {
           failedCount++;
@@ -305,7 +437,7 @@ export class UserLeaveBalanceService {
             userName: user.name,
             leaveType: leaveType.name,
             status: 'failed',
-            error: error.message
+            error: error.message,
           });
         }
       }
@@ -314,7 +446,7 @@ export class UserLeaveBalanceService {
     return {
       success: successCount,
       failed: failedCount,
-      details
+      details,
     };
   }
 
@@ -325,31 +457,57 @@ export class UserLeaveBalanceService {
     userId: string,
     leaveTypeId: string,
     year: number,
-    requestedDays: number
+    requestedDays: number,
   ): Promise<{ sufficient: boolean; available: number; message?: string }> {
     const balance = await this.getUserLeaveBalance(userId, leaveTypeId, year);
-    
+
     if (!balance) {
       return {
         sufficient: false,
         available: 0,
-        message: `No leave allocation found for this leave type in year ${year}`
+        message: `No leave allocation found for this leave type in year ${year}`,
       };
     }
 
     const availableDays = balance.remainingDays;
-    
+
     if (availableDays < requestedDays) {
       return {
         sufficient: false,
         available: availableDays,
-        message: `Insufficient leave balance. Available: ${availableDays} days, Requested: ${requestedDays} days`
+        message: `Insufficient leave balance. Available: ${availableDays} days, Requested: ${requestedDays} days`,
       };
     }
 
     return {
       sufficient: true,
-      available: availableDays
+      available: availableDays,
     };
+  }
+
+  /**
+   * Retrieve immutable audit ledger entries for a user
+   */
+  async getLedgerEntries(
+    userId: string,
+    year?: number,
+    leaveTypeId?: string,
+  ): Promise<LeaveBalanceLedger[]> {
+    const query = this.ledgerRepository
+      .createQueryBuilder('ledger')
+      .leftJoinAndSelect('ledger.leaveType', 'leaveType')
+      .where('ledger.userId = :userId', { userId });
+
+    if (year) {
+      query.andWhere('ledger.year = :year', { year });
+    }
+
+    if (leaveTypeId) {
+      query.andWhere('ledger.leaveTypeId = :leaveTypeId', { leaveTypeId });
+    }
+
+    query.orderBy('ledger.createdAt', 'DESC');
+
+    return query.getMany();
   }
 }
