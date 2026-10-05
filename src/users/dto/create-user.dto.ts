@@ -17,6 +17,9 @@ export class CreateUsersDto {
   role: string;
 
   @IsOptional()
+  joinedDate?: string | Date;
+
+  @IsOptional()
   personal?: Record<string, any>;
 
   @IsOptional()

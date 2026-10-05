@@ -73,6 +73,10 @@ export class UserSerializer extends ModelSerializer {
 
   @ApiPropertyOptional()
   @Expose()
+  joinedDate: Date;
+
+  @ApiPropertyOptional()
+  @Expose()
   profile: any;
 
   @ApiPropertyOptional()

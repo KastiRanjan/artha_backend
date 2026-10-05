@@ -38,7 +38,7 @@ export class UsersService {
   ) {}
 
   async create(createUsersDto: CreateUsersDto) {
-    const { email, name, role, hourlyRate } = createUsersDto;
+    const { email, name, role, hourlyRate, joinedDate } = createUsersDto;
 
     const user = await this.userRepository.findOne({ where: { email } });
     if (user) {
@@ -49,7 +49,8 @@ export class UsersService {
       name,
       username: name,
       roleId: role,
-      hourlyRate: typeof hourlyRate === 'number' ? hourlyRate : 500
+      hourlyRate: typeof hourlyRate === 'number' ? hourlyRate : 500,
+      joinedDate: joinedDate ? new Date(joinedDate as any) : undefined
     });
 
     return savedUser;
@@ -352,6 +353,41 @@ export class UsersService {
       );
     }
     
+    // Handle joinedDate changes - Only Admin and Super Admin can edit joinedDate
+    if (updateUserDto.joinedDate !== undefined) {
+      const roleName = modifierUser?.role?.name?.toLowerCase() || '';
+      const canEditJoinedDate =
+        roleName === 'admin' ||
+        roleName === 'superuser' ||
+        roleName === 'super admin' ||
+        roleName === 'super_user' ||
+        roleName === 'administrator' ||
+        roleName.includes('admin') ||
+        roleName.includes('super');
+      if (modifierUser && !canEditJoinedDate) {
+        delete updateData.joinedDate;
+      } else {
+        const newJoinedDate = updateUserDto.joinedDate ? new Date(updateUserDto.joinedDate as any) : null;
+        updateData.joinedDate = newJoinedDate;
+
+        const currentJoinedDateStr = user.joinedDate ? new Date(user.joinedDate).toISOString().split('T')[0] : '';
+        const newJoinedDateStr = newJoinedDate ? newJoinedDate.toISOString().split('T')[0] : '';
+
+        if (currentJoinedDateStr !== newJoinedDateStr) {
+          const modifier = modifierUser || await this.findSystemUser();
+          await this.userHistoryService.createHistoryRecord(
+            user,
+            modifier,
+            HistoryActionType.PROFILE_UPDATE,
+            'joinedDate',
+            currentJoinedDateStr || 'None',
+            newJoinedDateStr || 'None',
+            `Joined date changed from ${currentJoinedDateStr || 'None'} to ${newJoinedDateStr || 'None'} by ${modifier.name}`
+          );
+        }
+      }
+    }
+
     // Use the auth service's update method which has proper validation and role handling
     // Pass along the modifier user for history tracking
     return await this.authService.update(id, updateData, modifierUser);

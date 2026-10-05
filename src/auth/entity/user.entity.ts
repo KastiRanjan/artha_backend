@@ -76,6 +76,9 @@ export class UserEntity extends CustomBaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   lastActiveAt: Date;
 
+  @Column({ type: 'date', nullable: true })
+  joinedDate: Date;
+
   @Column({ nullable: true })
   @Exclude({
     toPlainOnly: true
