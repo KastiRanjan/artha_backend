@@ -338,7 +338,7 @@ export class AuthService {
   ): Promise<Pagination<UserSerializer>> {
     return this.userRepository.paginate(
       userSearchFilterDto,
-      ['role'],
+      ['role', 'profile', 'profile.department', 'bank_detail', 'projects'],
       ['username', 'email', 'name', 'phoneNumber', 'status'],
       {
         groups: [
@@ -348,6 +348,21 @@ export class AuthService {
         ]
       }
     );
+  }
+
+  /**
+   * Get all users for export with full relations (profile, department, bank_detail, projects)
+   */
+  async findAllExport(status?: string) {
+    const where: any = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    return this.userRepository.find({
+      where,
+      relations: ['role', 'profile', 'profile.department', 'bank_detail', 'projects'],
+      order: { name: 'ASC' }
+    });
   }
 
   /**

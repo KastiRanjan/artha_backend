@@ -167,7 +167,7 @@ export class BaseRepository<
         };
         
         // Add status filter to each keyword condition if status is provided
-        if (searchFilter.hasOwnProperty('status') && searchFilter.status) {
+        if (searchFilter.hasOwnProperty('status') && searchFilter.status && searchFilter.status !== 'all') {
           condition.status = searchFilter.status;
         }
         
@@ -175,7 +175,7 @@ export class BaseRepository<
       }
     } else {
       // If no keywords, but status is provided, add status-only condition
-      if (searchFilter.hasOwnProperty('status') && searchFilter.status) {
+      if (searchFilter.hasOwnProperty('status') && searchFilter.status && searchFilter.status !== 'all') {
         whereCondition.push({
           status: searchFilter.status
         });

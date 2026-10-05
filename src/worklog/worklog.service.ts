@@ -439,6 +439,26 @@ export class WorklogService {
     await this.populateUsers(worklogs);
     return worklogs;
   }
+
+  async findWorklogsByDateRange(startDate: string, endDate: string, userId?: string) {
+    const startOfRange = moment(startDate).startOf('day').toDate();
+    const endOfRange = moment(endDate).endOf('day').toDate();
+    const whereCondition: any = {
+      startTime: Between(startOfRange, endOfRange)
+    };
+    if (userId) {
+      whereCondition.user = { id: userId };
+    }
+    const worklogs = await this.worklogRepository.find({
+      relations: ['user', 'task', 'task.project', 'project'],
+      where: whereCondition,
+      order: {
+        startTime: 'ASC'
+      }
+    });
+    await this.populateUsers(worklogs);
+    return worklogs;
+  }
   
   async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string) {
     const whereCondition: any = {};

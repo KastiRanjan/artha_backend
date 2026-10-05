@@ -7,6 +7,15 @@ export const attendanceModulePermissions: ModulesPayloadInterface[] = [
     hasSubmodules: false,
     permissions: [
       {
+        name: "Export attendance helper",
+        route: [
+          {
+            path: "/attendance/export",
+            method: MethodList.GET
+          }
+        ]
+      },
+      {
         name: "View All Users Attendance",
         route: [
           {

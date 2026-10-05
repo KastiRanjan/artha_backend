@@ -72,6 +72,18 @@ export class UserSerializer extends ModelSerializer {
   createdAt: Date;
 
   @ApiPropertyOptional()
+  @Expose()
+  profile: any;
+
+  @ApiPropertyOptional()
+  @Expose()
+  bank_detail: any;
+
+  @ApiPropertyOptional()
+  @Expose()
+  projects: any;
+
+  @ApiPropertyOptional()
   @Expose({
     groups: defaultUserGroupsForSerializing
   })

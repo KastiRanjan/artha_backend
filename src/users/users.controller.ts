@@ -138,6 +138,12 @@ export class UsersController {
     );
   }
 
+  @Get('export')
+  @UseGuards(JwtTwoFactorGuard)
+  exportUsers(@Query('status') status?: string) {
+    return this.usersService.findAll(status);
+  }
+
   @Get()
   findAll(@Query('status') status?: string) {
     return this.usersService.findAll(status);

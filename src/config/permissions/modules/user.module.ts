@@ -25,6 +25,15 @@ export const userModulePermissions: ModulesPayloadInterface[] = [
         ]
       },
       {
+        name: "Export users helper",
+        route: [
+          {
+            path: "/users/export",
+            method: MethodList.GET
+          }
+        ]
+      },
+      {
         name: "Store new user",
         route: [
           {

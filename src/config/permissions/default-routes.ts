@@ -84,6 +84,14 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     method: MethodList.GET
   },
   {
+    path: "/users/list-active",
+    method: MethodList.GET
+  },
+  {
+    path: "/users/export",
+    method: MethodList.GET
+  },
+  {
     path: "/dashboard/os",
     method: MethodList.GET
   },
@@ -104,6 +112,10 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
   {
     path: "/attendance/today-attendence",
     method: MethodList.GET // View own status today
+  },
+  {
+    path: "/attendance/export",
+    method: MethodList.GET
   },
 
   // --- Worklogs Self-Service ---

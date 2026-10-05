@@ -208,6 +208,12 @@ export class AuthController {
     return this.authService.listActiveUsers();
   }
 
+  @UseGuards(JwtTwoFactorGuard)
+  @Get('/users/export')
+  exportUsers(@Query('status') status?: string) {
+    return this.authService.findAllExport(status);
+  }
+
   @UseGuards(JwtTwoFactorGuard, PermissionGuard)
   @Put('/users/:id')
   update(

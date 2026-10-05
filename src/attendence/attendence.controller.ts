@@ -67,6 +67,17 @@ export class AttendenceController {
   getMyAttendence(@GetUser() user: UserEntity) {
     return this.attendenceService.getMyAttendence(user);
   }
+
+  @Get('export')
+  exportAttendance(
+    @GetUser() user: UserEntity,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('userId') userId?: string,
+    @Query('departmentId') departmentId?: string,
+  ) {
+    return this.attendenceService.getExportAttendance(user, { startDate, endDate, userId, departmentId });
+  }
   
   @Get(':id')
   findOne(@Param('id') id: string) {

@@ -387,6 +387,153 @@ export class AttendenceService {
     return await this.addWorklogDataToAttendance(attendanceRecords);
   }
 
+  async getExportAttendance(
+    user: UserEntity,
+    filters: { startDate?: string; endDate?: string; userId?: string; departmentId?: string }
+  ): Promise<any[]> {
+    const isSuperUser = await this.checkSuperUserPermission(user);
+    
+    // If not superuser, force userId to the logged in user's ID
+    const effectiveUserId = isSuperUser ? filters.userId : user.id;
+
+    // 1. Build attendance query
+    const queryBuilder = this.attendanceRepository.createQueryBuilder('attendance')
+      .leftJoinAndSelect('attendance.history', 'history');
+
+    if (effectiveUserId) {
+      queryBuilder.andWhere('attendance.userId = :userId', { userId: effectiveUserId });
+    }
+
+    if (filters.startDate && filters.endDate) {
+      queryBuilder.andWhere('attendance.date BETWEEN :startDate AND :endDate', {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      });
+    } else if (filters.startDate) {
+      queryBuilder.andWhere('attendance.date >= :startDate', { startDate: filters.startDate });
+    } else if (filters.endDate) {
+      queryBuilder.andWhere('attendance.date <= :endDate', { endDate: filters.endDate });
+    }
+
+    queryBuilder.orderBy('attendance.date', 'DESC').addOrderBy('attendance.clockIn', 'DESC');
+
+    const attendanceRecords = await queryBuilder.getMany();
+
+    // 2. Fetch all relevant users with complete relations (role, profile, department)
+    const userQueryBuilder = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.department', 'department');
+
+    if (filters.departmentId) {
+      userQueryBuilder.andWhere('profile.departmentId = :departmentId', { departmentId: filters.departmentId });
+    }
+
+    const users = await userQueryBuilder.getMany();
+    const userMap = new Map<string, any>();
+    users.forEach((u) => {
+      userMap.set(u.id, {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        username: u.username,
+        phoneNumber: u.phoneNumber || '',
+        status: u.status,
+        roleName: u.role?.displayName || u.role?.name || 'N/A',
+        departmentName: u.profile?.department?.name || 'N/A',
+      });
+    });
+
+    // 3. Determine date range for worklogs bulk query
+    let minDate = filters.startDate;
+    let maxDate = filters.endDate;
+    if (!minDate || !maxDate) {
+      if (attendanceRecords.length > 0) {
+        const dates = attendanceRecords.map((a) => a.date).filter(Boolean).sort();
+        minDate = minDate || dates[0];
+        maxDate = maxDate || dates[dates.length - 1];
+      }
+    }
+
+    // 4. Fetch worklogs in bulk for the range
+    const worklogsByDateUser = new Map<string, any[]>();
+    if (minDate && maxDate) {
+      try {
+        const worklogs = await this.worklogService.findWorklogsByDateRange(minDate, maxDate, effectiveUserId);
+        worklogs.forEach((w) => {
+          const wUserId = w.user?.id;
+          const wDate = moment(w.startTime).utcOffset('+05:45').format('YYYY-MM-DD');
+          if (wUserId && wDate) {
+            const key = `${wUserId}_${wDate}`;
+            if (!worklogsByDateUser.has(key)) {
+              worklogsByDateUser.set(key, []);
+            }
+            worklogsByDateUser.get(key)!.push(w);
+          }
+        });
+      } catch (err) {
+        console.error('Error fetching worklogs for attendance export:', err);
+      }
+    }
+
+    const toHoursStr = (min: number) => {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h}h ${m}m`;
+    };
+
+    // 5. Combine attendance records with user & worklog summaries
+    const results = attendanceRecords
+      .filter((attendance) => {
+        if (filters.departmentId) {
+          return userMap.has(attendance.userId);
+        }
+        return true;
+      })
+      .map((attendance) => {
+        const userInfo = userMap.get(attendance.userId) || {
+          id: attendance.userId,
+          name: 'Unknown User',
+          email: 'N/A',
+          username: 'unknown',
+          phoneNumber: '',
+          roleName: 'N/A',
+          departmentName: 'N/A',
+        };
+
+        const key = `${attendance.userId}_${attendance.date}`;
+        const dayWorklogs = worklogsByDateUser.get(key) || [];
+
+        const worklogsByStatus = {
+          requested: dayWorklogs.filter((w) => w.status === 'requested'),
+          approved: dayWorklogs.filter((w) => w.status === 'approved'),
+          rejected: dayWorklogs.filter((w) => w.status === 'rejected'),
+        };
+
+        const requestedMinutes = worklogsByStatus.requested.reduce((sum, w) => sum + this.calculateWorklogDuration(w.startTime, w.endTime), 0);
+        const approvedMinutes = worklogsByStatus.approved.reduce((sum, w) => sum + this.calculateWorklogDuration(w.startTime, w.endTime), 0);
+        const rejectedMinutes = worklogsByStatus.rejected.reduce((sum, w) => sum + this.calculateWorklogDuration(w.startTime, w.endTime), 0);
+
+        const projectNames = Array.from(
+          new Set(dayWorklogs.map((w) => w.project?.name || w.task?.project?.name).filter(Boolean))
+        );
+
+        return {
+          ...attendance,
+          user: userInfo,
+          worklogs: {
+            requested: { total: requestedMinutes, hours: toHoursStr(requestedMinutes), items: worklogsByStatus.requested },
+            approved: { total: approvedMinutes, hours: toHoursStr(approvedMinutes), items: worklogsByStatus.approved },
+            rejected: { total: rejectedMinutes, hours: toHoursStr(rejectedMinutes), items: worklogsByStatus.rejected },
+            all: dayWorklogs,
+            projectNames,
+          },
+        };
+      });
+
+    return results;
+  }
+
   async remove(id: string): Promise<void> {
     const result = await this.attendanceRepository.delete(id);
     if (result.affected === 0) {
