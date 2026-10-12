@@ -57,8 +57,10 @@ export class WorklogController {
     @Query('date') date?: string,
     @Query('userId') userId?: string,
     @Query('projectId') projectId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
-    return this.worklogService.findAllWorklog(status, date, userId, projectId);
+    return this.worklogService.findAllWorklog(status, date, userId, projectId, startDate, endDate);
   }
 
   @Get(':id')

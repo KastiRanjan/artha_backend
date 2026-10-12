@@ -460,7 +460,7 @@ export class WorklogService {
     return worklogs;
   }
   
-  async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string) {
+  async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string, startDate?: string, endDate?: string) {
     const whereCondition: any = {};
     if (status) {
       whereCondition.status = status;
@@ -471,7 +471,11 @@ export class WorklogService {
     if (projectId) {
       whereCondition.project = { id: projectId };
     }
-    if (date) {
+    if (startDate && endDate) {
+      const startOfRange = moment(startDate).startOf('day').toDate();
+      const endOfRange = moment(endDate).endOf('day').toDate();
+      whereCondition.startTime = Between(startOfRange, endOfRange);
+    } else if (date) {
       const startOfDay = moment(date).startOf('day').toDate();
       const endOfDay = moment(date).endOf('day').toDate();
       whereCondition.startTime = Between(startOfDay, endOfDay);

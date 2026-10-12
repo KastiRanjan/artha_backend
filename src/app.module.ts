@@ -58,6 +58,7 @@ import { ProjectSignoffModule } from './project-signoff/project-signoff.module';
 import { DsaModule } from './dsa/dsa.module';
 import { ClientReportModule } from './client-report/client-report.module';
 import { ClientReportDocumentTypeModule } from './client-report-document-type/client-report-document-type.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -130,7 +131,8 @@ import { ClientReportDocumentTypeModule } from './client-report-document-type/cl
   ProjectSignoffModule,
   DsaModule,
   ClientReportModule,
-  ClientReportDocumentTypeModule
+  ClientReportDocumentTypeModule,
+  AuditLogModule
   ],
   providers: [
     {

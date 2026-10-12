@@ -1,5 +1,7 @@
 import { ConnectionOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
+import { AuditLogSubscriber } from '../audit-log/audit-log.subscriber';
+import { isAuditLogEnabled } from '../audit-log/audit-log.config';
 
 dotenv.config();
 
@@ -12,6 +14,8 @@ const ormConfig: ConnectionOptions = {
   database: process.env.DB_NAME || 'arthalive',
   migrationsTransactionMode: 'each',
   entities: [__dirname + '/../**/*.entity.{js,ts}'],
+  // Only register the audit log subscriber if explicitly enabled via env
+  subscribers: isAuditLogEnabled() ? [AuditLogSubscriber] : [],
   logging: false,
   synchronize: true,
   migrationsRun: process.env.NODE_ENV === 'test',
