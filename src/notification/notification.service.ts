@@ -1,3 +1,6 @@
+import * as webpush from 'web-push';
+import { PushSubscriptionEntity } from './entities/push-subscription.entity';
+import { SavePushSubscriptionDto } from './dto/push-subscription.dto';
 import { Injectable, Inject, forwardRef, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
@@ -14,6 +17,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 @Injectable()
 export class NotificationService implements OnModuleInit {
   private readonly logger = new Logger('NotificationService');
+  private webPushEnabled = false;
 
   constructor(
     @InjectRepository(Notification)
@@ -22,6 +26,8 @@ export class NotificationService implements OnModuleInit {
     private userRepository: Repository<UserEntity>,
     @InjectRepository(UserNotification)
     private userNotificationRepository: Repository<UserNotification>,
+    @InjectRepository(PushSubscriptionEntity)
+    private pushSubscriptionRepository: Repository<PushSubscriptionEntity>,
     @Inject(forwardRef(() => NotificationGateway))
     private notificationGateway: NotificationGateway,
     private readonly auditLogService: AuditLogService
@@ -47,6 +53,38 @@ export class NotificationService implements OnModuleInit {
         `);
         this.logger.log(`Successfully auto-repaired ${invalidCount} notification links.`);
       }
+
+    // Auto-create push_subscription table if not exists
+    try {
+      await this.pushSubscriptionRepository.query(`
+        CREATE TABLE IF NOT EXISTS push_subscription (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          "userId" UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+          endpoint TEXT NOT NULL UNIQUE,
+          p256dh TEXT NOT NULL,
+          auth TEXT NOT NULL,
+          "userAgent" VARCHAR(500),
+          "createdAt" TIMESTAMPTZ DEFAULT now(),
+          "updatedAt" TIMESTAMPTZ DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS idx_push_sub_user ON push_subscription("userId");
+      `);
+    } catch (e) {}
+
+    // Initialize VAPID
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT || 'mailto:admin@artha.com.np';
+    if (publicKey && privateKey) {
+      try {
+        webpush.setVapidDetails(subject, publicKey, privateKey);
+        this.webPushEnabled = true;
+        this.logger.log('Web Push (VAPID) service initialized successfully.');
+      } catch (err: any) {
+        this.logger.error(`Failed to initialize Web Push: ${err.message}`);
+      }
+    }
+
     } catch (err) {
       this.logger.warn(`Notification auto-repair notice: ${err.message}`);
     }
@@ -85,6 +123,12 @@ export class NotificationService implements OnModuleInit {
       await this.userNotificationRepository.save(userNotification);
       // Emit socket event to user
       this.notificationGateway.sendToUser(user.id, 'notification', userNotification);
+      this.sendPushToUser(user.id, {
+        title: 'Artha Notification',
+        message: savedNotification.message,
+        link: savedNotification.link,
+        type: savedNotification.type,
+      });
     }
 
     // If metadata contains a module, emit to that module room as well for contextual alerts
@@ -450,5 +494,312 @@ export class NotificationService implements OnModuleInit {
     } catch (err) {
       this.logger.error(`Error in automated notification cleanup cron: ${err.message}`, err.stack);
     }
+  }
+
+  // --- Web Push Core Methods ---
+
+  getVapidPublicKey() {
+    return {
+      publicKey: process.env.VAPID_PUBLIC_KEY || null,
+      enabled: this.webPushEnabled,
+    };
+  }
+
+  async savePushSubscription(userId: string, dto: SavePushSubscriptionDto & { userAgent?: string }) {
+    if (!userId) {
+      return { success: false, message: 'User ID is required to subscribe to push notifications.' };
+    }
+
+    let subscription = await this.pushSubscriptionRepository.findOne({
+      where: { endpoint: dto.endpoint },
+    });
+
+    if (subscription) {
+      subscription.userId = userId;
+      subscription.p256dh = dto.keys.p256dh;
+      subscription.auth = dto.keys.auth;
+      if (dto.userAgent) subscription.userAgent = dto.userAgent;
+    } else {
+      subscription = this.pushSubscriptionRepository.create({
+        userId,
+        endpoint: dto.endpoint,
+        p256dh: dto.keys.p256dh,
+        auth: dto.keys.auth,
+        userAgent: dto.userAgent,
+      });
+    }
+
+    await this.pushSubscriptionRepository.save(subscription);
+    return { success: true, message: 'Push subscription registered successfully.' };
+  }
+
+  async removePushSubscription(endpoint: string) {
+    if (!endpoint) return { success: false };
+    await this.pushSubscriptionRepository.delete({ endpoint });
+    return { success: true };
+  }
+
+  async sendPushToUser(
+    userId: string,
+    payload: {
+      title?: string;
+      message: string;
+      link?: string;
+      type?: string;
+      metadata?: any;
+      id?: string;
+    }
+  ) {
+    if (!this.webPushEnabled) return;
+
+    try {
+      const subscriptions = await this.pushSubscriptionRepository.find({
+        where: { userId },
+      });
+
+      if (!subscriptions || subscriptions.length === 0) return;
+
+      const pushPayload = JSON.stringify({
+        title: payload.title || 'Artha Notification',
+        message: payload.message,
+        link: payload.link || '/notifications',
+        type: payload.type || 'GENERAL',
+        metadata: payload.metadata || {},
+        id: payload.id || '',
+        timestamp: Date.now(),
+      });
+
+      const sendPromises = subscriptions.map(async (sub) => {
+        try {
+          await (webpush as any).sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth,
+              },
+            },
+            pushPayload
+          );
+        } catch (err: any) {
+          if (err?.statusCode === 410 || err?.statusCode === 404) {
+            await this.pushSubscriptionRepository.delete({ id: sub.id });
+          }
+        }
+      });
+
+      await Promise.allSettled(sendPromises);
+    } catch (err: any) {
+      this.logger.warn(`Failed to dispatch web push for user ${userId}: ${err.message}`);
+    }
+  }
+
+  async testPushNotification(userId: string) {
+    const subscriptions = await this.pushSubscriptionRepository.find({
+      where: { userId },
+    });
+
+    if (!subscriptions || subscriptions.length === 0) {
+      return {
+        success: false,
+        message: 'No push subscriptions found for this user. Please enable notifications in your browser first.',
+      };
+    }
+
+    await this.sendPushToUser(userId, {
+      title: '🔔 Artha Test Notification',
+      message: 'Background push notifications are working! You will receive alerts even when Artha is closed.',
+      link: '/notifications',
+    });
+
+    return {
+      success: true,
+      devicesCount: subscriptions.length,
+      message: `Test notification sent to ${subscriptions.length} registered device(s).`,
+    };
+  }
+
+  async getPushSubscribers() {
+    try {
+      const subscriptions = await this.pushSubscriptionRepository.find({
+        relations: ['user'],
+        order: { updatedAt: 'DESC' },
+      });
+
+      const userMap = new Map<string, any>();
+      for (const sub of subscriptions) {
+        const u = sub.user;
+        const userId = sub.userId;
+        const name = u?.name || u?.email || 'Unknown User';
+        const email = u?.email || 'No email';
+
+        if (!userMap.has(userId)) {
+          userMap.set(userId, {
+            userId,
+            name,
+            email,
+            deviceCount: 0,
+            devices: [],
+          });
+        }
+
+        const entry = userMap.get(userId);
+        entry.deviceCount += 1;
+        entry.devices.push({
+          id: sub.id,
+          userAgent: sub.userAgent,
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt,
+        });
+      }
+
+      return {
+        success: true,
+        totalSubscriptions: subscriptions.length,
+        totalSubscribers: userMap.size,
+        subscribers: Array.from(userMap.values()),
+        devices: subscriptions.map((s) => ({
+          id: s.id,
+          userId: s.userId,
+          name: s.user?.name || s.user?.email || 'Unknown',
+          email: s.user?.email,
+          userAgent: s.userAgent,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+        })),
+      };
+    } catch (err: any) {
+      return { success: false, totalSubscriptions: 0, totalSubscribers: 0, subscribers: [], devices: [] };
+    }
+  }
+
+  async getUsersForNotificationTarget() {
+    try {
+      const [users, subscriptions] = await Promise.all([
+        this.userRepository.find({
+          select: ['id', 'name', 'email', 'status'],
+          order: { name: 'ASC' },
+        }),
+        this.pushSubscriptionRepository.find({
+          order: { updatedAt: 'DESC' },
+        }),
+      ]);
+
+      const subMap = new Map<string, any[]>();
+      for (const sub of subscriptions) {
+        if (!subMap.has(sub.userId)) {
+          subMap.set(sub.userId, []);
+        }
+        subMap.get(sub.userId)!.push({
+          id: sub.id,
+          userAgent: sub.userAgent,
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt,
+        });
+      }
+
+      return users.map((u) => {
+        const userDevices = subMap.get(u.id) || [];
+        return {
+          id: u.id,
+          name: u.name || u.email,
+          email: u.email,
+          status: u.status,
+          deviceCount: userDevices.length,
+          devices: userDevices,
+        };
+      });
+    } catch (err: any) {
+      this.logger.error(`Failed to get users for notification target: ${err.message}`);
+      return [];
+    }
+  }
+
+  async sendCustomTestNotification(data: {
+    userId: string;
+    message: string;
+    title?: string;
+    link?: string;
+    type?: NotificationType;
+    sendPush?: boolean;
+    sendInApp?: boolean;
+    deviceId?: string;
+  }) {
+    const {
+      userId,
+      message,
+      title = '🔔 Artha Notification',
+      link = '/notifications',
+      type = NotificationType.GENERAL,
+      sendPush = true,
+      sendInApp = true,
+      deviceId,
+    } = data;
+
+    if (!userId) {
+      return { success: false, message: 'User ID is required.' };
+    }
+    if (!message) {
+      return { success: false, message: 'Notification message cannot be empty.' };
+    }
+
+    let inAppCreated = false;
+    if (sendInApp) {
+      await this.create({
+        users: [userId],
+        message,
+        link,
+        type,
+        metadata: { isTest: true, customTitle: title },
+      });
+      inAppCreated = true;
+    }
+
+    let pushDevicesCount = 0;
+    if (sendPush) {
+      let subscriptions: PushSubscriptionEntity[] = [];
+      if (deviceId && deviceId !== 'all') {
+        const sub = await this.pushSubscriptionRepository.findOne({
+          where: { id: deviceId },
+        });
+        if (sub) subscriptions = [sub];
+      } else {
+        subscriptions = await this.pushSubscriptionRepository.find({
+          where: { userId },
+        });
+      }
+
+      pushDevicesCount = subscriptions?.length || 0;
+      if (pushDevicesCount > 0) {
+        const payload = JSON.stringify({
+          title,
+          message,
+          link,
+          type,
+          timestamp: Date.now(),
+        });
+
+        for (const sub of subscriptions) {
+          try {
+            await (webpush as any).sendNotification(
+              {
+                endpoint: sub.endpoint,
+                keys: { p256dh: sub.p256dh, auth: sub.auth },
+              },
+              payload
+            );
+          } catch (err: any) {
+            this.logger.warn(`Push delivery error to endpoint: ${err.message}`);
+          }
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Notification sent! (In-app: ${inAppCreated ? 'Yes' : 'No'}, Push devices reached: ${pushDevicesCount})`,
+      inAppCreated,
+      pushDevicesCount,
+    };
   }
 }

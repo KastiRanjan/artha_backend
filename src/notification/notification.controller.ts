@@ -1,3 +1,5 @@
+import { Public } from 'src/common/decorators/public.decorator';
+import { SavePushSubscriptionDto } from './dto/push-subscription.dto';
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -70,5 +72,73 @@ export class NotificationController {
   @Delete('user/:userId/:notificationId')
   remove(@Param('userId') userId: string, @Param('notificationId') notificationId: string) {
     return this.notificationService.remove(userId, notificationId);
+  }
+
+  // Get public VAPID key to initialize browser PushManager subscription
+  @Public()
+  @Get('push/public-key')
+  getVapidPublicKey() {
+    return this.notificationService.getVapidPublicKey();
+  }
+
+  // Subscribe browser to background OS push notifications
+  @Public()
+  @Post('push/subscribe')
+  savePushSubscription(
+    @Body() body: SavePushSubscriptionDto & { userId?: string },
+    @Request() req?: any
+  ) {
+    const userId = req?.user?.id || body.userId;
+    return this.notificationService.savePushSubscription(userId, body);
+  }
+
+  // Unsubscribe browser from push notifications
+  @Public()
+  @Post('push/unsubscribe')
+  removePushSubscription(@Body() body: { endpoint: string }) {
+    return this.notificationService.removePushSubscription(body.endpoint);
+  }
+
+  // Send a test push notification to verify OS delivery
+  @Public()
+  @Post('push/test')
+  testPushNotification(
+    @Body() body: { userId?: string },
+    @Request() req?: any
+  ) {
+    const userId = req?.user?.id || body.userId;
+    return this.notificationService.testPushNotification(userId);
+  }
+
+  // Get all users and devices that have enabled background push notifications
+  @Public()
+  @Get('push/subscribers')
+  getPushSubscribers() {
+    return this.notificationService.getPushSubscribers();
+  }
+
+  // Get all users with their registered push devices for notification targeting
+  @Public()
+  @Get('push/users-for-target')
+  getUsersForNotificationTarget() {
+    return this.notificationService.getUsersForNotificationTarget();
+  }
+
+  // Send a custom test notification to a specific user with specific message
+  @Public()
+  @Post('test-custom')
+  sendCustomTestNotification(
+    @Body() body: {
+      userId: string;
+      message: string;
+      title?: string;
+      link?: string;
+      type?: NotificationType;
+      sendPush?: boolean;
+      sendInApp?: boolean;
+      deviceId?: string;
+    }
+  ) {
+    return this.notificationService.sendCustomTestNotification(body);
   }
 }
