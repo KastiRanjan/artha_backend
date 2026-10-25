@@ -19,8 +19,9 @@ export class AuditContextInterceptor implements NestInterceptor {
       const user = req.user;
       const userId = user.id || user.userId || null;
       const userName = user.name || user.username || null;
+      const userEmail = user.email || null;
       if (userId) {
-        AuditContext.updateUser(userId, userName);
+        AuditContext.updateUser(userId, userName, userEmail);
       }
     }
     return next.handle();

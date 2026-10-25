@@ -17,6 +17,7 @@ export class AuditContextMiddleware implements NestMiddleware {
     const user = (req as any).user;
     let userId = user?.id || user?.userId || null;
     let userName = user?.name || user?.username || null;
+    let userEmail = user?.email || null;
 
     // Fallback: extract user from JWT cookie or Authorization header
     if (!userId) {
@@ -32,6 +33,7 @@ export class AuditContextMiddleware implements NestMiddleware {
           if (decoded) {
             userId = decoded.subject || decoded.id || decoded.userId || null;
             userName = decoded.name || decoded.username || null;
+            userEmail = decoded.email || null;
           }
         }
       } catch (err) {
@@ -48,7 +50,7 @@ export class AuditContextMiddleware implements NestMiddleware {
 
     const userAgent = req.headers['user-agent'] || null;
 
-    AuditContext.setContext(userId, userName, ipAddress, userAgent);
+    AuditContext.setContext(userId, userName, ipAddress, userAgent, userEmail);
 
     // Clean up context after the response is sent
     res.on('finish', () => {

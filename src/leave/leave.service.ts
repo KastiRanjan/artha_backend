@@ -14,6 +14,7 @@ import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UserEntity } from '../auth/entity/user.entity';
 import { Project } from '../projects/entities/project.entity';
 import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/enums/notification-type.enum';
 import { UserLeaveBalanceService } from './user-leave-balance.service';
 import { LeaveLedgerAction } from './entities/leave-balance-ledger.entity';
 import * as moment from 'moment';
@@ -374,6 +375,9 @@ export class LeaveService {
       await this.notificationService.create({
         message: `New leave request from ${user.name} for ${createLeaveDto.type} (${dateInfo}) - Requested to: ${requestedManager.name}`,
         users: [createLeaveDto.requestedManagerId],
+        type: NotificationType.LEAVE,
+        link: `/time-off?leaveId=${savedLeave.id}`,
+        metadata: { module: 'leave', leaveId: savedLeave.id, status: 'pending' },
       });
     }
 
@@ -642,12 +646,18 @@ export class LeaveService {
     await this.notificationService.create({
       message: `Your leave request has been approved by manager ${manager.name} and is now waiting for final approval`,
       users: [leave.user.id],
+      type: NotificationType.LEAVE,
+      link: `/time-off?leaveId=${savedLeave.id}`,
+      metadata: { module: 'leave', leaveId: savedLeave.id, status: 'approved_by_manager' },
     });
 
     if (notifyAdmins && notifyAdmins.length > 0) {
       await this.notificationService.create({
         message: `Leave request from ${leave.user.name} has been approved by manager ${manager.name} and requires your final approval`,
         users: notifyAdmins,
+        type: NotificationType.LEAVE,
+        link: `/time-off?leaveId=${savedLeave.id}`,
+        metadata: { module: 'leave', leaveId: savedLeave.id, status: 'approved_by_manager' },
       });
     }
 
@@ -691,6 +701,9 @@ export class LeaveService {
     await this.notificationService.create({
       message: `Your leave request has been fully approved by ${admin.name} and is now confirmed`,
       users: [leave.user.id],
+      type: NotificationType.LEAVE,
+      link: `/time-off?leaveId=${savedLeave.id}`,
+      metadata: { module: 'leave', leaveId: savedLeave.id, status: 'approved' },
     });
 
     return savedLeave;
@@ -730,6 +743,9 @@ export class LeaveService {
     await this.notificationService.create({
       message: `Your leave request has been rejected by ${rejector.name}`,
       users: [leave.user.id],
+      type: NotificationType.LEAVE,
+      link: `/time-off?leaveId=${savedLeave.id}`,
+      metadata: { module: 'leave', leaveId: savedLeave.id, status: 'rejected' },
     });
 
     return savedLeave;
@@ -774,6 +790,9 @@ export class LeaveService {
       await this.notificationService.create({
         message: `Your leave request has been fully approved by ${user.name} and is now confirmed`,
         users: [leave.user.id],
+        type: NotificationType.LEAVE,
+        link: `/time-off?leaveId=${savedLeave.id}`,
+        metadata: { module: 'leave', leaveId: savedLeave.id, status: 'approved' },
       });
 
       return savedLeave;

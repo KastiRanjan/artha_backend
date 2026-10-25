@@ -119,7 +119,16 @@ export class WorklogService {
           await this.notificationService.create({
             message: `Worklog has been requested by user ${user.name}`,
             users: [worklog.requestTo],
-            type: NotificationType.WORKLOG
+            type: NotificationType.WORKLOG,
+            link: `/worklogs-all?tab=incoming-requested&worklogId=${worklog.id}`,
+            metadata: {
+              module: 'worklog',
+              worklogId: worklog.id,
+              status: 'requested',
+              isIncoming: true,
+              requesterId: user.id,
+              requesterName: user.name,
+            },
           });
       }
     }
@@ -300,7 +309,15 @@ export class WorklogService {
           await this.notificationService.create({
             message: `Worklog has been approved by user ${approver?.name || user.id}`,
             users: [worklog.user.id],
-            type: NotificationType.WORKLOG
+            type: NotificationType.WORKLOG,
+            link: `/worklogs-all?tab=approved&worklogId=${worklog.id}`,
+            metadata: {
+              module: 'worklog',
+              worklogId: worklog.id,
+              status: 'approved',
+              approverId: user.id,
+              approverName: approver?.name || user.name,
+            },
           });
         }
       } else if (updateWorklogDto.status === 'rejected') {
@@ -313,7 +330,16 @@ export class WorklogService {
           await this.notificationService.create({
             message: `Worklog has been rejected by user ${rejector?.name || user.id}`,
             users: [worklog.user.id],
-            type: NotificationType.WORKLOG
+            type: NotificationType.WORKLOG,
+            link: `/worklogs-all?tab=rejected&worklogId=${worklog.id}`,
+            metadata: {
+              module: 'worklog',
+              worklogId: worklog.id,
+              status: 'rejected',
+              rejectorId: user.id,
+              rejectorName: rejector?.name || user.name,
+              remark: updateWorklogDto.rejectedRemark || '',
+            },
           });
         }
       } else if (updateWorklogDto.status === 'requested') {

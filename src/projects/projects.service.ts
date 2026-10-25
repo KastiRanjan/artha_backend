@@ -153,7 +153,8 @@ export class ProjectsService {
     await this.notificationService.create({
       message: `Project ${savedProject.name} created`,
       users: userIds,
-      link: `${process.env.frontendUrl}/projects/${savedProject.id}`,
+      link: `/projects/${savedProject.id}`,
+      metadata: { module: 'project', projectId: savedProject.id },
       type: NotificationType.PROJECT
     });
     // Log project creation in timeline
@@ -451,7 +452,8 @@ export class ProjectsService {
       await this.notificationService.create({
         message: `Project ${updatedProject.name} updated`,
         users: users,
-        link: `${process.env.frontendUrl}/projects/${updatedProject.id}`,
+        link: `/projects/${updatedProject.id}`,
+        metadata: { module: 'project', projectId: updatedProject.id },
         type: NotificationType.PROJECT
       });
     }
@@ -747,7 +749,8 @@ export class ProjectsService {
       await this.notificationService.create({
         message: `Project ${project.name} has been marked as completed`,
         users: userIds,
-        link: `${process.env.frontendUrl}/projects/${project.id}`,
+        link: `/projects/${project.id}`,
+        metadata: { module: 'project', projectId: project.id },
         type: NotificationType.PROJECT
       });
     }
@@ -893,7 +896,8 @@ export class ProjectsService {
     await this.notificationService.create({
       message: `You have been assigned to project ${project.name}`,
       users: [user.id],
-      link: `${process.env.frontendUrl}/projects/${project.id}`,
+      link: `/projects/${project.id}`,
+      metadata: { module: 'project', projectId: project.id },
       type: NotificationType.PROJECT
     });
 
@@ -939,7 +943,8 @@ export class ProjectsService {
     await this.notificationService.create({
       message: `You have been released from project ${assignment.project.name}`,
       users: [userId],
-      link: `${process.env.frontendUrl}/projects/${projectId}`,
+      link: `/projects/${projectId}`,
+      metadata: { module: 'project', projectId },
       type: NotificationType.PROJECT
     });
 

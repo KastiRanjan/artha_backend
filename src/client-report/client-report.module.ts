@@ -21,7 +21,7 @@ import { MailModule } from 'src/mail/mail.module';
     TypeOrmModule.forFeature([ClientReport, ClientReportFile, ClientUser, Customer, Project, UserEntity]),
     JwtModule.registerAsync({
       useFactory: () => ({
-        secret: process.env.JWT_SECRET || 'your-secret-key',
+        secret: process.env.JWT_SECRET || 'secret',
         signOptions: { expiresIn: '24h' }
       })
     }),

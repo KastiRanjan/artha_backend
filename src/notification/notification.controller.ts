@@ -13,6 +13,26 @@ export class NotificationController {
     return this.notificationService.create(createNotificationDto);
   }
 
+  // Get statistics on read notifications eligible for cleanup (e.g. older than 15 days)
+  @Get('cleanup/stats')
+  getCleanupStats(@Query('days') days?: number) {
+    const retentionDays = days ? Number(days) : 15;
+    return this.notificationService.getCleanupStats(retentionDays);
+  }
+
+  // Trigger cleanup of read notifications older than X days (default 15 days)
+  // All deletions are automatically recorded in audit_log
+  @Post('cleanup')
+  cleanupOldNotifications(
+    @Query('days') days?: number,
+    @Request() req?: any
+  ) {
+    const retentionDays = days ? Number(days) : 15;
+    const performedBy = req?.user?.id || 'MANUAL_TRIGGER';
+    const performedByName = req?.user?.name || req?.user?.email || 'Admin User';
+    return this.notificationService.cleanupReadNotifications(retentionDays, performedBy, performedByName);
+  }
+
   // Get notifications for a user with optional type filter
   @Get('user/:userId')
   getUserNotifications(

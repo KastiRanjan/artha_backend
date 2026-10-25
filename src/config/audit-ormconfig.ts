@@ -1,6 +1,8 @@
 import { ConnectionOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
 import { AuditLog } from '../audit-log/entities/audit-log.model';
+import { AccessLog } from '../audit-log/entities/access-log.model';
+import { ErrorLog } from '../audit-log/entities/error-log.model';
 
 dotenv.config();
 
@@ -20,7 +22,7 @@ const auditOrmConfig: ConnectionOptions = {
   username: process.env.AUDIT_DB_USERNAME || process.env.DB_USERNAME || 'postgres',
   password: process.env.AUDIT_DB_PASSWORD || process.env.DB_PASSWORD || 'admin',
   database: process.env.AUDIT_DB_NAME || 'artha_audit',
-  entities: [AuditLog],
+  entities: [AuditLog, AccessLog, ErrorLog],
   logging: false,
   synchronize: true, // Auto-create audit tables. Set to false in production and use migrations.
 };

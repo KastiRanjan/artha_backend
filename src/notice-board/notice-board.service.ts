@@ -120,7 +120,8 @@ export class NoticeBoardService {
         await this.notificationService.create({
           users: savedNotice.users.map(u => u.id),
           message: `A notice has been published: "${savedNotice.title}"`,
-          link: `/notice-board/${savedNotice.id}`,
+          link: `/notice-board?noticeId=${savedNotice.id}`,
+          metadata: { module: 'noticeboard', noticeId: savedNotice.id },
           type: NotificationType.NOTICEBOARD
         });
       } catch (notificationError) {
@@ -256,7 +257,8 @@ export class NoticeBoardService {
         await this.notificationService.create({
           users: noticeBoard.users.map(u => u.id),
           message: `Notice updated: "${noticeBoard.title}"`,
-          link: `/notice-board/${noticeBoard.id}`,
+          link: `/notice-board?noticeId=${noticeBoard.id}`,
+          metadata: { module: 'noticeboard', noticeId: noticeBoard.id },
           type: NotificationType.NOTICEBOARD
         });
       } catch (notificationError) {

@@ -163,7 +163,7 @@ export class DsaService {
       await this.notificationService.create({
         message: `New DSA request of NRs. ${normalizedRequestedAmount} submitted for project ${project.name}`,
         link: `/projects/${project.id}/dsa`,
-        type: NotificationType.GENERAL,
+        type: NotificationType.DSA,
         users: Array.from(notifyUserIds),
       });
     }
@@ -278,8 +278,9 @@ export class DsaService {
     if (notifyUserIds.size > 0) {
       await this.notificationService.create({
         message: `Your DSA request for project ${dsa.project.name} has been approved for NRs. ${normalizedApprovedAmount}`,
-        link: `/projects/${dsa.project.id}/dsa`,
-        type: NotificationType.GENERAL,
+        link: `/projects/${dsa.project.id}/dsa?dsaId=${dsa.id}`,
+        metadata: { module: 'dsa', dsaId: dsa.id, projectId: dsa.project.id },
+        type: NotificationType.DSA,
         users: Array.from(notifyUserIds),
       });
     }
@@ -319,7 +320,7 @@ export class DsaService {
       await this.notificationService.create({
         message: `Your DSA request for project ${dsa.project.name} has been rejected.`,
         link: `/projects/${dsa.project.id}/dsa`,
-        type: NotificationType.GENERAL,
+        type: NotificationType.DSA,
         users: Array.from(notifyUserIds),
       });
     }
@@ -431,7 +432,7 @@ export class DsaService {
       await this.notificationService.create({
         message: `DSA settlement of NRs. ${totalClaimed} ${netMsg} submitted for project ${dsa.project.name}`,
         link: `/projects/${dsa.project.id}/dsa`,
-        type: NotificationType.GENERAL,
+        type: NotificationType.DSA,
         users: Array.from(notifyUserIds),
       });
     }
@@ -466,7 +467,7 @@ export class DsaService {
       await this.notificationService.create({
         message: `Your DSA settlement for project ${dsa.project.name} has been verified and completed.`,
         link: `/projects/${dsa.project.id}/dsa`,
-        type: NotificationType.GENERAL,
+        type: NotificationType.DSA,
         users: [dsa.requester.id],
       });
     }

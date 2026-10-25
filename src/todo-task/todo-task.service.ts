@@ -61,8 +61,9 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [createTodoTaskDto.assignedToId],
       message: `Task "${todoTaskTitle.name}" has been assigned to you with due date ${dueDateStr}.`,
-      link: `/todotask/${savedTask.id}`,
-      type: NotificationType.TASK
+      link: `/todotask?taskId=${savedTask.id}`,
+        type: NotificationType.TASK,
+        metadata: { module: 'todotask', taskId: savedTask.id }
     });
 
     // Notify informed users
@@ -70,8 +71,9 @@ export class TodoTaskService {
       await this.notificationService.create({
         users: informToUsers.map(u => u.id),
         message: `You have been informed about task "${todoTaskTitle.name}" assigned to ${assignedUser.name || assignedUser.email}.`,
-        link: `/todotask/${savedTask.id}`,
-        type: NotificationType.TASK
+        link: `/todotask?taskId=${savedTask.id}`,
+        type: NotificationType.TASK,
+        metadata: { module: 'todotask', taskId: savedTask.id }
       });
     }
     
@@ -198,8 +200,9 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been acknowledged by ${user.name || user.email}`,
-      link: `/todotask/${id}`,
-      type: NotificationType.TASK
+      link: `/todotask?taskId=${id}`,
+      type: NotificationType.TASK,
+      metadata: { module: 'todotask', taskId: id }
     });
     
     return this.findOne(id, user);
@@ -232,8 +235,9 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been marked as pending by ${user.name || user.email}`,
-      link: `/todotask/${id}`,
-      type: NotificationType.TASK
+      link: `/todotask?taskId=${id}`,
+      type: NotificationType.TASK,
+      metadata: { module: 'todotask', taskId: id }
     });
     
     return this.findOne(id, user);
@@ -267,8 +271,9 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been completed by ${user.name || user.email}`,
-      link: `/todotask/${id}`,
-      type: NotificationType.TASK
+      link: `/todotask?taskId=${id}`,
+      type: NotificationType.TASK,
+      metadata: { module: 'todotask', taskId: id }
     });
     
     return this.findOne(id, user);
@@ -305,8 +310,9 @@ export class TodoTaskService {
     await this.notificationService.create({
       users: [...new Set(notifyUsers)],
       message: `Task "${todoTask.title}" has been dropped by ${user.name || user.email}`,
-      link: `/todotask/${id}`,
-      type: NotificationType.TASK
+      link: `/todotask?taskId=${id}`,
+      type: NotificationType.TASK,
+      metadata: { module: 'todotask', taskId: id }
     });
     
     return this.findOne(id, user);
@@ -350,8 +356,9 @@ export class TodoTaskService {
       await this.notificationService.create({
         users: [updateTodoTaskDto.assignedToId],
         message: `You have been assigned to task: ${todoTask.title} by ${user.name || user.email}`,
-        link: `/todotask/${id}`,
-        type: NotificationType.TASK
+        link: `/todotask?taskId=${id}`,
+      type: NotificationType.TASK,
+      metadata: { module: 'todotask', taskId: id }
       });
     }
     

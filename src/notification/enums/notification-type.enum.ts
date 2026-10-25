@@ -4,5 +4,10 @@ export enum NotificationType {
     TASK = 'task',
     PROJECT = 'project',
     GENERAL = 'general',
-    SYSTEM = 'system'
+    SYSTEM = 'system',
+    CLIENT = 'client',
+    DSA = 'dsa',
+    LEAVE = 'leave',
+    TRAINING = 'training',
+    MEETING = 'meeting'
 }

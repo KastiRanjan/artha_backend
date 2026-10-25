@@ -2,7 +2,6 @@ import { IsArray, IsEnum, IsOptional, IsString } from "class-validator";
 import { NotificationType } from "../enums/notification-type.enum";
 
 export class CreateNotificationDto {
-
     @IsArray()
     users: string[];
 
@@ -17,4 +16,6 @@ export class CreateNotificationDto {
     @IsEnum(NotificationType)
     type?: NotificationType;
 
+    @IsOptional()
+    metadata?: Record<string, any>;
 }

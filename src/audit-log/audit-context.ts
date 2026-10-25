@@ -18,6 +18,7 @@ import { Request } from 'express';
 export class AuditContext {
   private static currentUserId: string | null = null;
   private static currentUserName: string | null = null;
+  private static currentUserEmail: string | null = null;
   private static currentIpAddress: string | null = null;
   private static currentUserAgent: string | null = null;
 
@@ -25,17 +26,20 @@ export class AuditContext {
     userId: string | null,
     userName: string | null,
     ipAddress: string | null,
-    userAgent: string | null
+    userAgent: string | null,
+    userEmail?: string | null
   ): void {
     AuditContext.currentUserId = userId;
     AuditContext.currentUserName = userName;
+    AuditContext.currentUserEmail = userEmail || null;
     AuditContext.currentIpAddress = ipAddress;
     AuditContext.currentUserAgent = userAgent;
   }
 
-  static updateUser(userId: string | null, userName: string | null): void {
+  static updateUser(userId: string | null, userName: string | null, userEmail?: string | null): void {
     if (userId) AuditContext.currentUserId = userId;
     if (userName) AuditContext.currentUserName = userName;
+    if (userEmail) AuditContext.currentUserEmail = userEmail;
   }
 
   static getUserId(): string | null {
@@ -44,6 +48,10 @@ export class AuditContext {
 
   static getUserName(): string | null {
     return AuditContext.currentUserName;
+  }
+
+  static getUserEmail(): string | null {
+    return AuditContext.currentUserEmail;
   }
 
   static getIpAddress(): string | null {
@@ -57,6 +65,7 @@ export class AuditContext {
   static clear(): void {
     AuditContext.currentUserId = null;
     AuditContext.currentUserName = null;
+    AuditContext.currentUserEmail = null;
     AuditContext.currentIpAddress = null;
     AuditContext.currentUserAgent = null;
   }
