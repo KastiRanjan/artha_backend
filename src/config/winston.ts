@@ -2,49 +2,50 @@ import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { WinstonModuleOptions } from 'nest-winston';
 import * as WinstonCloudWatch from 'winston-cloudwatch';
-import * as config from 'config';
 
-const isProduction = process.env.NODE_ENV === 'production';
+// Only enable CloudWatch if explicitly requested AND AWS region + credentials are provided
+const hasCloudWatchConfig = Boolean(
+  (process.env.ENABLE_CLOUDWATCH === 'true' || process.env.USE_CLOUDWATCH === 'true') &&
+  (process.env.CLOUDWATCH_AWS_REGION || process.env.AWS_REGION) &&
+  (process.env.AWS_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID)
+);
+
 const winstonConfig = {
-  groupName: 'truthy',
-  streamName: 'truthy-stream',
-  awsAccessKeyId: '',
-  awsSecretAccessKey: '',
-  awsRegion: ''
-}
+  groupName: process.env.CLOUDWATCH_GROUP_NAME || 'artha',
+  streamName: process.env.CLOUDWATCH_STREAM_NAME || 'artha-stream',
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID || '',
+  awsSecretAccessKey: process.env.AWS_KEY_SECRET || process.env.AWS_SECRET_ACCESS_KEY || '',
+  awsRegion: process.env.CLOUDWATCH_AWS_REGION || process.env.AWS_REGION || '',
+};
 
 export default {
   format: winston.format.colorize(),
   exitOnError: false,
-  transports: isProduction
+  transports: hasCloudWatchConfig
     ? new WinstonCloudWatch({
-      name: 'Truthy CMS',
+      name: 'Artha CloudWatch Logger',
       awsOptions: {
         credentials: {
-          accessKeyId:
-            process.env.AWS_ACCESS_KEY || winstonConfig.awsAccessKeyId,
-          secretAccessKey:
-            process.env.AWS_KEY_SECRET || winstonConfig.awsSecretAccessKey
-        }
+          accessKeyId: winstonConfig.awsAccessKeyId,
+          secretAccessKey: winstonConfig.awsSecretAccessKey,
+        },
       },
-      logGroupName:
-        process.env.CLOUDWATCH_GROUP_NAME || winstonConfig.groupName,
-      logStreamName:
-        process.env.CLOUDWATCH_STREAM_NAME || winstonConfig.streamName,
-      awsRegion: process.env.CLOUDWATCH_AWS_REGION || winstonConfig.awsRegion,
+      logGroupName: winstonConfig.groupName,
+      logStreamName: winstonConfig.streamName,
+      awsRegion: winstonConfig.awsRegion,
       messageFormatter: function (item) {
         return (
           item.level + ': ' + item.message + ' ' + JSON.stringify(item.meta)
         );
-      }
+      },
     })
     : new winston.transports.Console({
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.ms(),
-        nestWinstonModuleUtilities.format.nestLike('Truthy Logger', {
-          prettyPrint: true
-        })
-      )
-    })
+        nestWinstonModuleUtilities.format.nestLike('Artha Logger', {
+          prettyPrint: true,
+        }),
+      ),
+    }),
 } as WinstonModuleOptions;
