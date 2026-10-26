@@ -532,10 +532,25 @@ export class WorklogService {
     });
 
     if (uniqueIds.size > 0) {
-      const users = await this.userRepository.find({
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const validUuids = Array.from(uniqueIds).filter(id => uuidRegex.test(id));
+      const nonUuids = Array.from(uniqueIds).filter(id => !uuidRegex.test(id));
+      const whereConds: any[] = [];
+      if (validUuids.length > 0) whereConds.push({ id: In(validUuids) });
+      if (nonUuids.length > 0) {
+        whereConds.push({ username: In(nonUuids) });
+        whereConds.push({ name: In(nonUuids) });
+      }
+      const users = whereConds.length > 0 ? await this.userRepository.find({ where: whereConds }) : [];
+      if (false) await this.userRepository.find({
         where: { id: In(Array.from(uniqueIds)) }
       });
-      const userMap = new Map(users.map(u => [u.id, u]));
+      const userMap = new Map();
+      users.forEach(u => {
+        if (u.id) userMap.set(u.id, u);
+        if (u.username) userMap.set(u.username, u);
+        if (u.name) userMap.set(u.name, u);
+      });
       
       worklogs.forEach(w => {
         if (w.approvedBy) (w as any).approvedByUser = userMap.get(w.approvedBy);
