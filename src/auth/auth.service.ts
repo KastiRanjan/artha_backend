@@ -361,7 +361,7 @@ export class AuthService {
     return this.userRepository.find({
       where,
       relations: ['role', 'profile', 'profile.department', 'bank_detail', 'projects'],
-      order: { name: 'ASC' }
+      order: { createdAt: 'DESC' }
     });
   }
 

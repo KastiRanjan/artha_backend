@@ -20,10 +20,11 @@ export class CreateProjectDto {
   @IsString()
   description: string;
 
+  @IsOptional()
   @IsEnum(['active', 'suspended', 'archived', 'signed_off'], {
     message: 'status must be one of: active, suspended, archived, signed_off'
   })
-  status: 'active' | 'suspended' | 'archived' | 'signed_off';
+  status?: 'active' | 'suspended' | 'archived' | 'signed_off';
 
   @IsNotEmpty()
   @IsUUID()

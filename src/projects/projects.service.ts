@@ -124,6 +124,7 @@ export class ProjectsService {
     // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
+      status: projectData.status || 'active',
       name,
       users, // Assign the user entities here
       projectLead: lead,
@@ -183,14 +184,15 @@ export class ProjectsService {
     const baseRelations = ['projectLead', 'customer', 'billing', 'projectManager', 'natureOfWork', 'natureOfWorkGroup'];
     const superuserRelations = [...baseRelations, 'users', 'users.role'];
 
+    const isStatusActive = status === 'active';
+    const projectOrder: any = isStatusActive ? { createdAt: 'DESC' } : { updatedAt: 'DESC' };
+
     if (user.role.name === 'superuser') {
       const whereCondition = (!status || status === 'all') ? {} : { status: status };
       projects = await this.projectRepository.find({
         where: whereCondition,
         relations: superuserRelations,
-        order: {
-          name: 'ASC' // Order alphabetically by name
-        }
+        order: projectOrder
       });
     } else {
       const userRelations = ['projects', ...baseRelations.map(r => `projects.${r}`), 'projects.users', 'projects.users.role'];
@@ -203,8 +205,18 @@ export class ProjectsService {
       projects = (!status || status === 'all') 
         ? (users?.projects || [])
         : (users?.projects || []).filter(project => project.status === status);
-      // Sort alphabetically by name for non-superuser
-      projects = (projects || []).sort((a, b) => a.name.localeCompare(b.name));
+      // Active projects sort by creation date (newest first); other statuses sort by updated date (status changed)
+      projects = (projects || []).sort((a, b) => {
+        if (isStatusActive) {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        } else {
+          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+          return bTime - aTime;
+        }
+      });
     }
 
     // Fast 3ms SQL aggregation query for project task completion stats (avoids heavy tasks relation)

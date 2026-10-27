@@ -84,6 +84,10 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     method: MethodList.GET
   },
   {
+    path: "/users",
+    method: MethodList.GET
+  },
+  {
     path: "/users/list-active",
     method: MethodList.GET
   },

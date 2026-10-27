@@ -22,7 +22,7 @@ export class Project extends CustomBaseEntity {
   @Column('text')
   description: string;
 
-  @Column({ length: 20 })
+  @Column({ length: 20, default: 'active' })
   status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed';
 
   @ManyToOne(() => NatureOfWork, { onDelete: 'SET NULL', nullable: true })

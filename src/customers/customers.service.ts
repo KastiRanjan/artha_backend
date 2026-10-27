@@ -59,7 +59,8 @@ export class CustomersService {
 
   findAll() {
     return this.customerRepository.find({
-      relations: ['businessSize', 'industryNature', 'legalStatus']
+      relations: ['businessSize', 'industryNature', 'legalStatus'],
+      order: { createdAt: 'DESC' }
     });
   }
 
@@ -69,7 +70,8 @@ export class CustomersService {
     }
     return this.customerRepository.find({
       where: { status: status as any },
-      relations: ['businessSize', 'industryNature', 'legalStatus']
+      relations: ['businessSize', 'industryNature', 'legalStatus'],
+      order: { createdAt: 'DESC' }
     });
   }
 
