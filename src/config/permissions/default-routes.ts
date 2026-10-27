@@ -275,11 +275,51 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
   },
   {
     path: "/todo-task/:id",
+    method: MethodList.GET
+  },
+  {
+    path: "/todo-task/:id",
     method: MethodList.PATCH
   },
   {
     path: "/todo-task/:id",
     method: MethodList.DELETE
+  },
+  {
+    path: "/todo-task/assigned/:userId",
+    method: MethodList.GET
+  },
+  {
+    path: "/todo-task/created/:userId",
+    method: MethodList.GET
+  },
+  {
+    path: "/todo-task/informed",
+    method: MethodList.GET
+  },
+  {
+    path: "/todo-task/:id/complete",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/todo-task/:id/acknowledge",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/todo-task/:id/pending",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/todo-task/:id/drop",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/todo-task-title",
+    method: MethodList.GET
+  },
+  {
+    path: "/task-type",
+    method: MethodList.GET
   },
 
   // --- Client Portal (Authenticated) ---
