@@ -65,7 +65,7 @@ export class ProjectsService {
     private readonly notificationService: NotificationService,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
-  async create(createProjectDto: CreateProjectDto) {
+  async create(createProjectDto: CreateProjectDto, currentUser?: UserEntity) {
     const {
       users: userIds,
       projectLead,
@@ -151,9 +151,20 @@ export class ProjectsService {
       }
     }
 
+    const recipientSet = new Set<string>();
+    if (currentUser?.id) recipientSet.add(String(currentUser.id));
+    if (userIds && Array.isArray(userIds)) {
+      userIds.forEach((uid: any) => {
+        if (uid) recipientSet.add(String(uid));
+      });
+    }
+    if (projectLead) recipientSet.add(String(projectLead));
+    if (projectManager) recipientSet.add(String(projectManager));
+
+    const recipientList = Array.from(recipientSet);
     await this.notificationService.create({
       message: `Project ${savedProject.name} created`,
-      users: userIds,
+      users: recipientList.length > 0 ? recipientList : undefined,
       link: `/projects/${savedProject.id}`,
       metadata: { module: 'project', projectId: savedProject.id },
       type: NotificationType.PROJECT
@@ -312,7 +323,7 @@ export class ProjectsService {
     return formatted;
   }
 
-  async update(id: string, updateProjectDto: UpdateProjectDto) {
+  async update(id: string, updateProjectDto: UpdateProjectDto, currentUser?: UserEntity) {
     // Find the project by its ID
     const project = await this.projectRepository.findOne({
       where: { id },
@@ -460,15 +471,43 @@ export class ProjectsService {
     // Save the updated project back to the repository
     const updatedProject = await this.projectRepository.save(project);
 
-    if (users) {
-      await this.notificationService.create({
-        message: `Project ${updatedProject.name} updated`,
-        users: users,
-        link: `/projects/${updatedProject.id}`,
-        metadata: { module: 'project', projectId: updatedProject.id },
-        type: NotificationType.PROJECT
+    // Collect all stakeholder user IDs for the project notification
+    const recipientSet = new Set<string>();
+    if (currentUser?.id) recipientSet.add(String(currentUser.id));
+    if (project.users && Array.isArray(project.users)) {
+      project.users.forEach((u: any) => {
+        const uId = typeof u === 'string' ? u : u?.id;
+        if (uId) recipientSet.add(String(uId));
       });
     }
+    if (project.projectLead?.id) recipientSet.add(String(project.projectLead.id));
+    if (project.projectManager?.id) recipientSet.add(String(project.projectManager.id));
+    if (users && Array.isArray(users)) {
+      users.forEach((u: any) => {
+        const uId = typeof u === 'string' ? u : u?.id;
+        if (uId) recipientSet.add(String(uId));
+      });
+    }
+
+    try {
+      const assignments = await this.assignmentRepository.find({
+        where: { projectId: id, isActive: true },
+        relations: ['user']
+      });
+      assignments.forEach((a) => {
+        if (a.userId) recipientSet.add(String(a.userId));
+        if (a.user?.id) recipientSet.add(String(a.user.id));
+      });
+    } catch (e) {}
+
+    const recipientUserIds = Array.from(recipientSet);
+    await this.notificationService.create({
+      message: `Project ${updatedProject.name} updated`,
+      users: recipientUserIds.length > 0 ? recipientUserIds : undefined,
+      link: `/projects/${updatedProject.id}`,
+      metadata: { module: 'project', projectId: updatedProject.id },
+      type: NotificationType.PROJECT
+    });
     
     return ProjectDateFormatter.addNepaliDates(updatedProject);
   }
@@ -755,17 +794,26 @@ export class ProjectsService {
       details: `Project marked as completed by ${user.name}`
     });
 
-    // Send notifications to all project members
-    const userIds = project.users?.map(u => u.id) || [];
-    if (userIds.length > 0) {
-      await this.notificationService.create({
-        message: `Project ${project.name} has been marked as completed`,
-        users: userIds,
-        link: `/projects/${project.id}`,
-        metadata: { module: 'project', projectId: project.id },
-        type: NotificationType.PROJECT
+    // Send notifications to all project stakeholders
+    const completeRecipientSet = new Set<string>();
+    if (user?.id) completeRecipientSet.add(String(user.id));
+    if (project.users && Array.isArray(project.users)) {
+      project.users.forEach((u: any) => {
+        const uId = typeof u === 'string' ? u : u?.id;
+        if (uId) completeRecipientSet.add(String(uId));
       });
     }
+    if (project.projectLead?.id) completeRecipientSet.add(String(project.projectLead.id));
+    if (project.projectManager?.id) completeRecipientSet.add(String(project.projectManager.id));
+
+    const completeRecipients = Array.from(completeRecipientSet);
+    await this.notificationService.create({
+      message: `Project ${project.name} has been marked as completed`,
+      users: completeRecipients.length > 0 ? completeRecipients : undefined,
+      link: `/projects/${project.id}`,
+      metadata: { module: 'project', projectId: project.id },
+      type: NotificationType.PROJECT
+    });
 
     return updatedProject;
   }

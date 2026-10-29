@@ -45,8 +45,8 @@ export class ProjectsController {
   }
 
   @Post()
-  create(@Body() createProjectDto: CreateProjectDto) {
-    return this.projectsService.create(createProjectDto);
+  create(@Body() createProjectDto: CreateProjectDto, @GetUser() user?: UserEntity) {
+    return this.projectsService.create(createProjectDto, user);
   }
 
   @Get()
@@ -88,8 +88,12 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto) {
-    return this.projectsService.update(id, updateProjectDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateProjectDto: UpdateProjectDto,
+    @GetUser() user?: UserEntity,
+  ) {
+    return this.projectsService.update(id, updateProjectDto, user);
   }
 
   @Delete(':id')
