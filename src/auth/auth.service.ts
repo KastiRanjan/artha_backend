@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import {
   BadRequestException,
   HttpStatus,
@@ -70,8 +71,13 @@ export class AuthService {
    * @param token
    */
   async validateResetToken(token: string): Promise<{ valid: boolean }> {
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return { valid: false };
+    }
     const user = await this.userRepository.createQueryBuilder('user')
-      .where('user.token = :token', { token })
+      .where('user.token = :token', { token: token.trim() })
+      .andWhere('user.token IS NOT NULL')
+      .andWhere("user.token != ''")
       .andWhere('user.tokenValidityDate > NOW()')
       .getOne();
     return { valid: !!user };
@@ -429,9 +435,12 @@ export class AuthService {
    * @param token
    */
   async activateAccount(token: string): Promise<void> {
-    const user = await this.userRepository.findOne({ token: token });
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      throw new NotFoundException('Invalid activation token');
+    }
+    const user = await this.userRepository.findOne({ where: { token: token.trim() } });
     if (!user) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid or expired activation link');
     }
     if (user.status !== UserStatusEnum.INACTIVE) {
       throw new ForbiddenException(
@@ -440,7 +449,8 @@ export class AuthService {
       );
     }
     user.status = UserStatusEnum.ACTIVE;
-    user.token = await this.generateUniqueToken(6);
+    user.token = null as any;
+    user.tokenValidityDate = null as any;
     user.skipHashPassword = true;
     await user.save();
   }
@@ -451,15 +461,18 @@ export class AuthService {
    */
   async forgotPassword(forgetPasswordDto: ForgetPasswordDto): Promise<void> {
     const { email } = forgetPasswordDto;
+    if (!email || typeof email !== 'string') {
+      return;
+    }
     const user = await this.userRepository.findOne({
       where: {
-        email
+        email: email.trim().toLowerCase()
       }
     });
     if (!user) {
       return;
     }
-    const token = await this.generateUniqueToken(6);
+    const token = crypto.randomBytes(32).toString('hex');
     user.token = token;
     const currentDateTime = new Date();
     currentDateTime.setHours(currentDateTime.getHours() + 1);
@@ -486,9 +499,11 @@ export class AuthService {
       resetPasswordDto
     );
     if (!user) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid or expired reset token');
     }
-    user.token = await this.generateUniqueToken(6);
+    user.token = null as any;
+    user.tokenValidityDate = null as any;
+    user.skipHashPassword = false;
     user.password = password;
     await user.save();
   }

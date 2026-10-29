@@ -22,6 +22,7 @@ import { Request, Response } from 'express';
 import { UAParser } from 'ua-parser-js';
 
 import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
 import JwtTwoFactorGuard from 'src/common/guard/jwt-two-factor.guard';
 import { PermissionGuard } from 'src/common/guard/permission.guard';
 import { multerOptionsHelper } from 'src/common/helper/multer-options.helper';
@@ -47,6 +48,7 @@ import { RefreshTokenSerializer } from 'src/refresh-token/serializer/refresh-tok
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Get('/auth/validate-reset-token')
   validateResetToken(
     @Query('token') token: string
@@ -54,6 +56,7 @@ export class AuthController {
     return this.authService.validateResetToken(token);
   }
 
+  @Public()
   @Post('/auth/register')
   register(
     @Body(ValidationPipe)
@@ -62,6 +65,7 @@ export class AuthController {
     return this.authService.create(registerUserDto);
   }
 
+  @Public()
   @Post('/auth/login')
   async login(
     @Req()
@@ -115,6 +119,7 @@ export class AuthController {
     }
   }
 
+  @Public()
   @Get('/auth/activate-account')
   @HttpCode(HttpStatus.NO_CONTENT)
   activateAccount(
@@ -124,6 +129,8 @@ export class AuthController {
     return this.authService.activateAccount(token);
   }
 
+  @Public()
+  @Post('/auth/forgot-password')
   @Put('/auth/forgot-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   forgotPassword(
@@ -133,6 +140,8 @@ export class AuthController {
     return this.authService.forgotPassword(forgetPasswordDto);
   }
 
+  @Public()
+  @Post('/auth/reset-password')
   @Put('/auth/reset-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   resetPassword(

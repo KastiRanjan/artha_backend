@@ -96,8 +96,13 @@ export class UserRepository extends BaseRepository<UserEntity, UserSerializer> {
     resetPasswordDto: ResetPasswordDto
   ): Promise<UserEntity> {
     const { token } = resetPasswordDto;
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return null;
+    }
     const query = this.createQueryBuilder('user');
-    query.where('user.token = :token', { token });
+    query.where('user.token = :token', { token: token.trim() });
+    query.andWhere('user.token IS NOT NULL');
+    query.andWhere("user.token != ''");
     query.andWhere('user.tokenValidityDate > :date', {
       date: new Date()
     });

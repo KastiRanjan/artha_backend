@@ -21,12 +21,24 @@ export const PublicRoutes: RoutePayloadInterface[] = [
     method: MethodList.GET
   },
   {
+    path: "/auth/validate-reset-token",
+    method: MethodList.GET
+  },
+  {
     path: "/auth/forgot-password",
     method: MethodList.PUT
   },
   {
+    path: "/auth/forgot-password",
+    method: MethodList.POST
+  },
+  {
     path: "/auth/reset-password",
     method: MethodList.PUT
+  },
+  {
+    path: "/auth/reset-password",
+    method: MethodList.POST
   },
   {
     path: "/logout",
@@ -209,6 +221,14 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
   },
 
   // --- Leave Self-Service ---
+  {
+    path: "/leave-type/active",
+    method: MethodList.GET
+  },
+  {
+    path: "/leave-type",
+    method: MethodList.GET
+  },
   {
     path: "/leave",
     method: MethodList.POST // Apply for leave
