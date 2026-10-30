@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   HttpStatus,
@@ -72,7 +73,7 @@ export class AuthService {
    */
   async validateResetToken(token: string): Promise<{ valid: boolean }> {
     if (!token || typeof token !== 'string' || token.trim() === '') {
-      return { valid: false };
+      throw new BadRequestException('Invalid or expired reset token');
     }
     const user = await this.userRepository.createQueryBuilder('user')
       .where('user.token = :token', { token: token.trim() })
@@ -80,7 +81,10 @@ export class AuthService {
       .andWhere("user.token != ''")
       .andWhere('user.tokenValidityDate > NOW()')
       .getOne();
-    return { valid: !!user };
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+    return { valid: true };
   }
 
   /**
@@ -450,7 +454,7 @@ export class AuthService {
     }
     user.status = UserStatusEnum.ACTIVE;
     user.token = null as any;
-    user.tokenValidityDate = null as any;
+    user.tokenValidityDate = new Date();
     user.skipHashPassword = true;
     await user.save();
   }
@@ -501,10 +505,16 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Invalid or expired reset token');
     }
+    if (!user.salt) {
+      user.salt = await bcrypt.genSalt();
+    }
     user.token = null as any;
-    user.tokenValidityDate = null as any;
+    user.tokenValidityDate = new Date();
     user.skipHashPassword = false;
     user.password = password;
+    if (user.status === UserStatusEnum.INACTIVE) {
+      user.status = UserStatusEnum.ACTIVE;
+    }
     await user.save();
   }
 

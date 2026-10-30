@@ -130,7 +130,6 @@ export class AuthController {
   }
 
   @Public()
-  @Post('/auth/forgot-password')
   @Put('/auth/forgot-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   forgotPassword(
@@ -141,10 +140,29 @@ export class AuthController {
   }
 
   @Public()
-  @Post('/auth/reset-password')
+  @Post('/auth/forgot-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  forgotPasswordPost(
+    @Body()
+    forgetPasswordDto: ForgetPasswordDto
+  ): Promise<void> {
+    return this.authService.forgotPassword(forgetPasswordDto);
+  }
+
+  @Public()
   @Put('/auth/reset-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   resetPassword(
+    @Body()
+    resetPasswordDto: ResetPasswordDto
+  ): Promise<void> {
+    return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Public()
+  @Post('/auth/reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  resetPasswordPost(
     @Body()
     resetPasswordDto: ResetPasswordDto
   ): Promise<void> {
