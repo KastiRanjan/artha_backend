@@ -141,7 +141,7 @@ export class AuthService {
     if (!createUserDto.status) {
       createUserDto.roleId = '7c9f6f7a-3a6a-46ea-8c1f-64c1e9f2f7f7';
     }
-    createUserDto.tokenValidityDate = new Date(Date.now() + 1000 * 60 * 60);
+    createUserDto.tokenValidityDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 1 week
     const isEmailAlreadyExist = await this.userRepository.findOne({
       where: { email: createUserDto.email },
       select: ['id']
@@ -479,7 +479,7 @@ export class AuthService {
     const token = crypto.randomBytes(32).toString('hex');
     user.token = token;
     const currentDateTime = new Date();
-    currentDateTime.setHours(currentDateTime.getHours() + 1);
+    currentDateTime.setDate(currentDateTime.getDate() + 7); // 1 week
     user.tokenValidityDate = currentDateTime;
     user.skipHashPassword = true;
     await user.save();
