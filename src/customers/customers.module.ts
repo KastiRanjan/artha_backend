@@ -11,6 +11,7 @@ import { PortalCredential } from './entities/portal-credential.entity';
 import { BusinessSize } from 'src/business-size/entities/business-size.entity';
 import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
 import { LegalStatus } from 'src/legal-status/entities/legal-status.entity';
+import { UserEntity } from 'src/auth/entity/user.entity';
 import { BusinessSizeModule } from 'src/business-size/business-size.module';
 import { BusinessNatureModule } from 'src/business-nature/business-nature.module';
 import { LegalStatusModule } from 'src/legal-status/legal-status.module';
@@ -30,6 +31,7 @@ import { StandalonePortalCredentialsController } from './standalone-portal-crede
       BusinessSize,
       BusinessNature,
       LegalStatus,
+      UserEntity,
     ]),
     BusinessSizeModule,
     BusinessNatureModule,

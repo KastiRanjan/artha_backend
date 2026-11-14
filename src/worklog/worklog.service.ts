@@ -164,16 +164,29 @@ export class WorklogService {
         action: 'worklog_added',
         details: `Worklog added for task '${taskWithProject.name}' by user '${user.name}'.`
       });
+
+      // Track project firstWorklogAt for Day Counter & Open/Active separation
+      const projId = taskWithProject.project?.id || (worklog.project as any)?.id;
+      if (projId) {
+        const proj = await this.projectRepository.findOne({ where: { id: projId } });
+        if (proj && !proj.firstWorklogAt) {
+          proj.firstWorklogAt = worklog.startTime || worklog.createdAt || new Date();
+          await this.projectRepository.save(proj);
+        }
+      }
     }
     return savedWorklogs;
   }
 
 
 
-  async findAll(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+  async findAll(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested', workingYearId?: string) {
     const whereCondition: any = { user };
     if (status) {
       whereCondition.status = status;
+    }
+    if (workingYearId && workingYearId !== 'all') {
+      whereCondition.project = { workingYearId };
     }
     const worklogs = await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
@@ -193,7 +206,7 @@ export class WorklogService {
   }
 
   
-  async findRequest(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested') {
+  async findRequest(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested', workingYearId?: string) {
     let whereCondition: any = {};
     if (status === 'approved' || status === 'rejected') {
       whereCondition = { requestTo: user.id, status };
@@ -203,6 +216,9 @@ export class WorklogService {
       if (status) {
         whereCondition.status = status;
       }
+    }
+    if (workingYearId && workingYearId !== 'all') {
+      whereCondition.project = { workingYearId };
     }
     const worklogs = await this.worklogRepository.find({
       relations: ['user', 'task', 'task.project'],
@@ -486,7 +502,7 @@ export class WorklogService {
     return worklogs;
   }
   
-  async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string, startDate?: string, endDate?: string) {
+  async findAllWorklog(status?: string, date?: string, userId?: string, projectId?: string, startDate?: string, endDate?: string, workingYearId?: string) {
     const whereCondition: any = {};
     if (status) {
       whereCondition.status = status;
@@ -496,6 +512,8 @@ export class WorklogService {
     }
     if (projectId) {
       whereCondition.project = { id: projectId };
+    } else if (workingYearId && workingYearId !== 'all') {
+      whereCondition.project = { workingYearId };
     }
     if (startDate && endDate) {
       const startOfRange = moment(startDate).startOf('day').toDate();

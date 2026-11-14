@@ -48,8 +48,11 @@ export class TasksController {
   }
 
   @Get()
-  findAll(@Query('status') status: 'open' | 'in_progress' | 'done') {
-    return this.tasksService.findAll(status);
+  findAll(
+    @Query('status') status?: 'open' | 'in_progress' | 'done',
+    @Query('workingYearId') workingYearId?: string
+  ) {
+    return this.tasksService.findAll(status, workingYearId);
   }
 
   @Get('user')

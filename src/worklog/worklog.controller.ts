@@ -38,8 +38,9 @@ export class WorklogController {
     @GetUser()
     user: UserEntity,
     @Query('status') status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+    @Query('workingYearId') workingYearId?: string,
   ) {
-    return this.worklogService.findRequest(user, status);
+    return this.worklogService.findRequest(user, status, workingYearId);
   }
 
   @Get()
@@ -47,8 +48,9 @@ export class WorklogController {
     @GetUser()
     user: UserEntity,
     @Query('status') status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested',
+    @Query('workingYearId') workingYearId?: string,
   ) {
-    return this.worklogService.findAll(user, status);
+    return this.worklogService.findAll(user, status, workingYearId);
   }
 
   @Get('allworklog')
@@ -59,8 +61,9 @@ export class WorklogController {
     @Query('projectId') projectId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('workingYearId') workingYearId?: string,
   ) {
-    return this.worklogService.findAllWorklog(status, date, userId, projectId, startDate, endDate);
+    return this.worklogService.findAllWorklog(status, date, userId, projectId, startDate, endDate, workingYearId);
   }
 
   @Get(':id')

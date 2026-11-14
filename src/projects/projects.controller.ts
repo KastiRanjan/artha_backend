@@ -54,9 +54,11 @@ export class ProjectsController {
   findAll(
     @GetUser() user: UserEntity,
     @Query('status') status?: 'active' | 'suspended' | 'archived' | 'signed_off' | 'all',
-    @Query('fields') fields?: string
+    @Query('fields') fields?: string,
+    @Query('workingYearId') workingYearId?: string,
+    @Query('tab') tab?: string
   ) {
-    return this.projectsService.findAll(status, user, fields);
+    return this.projectsService.findAll(status, user, fields, workingYearId, tab);
   }
 
   @Get(':id')
@@ -202,3 +204,4 @@ export class ProjectsController {
     return this.userAvailabilityService.getUsersAvailableBy(new Date(date));
   }
 }
+

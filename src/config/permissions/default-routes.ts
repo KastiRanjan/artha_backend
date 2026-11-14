@@ -278,6 +278,20 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     method: MethodList.GET
   },
 
+  // --- Working Years (Fiscal Year) ---
+  {
+    path: "/working-years",
+    method: MethodList.GET
+  },
+  {
+    path: "/working-years/current",
+    method: MethodList.GET
+  },
+  {
+    path: "/working-years/config",
+    method: MethodList.GET
+  },
+
   // --- Calendar & Holidays ---
   {
     path: "/holiday",

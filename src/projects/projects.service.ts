@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { WorkingYear } from 'src/working-year/entities/working-year.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { UserEntity } from 'src/auth/entity/user.entity';
@@ -9,7 +10,7 @@ import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity'
 import { NatureOfWorkGroup } from 'src/nature-of-work/entities/nature-of-work-group.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/enums/notification-type.enum';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddFromTemplatesDto } from './dto/add-from-templates.dto';
@@ -36,6 +37,7 @@ import { CalendarUtil } from 'src/calendar/calendar.util';
 export class ProjectsService {
   constructor(
     @InjectRepository(Project) private projectRepository: Repository<Project>,
+    @InjectRepository(WorkingYear) private workingYearRepository: Repository<WorkingYear>,
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
     @InjectRepository(UserEntity)
@@ -76,6 +78,7 @@ export class ProjectsService {
       natureOfWork: natureOfWorkId,
       natureOfWorkGroup: natureOfWorkGroupId,
       name,
+      workingYearId,
       ...projectData
     } = createProjectDto;
 
@@ -121,6 +124,29 @@ export class ProjectsService {
       natureOfWorkGroupEntity = await this.natureOfWorkGroupRepository.findOne({ where: { id: natureOfWorkEntity.groupId } });
     }
 
+    let workingYearEntity: WorkingYear = null;
+    if (workingYearId) {
+      workingYearEntity = await this.workingYearRepository.findOne({ where: { id: workingYearId } });
+    }
+    if (!workingYearEntity) {
+      const checkDate = projectData.startingDate ? new Date(projectData.startingDate) : new Date();
+      const allWYs = await this.workingYearRepository.find();
+      workingYearEntity = allWYs.find((wy) => {
+        const s = new Date(wy.startDateAD);
+        const e = new Date(wy.endDateAD);
+        return checkDate >= s && checkDate <= e;
+      }) || null;
+    }
+    if (!workingYearEntity) {
+      workingYearEntity = await this.workingYearRepository.findOne({ where: { isCurrent: true } });
+    }
+    if (!workingYearEntity && projectData.fiscalYear) {
+      workingYearEntity = await this.workingYearRepository.findOne({ where: { nepaliStartYear: projectData.fiscalYear } });
+    }
+    if (!workingYearEntity) {
+      workingYearEntity = (await this.workingYearRepository.find({ order: { startDateAD: 'DESC' }, take: 1 }))[0] || null;
+    }
+
     // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
@@ -132,7 +158,12 @@ export class ProjectsService {
       customer: clientEntity,
       billing: billingEntity,
       natureOfWork: natureOfWorkEntity,
-      natureOfWorkGroup: natureOfWorkGroupEntity
+      natureOfWorkGroup: natureOfWorkGroupEntity,
+      workingYear: workingYearEntity,
+      workingYearId: workingYearEntity?.id || null,
+      fiscalYear: projectData.fiscalYear || workingYearEntity?.nepaliStartYear || 2081,
+      createdBy: currentUser?.id || null,
+      updatedBy: currentUser?.id || null
     });
 
     const savedProject = await this.projectRepository.save(project);
@@ -185,14 +216,22 @@ export class ProjectsService {
   async findAll(
     status: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed' | 'all' | undefined,
     user: UserEntity,
-    fields?: string
+    fields?: string,
+    workingYearId?: string,
+    tab?: string
   ) {
     let projects = null;
 
     const requestedFields = fields ? fields.split(',') : [];
     const includeTasks = requestedFields.length === 0 || requestedFields.includes('completion') || requestedFields.includes('tasks');
 
-    const baseRelations = ['projectLead', 'customer', 'billing', 'projectManager', 'natureOfWork', 'natureOfWorkGroup'];
+    const baseRelations = ['projectLead', 'customer', 'billing', 'projectManager', 'natureOfWork', 'natureOfWorkGroup', 'workingYear', 'completedInWorkingYear'];
+
+
+    let targetWY: WorkingYear = null;
+    if (workingYearId && workingYearId !== 'all') {
+      targetWY = await this.workingYearRepository.findOne({ where: { id: workingYearId } });
+    }
     const superuserRelations = [...baseRelations, 'users', 'users.role'];
 
     const isStatusActive = status === 'active';
@@ -228,6 +267,72 @@ export class ProjectsService {
           return bTime - aTime;
         }
       });
+    }
+
+    // Apply Fiscal Year & Tab-based segmentation
+    if (targetWY) {
+      const targetStart = new Date(targetWY.startDateAD).getTime();
+      const targetEnd = new Date(targetWY.endDateAD).getTime();
+
+      projects = (projects || []).filter((p: Project) => {
+        if (tab === 'open') {
+          const isOpen = p.status === 'active' && !p.firstWorklogAt;
+          if (!isOpen) return false;
+          const isThisFY = p.workingYearId === targetWY.id;
+          const isCarriedOver = p.workingYear && new Date(p.workingYear.startDateAD).getTime() < targetStart;
+          return isThisFY || isCarriedOver;
+        }
+
+        if (tab === 'active') {
+          const isActiveWithWorklog = p.status === 'active' && Boolean(p.firstWorklogAt);
+          if (!isActiveWithWorklog) return false;
+          const isThisFY = p.workingYearId === targetWY.id;
+          const isCarriedOver = p.workingYear && new Date(p.workingYear.startDateAD).getTime() < targetStart;
+          return isThisFY || isCarriedOver;
+        }
+
+        if (status === 'completed' || tab === 'completed') {
+          if (p.status !== 'completed') return false;
+          if (p.completedInWorkingYearId === targetWY.id) return true;
+          if (p.completedAt) {
+            const compTime = new Date(p.completedAt).getTime();
+            if (compTime >= targetStart && compTime <= targetEnd) return true;
+          }
+          if (!p.completedInWorkingYearId && !p.completedAt && p.workingYearId === targetWY.id) return true;
+          return false;
+        }
+
+        if (status === 'active') {
+          const isThisFY = p.workingYearId === targetWY.id;
+          const isCarriedOver = p.workingYear && new Date(p.workingYear.startDateAD).getTime() < targetStart;
+          return isThisFY || isCarriedOver;
+        }
+
+        if (status === 'all' || !status) {
+          const isThisFY = p.workingYearId === targetWY.id;
+          const isCarriedOverActive =
+            p.status === 'active' &&
+            p.workingYear &&
+            new Date(p.workingYear.startDateAD).getTime() < targetStart;
+          const isCompletedInThisFY =
+            (p.status === 'completed' || p.status === 'signed_off') &&
+            (p.completedInWorkingYearId === targetWY.id ||
+              (p.completedAt &&
+                new Date(p.completedAt).getTime() >= targetStart &&
+                new Date(p.completedAt).getTime() <= targetEnd));
+
+          return isThisFY || isCarriedOverActive || isCompletedInThisFY;
+        }
+
+        if (p.workingYearId) {
+          return p.workingYearId === targetWY.id;
+        }
+        return true;
+      });
+    } else if (tab === 'open') {
+      projects = (projects || []).filter((p: Project) => p.status === 'active' && !p.firstWorklogAt);
+    } else if (tab === 'active') {
+      projects = (projects || []).filter((p: Project) => p.status === 'active' && Boolean(p.firstWorklogAt));
     }
 
     // Fast 3ms SQL aggregation query for project task completion stats (avoids heavy tasks relation)
@@ -275,12 +380,74 @@ export class ProjectsService {
       console.error('Failed to fetch active assignments:', e);
     }
 
-    // Add Nepali date formatting, task completion stats, and active users to each project
+    // Batch resolve creators
+    const creatorIds = Array.from(
+      new Set(
+        projects
+          .map((p) => p.createdBy)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+    let creatorMap = new Map<string, any>();
+    if (creatorIds.length > 0) {
+      try {
+        const creators = await this.userRepository.find({
+          where: { id: In(creatorIds) },
+          select: ['id', 'name', 'email', 'avatar']
+        });
+        creatorMap = new Map(creators.map((c) => [c.id, c]));
+      } catch (e) {
+        console.error('Failed to batch resolve creators for projects:', e);
+      }
+    }
+
+    // Add Nepali date formatting, task completion stats, active users, day counter, and FY flags
     return projects.map((project) => {
       const formatted = ProjectDateFormatter.addNepaliDates(project);
       const pIdStr = String(project.id);
       (formatted as any).taskCompletionStats = taskStatsMap.get(pIdStr) || { total: 0, completed: 0 };
       (formatted as any).activeUsers = activeUsersMap.get(pIdStr) || [];
+      (formatted as any).creator = project.createdBy ? (creatorMap.get(project.createdBy) || null) : null;
+
+      // Day counter & Fiscal Year flags
+      const firstWorklogTime = project.firstWorklogAt ? new Date(project.firstWorklogAt).getTime() : null;
+      let dayCounter: number | null = null;
+      if (firstWorklogTime) {
+        if (project.status === 'completed' || project.status === 'signed_off') {
+          // Completed project: calculate how much that project ran for (start to completion)
+          const endTime = project.completedAt
+            ? new Date(project.completedAt).getTime()
+            : (project.updatedAt ? new Date(project.updatedAt).getTime() : Date.now());
+          const diffMs = Math.max(0, endTime - firstWorklogTime);
+          dayCounter = Math.max(1, Math.round(diffMs / 86400000));
+        } else {
+          // Active project: days elapsed since first worklog until today
+          const diffMs = Math.max(0, Date.now() - firstWorklogTime);
+          dayCounter = Math.floor(diffMs / 86400000);
+        }
+      } else if ((project.status === 'completed' || project.status === 'signed_off') && (project.startingDate || project.createdAt)) {
+        // Fallback for completed projects where no worklog was logged: span between start and completion
+        const startTime = project.startingDate
+          ? new Date(project.startingDate).getTime()
+          : new Date(project.createdAt).getTime();
+        const endTime = project.completedAt
+          ? new Date(project.completedAt).getTime()
+          : (project.updatedAt ? new Date(project.updatedAt).getTime() : Date.now());
+        const diffMs = Math.max(0, endTime - startTime);
+        dayCounter = Math.max(1, Math.round(diffMs / 86400000));
+      }
+      (formatted as any).dayCounter = dayCounter;
+
+      const isCarriedOver = Boolean(
+        targetWY &&
+        project.workingYear &&
+        new Date(project.workingYear.startDateAD).getTime() < new Date(targetWY.startDateAD).getTime() &&
+        project.status === 'active'
+      );
+      (formatted as any).isCarriedOver = isCarriedOver;
+      (formatted as any).isOpen = project.status === 'active' && !project.firstWorklogAt;
+      (formatted as any).isWorklogStarted = Boolean(project.firstWorklogAt);
+
       return formatted;
     });
   }
@@ -306,7 +473,9 @@ export class ProjectsService {
         'billing', 
         'customer', 
         'natureOfWork',
-        'natureOfWorkGroup'
+        'natureOfWorkGroup',
+        'workingYear',
+        'completedInWorkingYear'
       ]
     });
     
@@ -320,6 +489,50 @@ export class ProjectsService {
     } catch (e) {
       (formatted as any).activeUsers = [];
     }
+
+    if (project) {
+      const firstWorklogTime = project.firstWorklogAt ? new Date(project.firstWorklogAt).getTime() : null;
+      let dayCounter: number | null = null;
+      if (firstWorklogTime) {
+        if (project.status === 'completed' || project.status === 'signed_off') {
+          const endTime = project.completedAt
+            ? new Date(project.completedAt).getTime()
+            : (project.updatedAt ? new Date(project.updatedAt).getTime() : Date.now());
+          const diffMs = Math.max(0, endTime - firstWorklogTime);
+          dayCounter = Math.max(1, Math.round(diffMs / 86400000));
+        } else {
+          const diffMs = Math.max(0, Date.now() - firstWorklogTime);
+          dayCounter = Math.floor(diffMs / 86400000);
+        }
+      } else if ((project.status === 'completed' || project.status === 'signed_off') && (project.startingDate || project.createdAt)) {
+        const startTime = project.startingDate
+          ? new Date(project.startingDate).getTime()
+          : new Date(project.createdAt).getTime();
+        const endTime = project.completedAt
+          ? new Date(project.completedAt).getTime()
+          : (project.updatedAt ? new Date(project.updatedAt).getTime() : Date.now());
+        const diffMs = Math.max(0, endTime - startTime);
+        dayCounter = Math.max(1, Math.round(diffMs / 86400000));
+      }
+      (formatted as any).dayCounter = dayCounter;
+      (formatted as any).isOpen = project.status === 'active' && !project.firstWorklogAt;
+      (formatted as any).isWorklogStarted = Boolean(project.firstWorklogAt);
+
+      if (project.createdBy) {
+        try {
+          const creator = await this.userRepository.findOne({
+            where: { id: project.createdBy },
+            select: ['id', 'name', 'email', 'avatar']
+          });
+          (formatted as any).creator = creator || null;
+        } catch (e) {
+          (formatted as any).creator = null;
+        }
+      } else {
+        (formatted as any).creator = null;
+      }
+    }
+
     return formatted;
   }
 
@@ -355,11 +568,49 @@ export class ProjectsService {
       billing,
       natureOfWork,
       natureOfWorkGroup,
+      workingYearId,
       ...otherUpdates
     } = effectiveUpdateDto as UpdateProjectDto;
 
     // Update project properties with the new values for simple fields
     Object.assign(project, otherUpdates);
+
+    // If status is transitioning to completed, stamp completedAt and completedInWorkingYear
+    if (effectiveUpdateDto.status === 'completed' && project.status !== 'completed') {
+      project.completedAt = new Date();
+      const today = new Date();
+      const allWY = await this.workingYearRepository.find();
+      const compWY = allWY.find(wy => today >= new Date(wy.startDateAD) && today <= new Date(wy.endDateAD))
+        || (await this.workingYearRepository.findOne({ where: { isCurrent: true } }));
+      if (compWY) {
+        project.completedInWorkingYear = compWY;
+        project.completedInWorkingYearId = compWY.id;
+      }
+    } else if (effectiveUpdateDto.status && effectiveUpdateDto.status !== 'completed' && project.status === 'completed') {
+      project.completedAt = null;
+      project.completedInWorkingYear = null;
+      project.completedInWorkingYearId = null;
+    }
+
+    // Superuser-only workingYear editing
+    if (workingYearId !== undefined) {
+      const isSuperUser = (currentUser?.role?.name || '').toLowerCase() === 'superuser';
+      if (!isSuperUser) {
+        throw new ForbiddenException('Only superusers can change the working year of a project');
+      }
+      if (workingYearId) {
+        const wy = await this.workingYearRepository.findOne({ where: { id: workingYearId } });
+        if (!wy) {
+          throw new BadRequestException(`Working year with ID ${workingYearId} not found`);
+        }
+        project.workingYear = wy;
+        project.workingYearId = wy.id;
+        project.fiscalYear = wy.nepaliStartYear;
+      } else {
+        project.workingYear = null;
+        project.workingYearId = null;
+      }
+    }
 
     // If there are user updates, handle them
     if (users) {
@@ -469,6 +720,9 @@ export class ProjectsService {
     }
 
     // Save the updated project back to the repository
+    if (currentUser?.id) {
+      project.updatedBy = currentUser.id;
+    }
     const updatedProject = await this.projectRepository.save(project);
 
     // Collect all stakeholder user IDs for the project notification
@@ -782,8 +1036,22 @@ export class ProjectsService {
       );
     }
 
-    // Update project status
+    // Update project status & completion FY
     project.status = 'completed';
+    project.completedAt = new Date();
+    const today = new Date();
+    let currentWY = await this.workingYearRepository.findOne({ where: { isCurrent: true } });
+    if (!currentWY) {
+      const allWY = await this.workingYearRepository.find({ order: { startDateAD: 'DESC' } });
+      currentWY = allWY.find(wy => today >= new Date(wy.startDateAD) && today <= new Date(wy.endDateAD)) || allWY[0];
+    }
+    if (currentWY) {
+      project.completedInWorkingYear = currentWY;
+      project.completedInWorkingYearId = currentWY.id;
+    }
+    if (user?.id) {
+      project.updatedBy = user.id;
+    }
     const updatedProject = await this.projectRepository.save(project);
 
     // Log in timeline

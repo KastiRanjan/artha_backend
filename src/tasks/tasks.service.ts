@@ -781,9 +781,13 @@ export class TasksService {
     };
   }
 
-  findAll(status: 'open' | 'in_progress' | 'done') {
+  findAll(status?: 'open' | 'in_progress' | 'done', workingYearId?: string) {
+    const where: any = status ? { status } : {};
+    if (workingYearId && workingYearId !== 'all') {
+      where.project = { workingYearId };
+    }
     return this.taskRepository.find({
-      where: { status },
+      where,
       relations: [
         'worklogs', 
         'project', 

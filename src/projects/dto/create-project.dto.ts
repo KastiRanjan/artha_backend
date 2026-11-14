@@ -21,10 +21,10 @@ export class CreateProjectDto {
   description: string;
 
   @IsOptional()
-  @IsEnum(['active', 'suspended', 'archived', 'signed_off'], {
-    message: 'status must be one of: active, suspended, archived, signed_off'
+  @IsEnum(['active', 'suspended', 'archived', 'signed_off', 'completed'], {
+    message: 'status must be one of: active, suspended, archived, signed_off, completed'
   })
-  status?: 'active' | 'suspended' | 'archived' | 'signed_off';
+  status?: 'active' | 'suspended' | 'archived' | 'signed_off' | 'completed';
 
   @IsNotEmpty()
   @IsUUID()
@@ -34,9 +34,13 @@ export class CreateProjectDto {
   @IsUUID()
   natureOfWorkGroup?: string; // Reference to NatureOfWorkGroup entity (optional)
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsInt()
-  fiscalYear: number;
+  fiscalYear?: number;
+
+  @IsOptional()
+  @IsUUID()
+  workingYearId?: string;
 
   @IsNotEmpty()
   @Type(() => Date)

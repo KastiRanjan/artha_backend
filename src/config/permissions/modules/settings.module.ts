@@ -444,4 +444,27 @@ export const settingsModulePermissions: ModulesPayloadInterface[] = [
       }
     ]
   }
+,
+  {
+    name: "Working Year Management",
+    resource: "working-year",
+    hasSubmodules: false,
+    permissions: [
+      {
+        name: "Manage working years",
+        route: [
+          { path: "/working-years", method: MethodList.GET },
+          { path: "/working-years", method: MethodList.POST },
+          { path: "/working-years/current", method: MethodList.GET },
+          { path: "/working-years/config", method: MethodList.GET },
+          { path: "/working-years/config", method: MethodList.PATCH },
+          { path: "/working-years/generate-next", method: MethodList.POST },
+          { path: "/working-years/:id", method: MethodList.GET },
+          { path: "/working-years/:id", method: MethodList.PATCH },
+          { path: "/working-years/:id/set-current", method: MethodList.PATCH },
+          { path: "/working-years/:id", method: MethodList.DELETE }
+        ]
+      }
+    ]
+  }
 ];

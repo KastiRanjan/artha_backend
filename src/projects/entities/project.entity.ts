@@ -1,3 +1,4 @@
+import { WorkingYear } from 'src/working-year/entities/working-year.entity';
 import { ProjectTimeline } from './project-timeline.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { CustomBaseEntity } from 'src/common/entity/custom-base.entity';
@@ -7,7 +8,7 @@ import { Worklog } from 'src/worklog/entities/worklog.entity';
 import { Billing } from 'src/billing/entities/billing.entity';
 import { NatureOfWork } from 'src/nature-of-work/entities/nature-of-work.entity';
 import { NatureOfWorkGroup } from 'src/nature-of-work/entities/nature-of-work-group.entity';
-import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToMany, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity()
 export class Project extends CustomBaseEntity {
@@ -34,8 +35,28 @@ export class Project extends CustomBaseEntity {
   @Column({ nullable: true, type: 'uuid' })
   natureOfWorkGroupId: string;
 
-  @Column()
+  @Column({ nullable: true })
   fiscalYear: number;
+
+  @ManyToOne(() => WorkingYear, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'workingYearId' })
+  workingYear: WorkingYear;
+
+  @Column({ nullable: true, type: 'uuid' })
+  workingYearId: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  firstWorklogAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  completedAt: Date;
+
+  @ManyToOne(() => WorkingYear, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'completedInWorkingYearId' })
+  completedInWorkingYear: WorkingYear;
+
+  @Column({ nullable: true, type: 'uuid' })
+  completedInWorkingYearId: string;
 
   @Column({ type: 'date' })
   startingDate: Date;

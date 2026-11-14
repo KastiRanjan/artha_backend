@@ -59,6 +59,7 @@ import { DsaModule } from './dsa/dsa.module';
 import { ClientReportModule } from './client-report/client-report.module';
 import { ClientReportDocumentTypeModule } from './client-report-document-type/client-report-document-type.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { WorkingYearModule } from './working-year/working-year.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -132,7 +133,8 @@ import { AuditLogModule } from './audit-log/audit-log.module';
   DsaModule,
   ClientReportModule,
   ClientReportDocumentTypeModule,
-  AuditLogModule
+  AuditLogModule,
+  WorkingYearModule
   ],
   providers: [
     {

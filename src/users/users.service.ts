@@ -3,7 +3,7 @@ import { CreateUsersDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { UserStatusEnum } from 'src/auth/user-status.enum';
-import { Connection, Repository } from 'typeorm';
+import { Connection, Repository, In } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserProfileEntity } from './entities/user.profile.entity';
 import { UserBankDetailEntity } from './entities/user.bankdetail.entity';
@@ -37,7 +37,7 @@ export class UsersService {
     private readonly userHistoryService: UserHistoryService
   ) {}
 
-  async create(createUsersDto: CreateUsersDto) {
+  async create(createUsersDto: CreateUsersDto, creatorId?: string) {
     const { email, name, role, hourlyRate, joinedDate } = createUsersDto;
 
     const user = await this.userRepository.findOne({ where: { email } });
@@ -50,7 +50,9 @@ export class UsersService {
       username: name,
       roleId: role,
       hourlyRate: typeof hourlyRate === 'number' ? hourlyRate : 500,
-      joinedDate: joinedDate ? new Date(joinedDate as any) : undefined
+      joinedDate: joinedDate ? new Date(joinedDate as any) : undefined,
+      createdBy: creatorId || null,
+      updatedBy: creatorId || null
     });
 
     return savedUser;
@@ -203,11 +205,30 @@ export class UsersService {
     if (status && status !== 'all') {
       where.status = status;
     }
-    return this.userRepository.find({
+    const users = await this.userRepository.find({
       where,
       relations: ['role', 'profile', 'profile.department', 'bank_detail', 'projects'],
       order: { createdAt: 'DESC' }
     });
+
+    const creatorIds = Array.from(new Set(users.map(u => u.createdBy).filter((id): id is string => Boolean(id))));
+    let creatorMap = new Map<string, any>();
+    if (creatorIds.length > 0) {
+      try {
+        const creators = await this.userRepository.find({
+          where: { id: In(creatorIds) },
+          select: ['id', 'name', 'email', 'avatar']
+        });
+        creatorMap = new Map(creators.map(c => [c.id, c]));
+      } catch (e) {
+        console.error('Failed to batch resolve creators for users:', e);
+      }
+    }
+
+    return users.map(u => ({
+      ...u,
+      creator: u.createdBy ? (creatorMap.get(u.createdBy) || null) : null
+    }));
   }
 
   /**
@@ -268,6 +289,19 @@ export class UsersService {
       throw new BadRequestException('User not found');
     }
     
+    if (user.createdBy) {
+      try {
+        const creator = await this.userRepository.findOne({
+          where: { id: user.createdBy },
+          select: ['id', 'name', 'email', 'avatar']
+        });
+        (user as any).creator = creator || null;
+      } catch (e) {
+        (user as any).creator = null;
+      }
+    } else {
+      (user as any).creator = null;
+    }
     return user;
   }
 
@@ -390,6 +424,9 @@ export class UsersService {
 
     // Use the auth service's update method which has proper validation and role handling
     // Pass along the modifier user for history tracking
+    if (modifierUser?.id) {
+      updateData.updatedBy = modifierUser.id;
+    }
     return await this.authService.update(id, updateData, modifierUser);
   }
 

@@ -2,11 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { BusinessSize } from 'src/business-size/entities/business-size.entity';
 import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
 import { LegalStatus } from 'src/legal-status/entities/legal-status.entity';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @Injectable()
 export class CustomersService {
@@ -18,11 +19,15 @@ export class CustomersService {
     @InjectRepository(BusinessNature)
     private businessNatureRepository: Repository<BusinessNature>,
     @InjectRepository(LegalStatus)
-    private legalStatusRepository: Repository<LegalStatus>
+    private legalStatusRepository: Repository<LegalStatus>,
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>
   ) {}
 
-  async create(createCustomerDto: CreateCustomerDto) {
+  async create(createCustomerDto: CreateCustomerDto, user?: UserEntity) {
     const customer = this.customerRepository.create(createCustomerDto);
+    customer.createdBy = user?.id || null;
+    customer.updatedBy = user?.id || null;
     
     // Handle business size reference if provided
     if (createCustomerDto.businessSizeId) {
@@ -57,22 +62,44 @@ export class CustomersService {
     return this.customerRepository.save(customer);
   }
 
-  findAll() {
-    return this.customerRepository.find({
+  private async attachCreators(customers: Customer[]): Promise<any[]> {
+    const creatorIds = Array.from(new Set(customers.map(c => c.createdBy).filter((id): id is string => Boolean(id))));
+    let creatorMap = new Map<string, any>();
+    if (creatorIds.length > 0) {
+      try {
+        const creators = await this.userRepository.find({
+          where: { id: In(creatorIds) },
+          select: ['id', 'name', 'email', 'avatar']
+        });
+        creatorMap = new Map(creators.map(c => [c.id, c]));
+      } catch (e) {
+        console.error('Failed to batch resolve creators for customers:', e);
+      }
+    }
+    return customers.map(c => ({
+      ...c,
+      creator: c.createdBy ? (creatorMap.get(c.createdBy) || null) : null
+    }));
+  }
+
+  async findAll() {
+    const customers = await this.customerRepository.find({
       relations: ['businessSize', 'industryNature', 'legalStatus'],
       order: { createdAt: 'DESC' }
     });
+    return this.attachCreators(customers);
   }
 
-  findByStatus(status: string) {
+  async findByStatus(status: string) {
     if (status && status.toLowerCase() === 'all') {
       return this.findAll();
     }
-    return this.customerRepository.find({
+    const customers = await this.customerRepository.find({
       where: { status: status as any },
       relations: ['businessSize', 'industryNature', 'legalStatus'],
       order: { createdAt: 'DESC' }
     });
+    return this.attachCreators(customers);
   }
 
   async findOne(id: string) {
@@ -83,10 +110,23 @@ export class CustomersService {
     if (!customer) {
       throw new NotFoundException(`Customer with ID ${id} not found`);
     }
+    if (customer.createdBy) {
+      try {
+        const creator = await this.userRepository.findOne({
+          where: { id: customer.createdBy },
+          select: ['id', 'name', 'email', 'avatar']
+        });
+        (customer as any).creator = creator || null;
+      } catch (e) {
+        (customer as any).creator = null;
+      }
+    } else {
+      (customer as any).creator = null;
+    }
     return customer;
   }
 
-  async update(id: string, updateCustomerDto: UpdateCustomerDto) {
+  async update(id: string, updateCustomerDto: UpdateCustomerDto, user?: UserEntity) {
     const customer = await this.findOne(id);
     
     // Handle business size reference if provided
@@ -126,6 +166,9 @@ export class CustomersService {
     }
     
     Object.assign(customer, updateCustomerDto);
+    if (user?.id) {
+      customer.updatedBy = user.id;
+    }
     return this.customerRepository.save(customer);
   }
 

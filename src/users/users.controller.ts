@@ -48,8 +48,9 @@ export class UsersController {
   ) {}
 
   @Post()
-  create(@Body() createUsersDto: CreateUsersDto) {
-    return this.usersService.create(createUsersDto);
+  create(@Body() createUsersDto: CreateUsersDto, @Request() req?: any) {
+    const creatorId = req?.user?.id;
+    return this.usersService.create(createUsersDto, creatorId);
   }
   @Post(':id')
   async createDetail(

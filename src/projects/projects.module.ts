@@ -1,3 +1,4 @@
+import { WorkingYear } from 'src/working-year/entities/working-year.entity';
 import { Module } from '@nestjs/common';
 import { ProjectsController } from './projects.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -48,7 +49,8 @@ import { Worklog } from 'src/worklog/entities/worklog.entity';
       TaskGroup,
       TaskTemplate,
       ProjectUserAssignment,
-      Worklog
+      Worklog,
+      WorkingYear
     ]),
     CustomersModule,
     BusinessSizeModule,
@@ -60,3 +62,4 @@ import { Worklog } from 'src/worklog/entities/worklog.entity';
   exports: [ProjectsService, ProjectTimelineService, UserAvailabilityService]
 })
 export class ProjectsModule {}
+
