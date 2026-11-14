@@ -115,6 +115,10 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     path: "/dashboard/browser",
     method: MethodList.GET
   },
+  {
+    path: "/dashboard/sidebar-summary",
+    method: MethodList.GET
+  },
 
   // --- Attendance Self-Service ---
   {

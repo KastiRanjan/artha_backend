@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, MoreThanOrEqual } from 'typeorm';
+import { Project } from 'src/projects/entities/project.entity';
+import { Customer } from 'src/customers/entities/customer.entity';
+import { Task } from 'src/tasks/entities/task.entity';
+import { NoticeBoard } from 'src/notice-board/entities/notice-board.entity';
+import { WorkingYear } from 'src/working-year/entities/working-year.entity';
 import moment = require('moment');
 
 import { UserStatusEnum } from 'src/auth/user-status.enum';
@@ -24,7 +29,17 @@ export class DashboardService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(Attendance)
-    private readonly attendanceRepository: Repository<Attendance>
+    private readonly attendanceRepository: Repository<Attendance>,
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
+    @InjectRepository(Customer)
+    private readonly customerRepository: Repository<Customer>,
+    @InjectRepository(Task)
+    private readonly taskRepository: Repository<Task>,
+    @InjectRepository(NoticeBoard)
+    private readonly noticeRepository: Repository<NoticeBoard>,
+    @InjectRepository(WorkingYear)
+    private readonly workingYearRepository: Repository<WorkingYear>
   ) {}
 
   async getUserStat(): Promise<UsersStatsInterface> {
@@ -209,6 +224,200 @@ export class DashboardService {
       underPerformers,
       date: targetDate,
       period
+    };
+  }
+
+  async getSidebarSummary(user: UserEntity, workingYearId?: string) {
+    const oneMonthAgo = moment().subtract(30, 'days').startOf('day').toDate();
+
+    // 1. Projects: Recent in last 30 days & Total Active
+    const recentProjectsCount = await this.projectRepository
+      .createQueryBuilder('p')
+      .where('p.createdAt >= :oneMonthAgo', { oneMonthAgo })
+      .getCount();
+
+    let targetWY: WorkingYear = null;
+    if (workingYearId && workingYearId !== 'all') {
+      targetWY = await this.workingYearRepository.findOne({ where: { id: workingYearId } });
+    }
+    if (!targetWY && (!workingYearId || workingYearId !== 'all')) {
+      targetWY = await this.workingYearRepository.findOne({ where: { isCurrent: true } });
+    }
+
+    let totalProjectsCount = 0;
+    if (targetWY) {
+      totalProjectsCount = await this.projectRepository
+        .createQueryBuilder('p')
+        .where('p.status = :status', { status: 'active' })
+        .andWhere(
+          '(p.workingYearId = :wyId OR (p.workingYearId IS NOT NULL AND p.completedAt IS NULL))',
+          { wyId: targetWY.id }
+        )
+        .getCount();
+    } else {
+      totalProjectsCount = await this.projectRepository.count({ where: { status: 'active' } });
+    }
+
+    // 2. Clients: Recent in last 30 days & Total Active
+    const recentClientsCount = await this.customerRepository
+      .createQueryBuilder('c')
+      .where('c.createdAt >= :oneMonthAgo', { oneMonthAgo })
+      .getCount();
+    const totalClientsCount = await this.customerRepository.count({ where: { status: 'active' } });
+
+    // 3. Active Users: Recent in last 30 days & Total Active
+    const recentUsersCount = await this.userRepository
+      .createQueryBuilder('u')
+      .where('u.createdAt >= :oneMonthAgo', { oneMonthAgo })
+      .getCount();
+    const totalUsersCount = await this.userRepository.count({ where: { status: UserStatusEnum.ACTIVE } });
+
+    // 4. Pending Tasks for this user: Recent in last 30 days & Total Pending
+    let recentTasksCount = 0;
+    let totalPendingTasksCount = 0;
+    try {
+      recentTasksCount = await this.taskRepository
+        .createQueryBuilder('t')
+        .innerJoin('t.assignees', 'a', 'a.id = :userId', { userId: user.id })
+        .where('t.createdAt >= :oneMonthAgo', { oneMonthAgo })
+        .getCount();
+
+      totalPendingTasksCount = await this.taskRepository
+        .createQueryBuilder('t')
+        .innerJoin('t.assignees', 'a', 'a.id = :userId', { userId: user.id })
+        .where('t.status != :doneStatus', { doneStatus: 'done' })
+        .getCount();
+    } catch (e) {
+      recentTasksCount = 0;
+      totalPendingTasksCount = 0;
+    }
+
+    // 5. Notices count: Recent in last 30 days & Total
+    let recentNoticesCount = 0;
+    let totalNoticesCount = 0;
+    try {
+      recentNoticesCount = await this.noticeRepository
+        .createQueryBuilder('n')
+        .where('n.createdAt >= :oneMonthAgo', { oneMonthAgo })
+        .getCount();
+      totalNoticesCount = await this.noticeRepository.count();
+    } catch (e) {
+      recentNoticesCount = 0;
+      totalNoticesCount = 0;
+    }
+
+    // 6. Recent Projects (Created in last 30 days only, max 5)
+    const recentProjectsRaw = await this.projectRepository.find({
+      where: { createdAt: MoreThanOrEqual(oneMonthAgo) },
+      order: { createdAt: 'DESC' },
+      take: 5,
+      select: ['id', 'name', 'status', 'createdAt', 'createdBy']
+    });
+
+    // 7. Recent Clients (Created in last 30 days only, max 5)
+    const recentClientsRaw = await this.customerRepository.find({
+      where: { createdAt: MoreThanOrEqual(oneMonthAgo) },
+      order: { createdAt: 'DESC' },
+      take: 5,
+      select: ['id', 'name', 'status', 'createdAt', 'createdBy']
+    });
+
+    // 8. Recent Users (Created in last 30 days only, max 5)
+    const recentUsersRaw = await this.userRepository.find({
+      where: { createdAt: MoreThanOrEqual(oneMonthAgo) },
+      order: { createdAt: 'DESC' },
+      take: 5,
+      select: ['id', 'name', 'status', 'createdAt', 'avatar', 'createdBy']
+    });
+
+    // Batch resolve creators for recent projects, clients, and users
+    const creatorIds = Array.from(
+      new Set(
+        [...recentProjectsRaw, ...recentClientsRaw, ...recentUsersRaw]
+          .map((r) => r.createdBy)
+          .filter(Boolean)
+      )
+    );
+
+    let creatorMap = new Map<string, any>();
+    if (creatorIds.length > 0) {
+      try {
+        const creators = await this.userRepository.find({
+          where: { id: In(creatorIds) },
+          select: ['id', 'name', 'email', 'avatar']
+        });
+        creatorMap = new Map(creators.map((c) => [c.id, c]));
+      } catch (e) {
+        console.error('Failed to batch resolve creators for sidebar summary:', e);
+      }
+    }
+
+    const recentProjects = recentProjectsRaw.map((p) => ({
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      createdAt: p.createdAt,
+      creator: p.createdBy ? creatorMap.get(p.createdBy) || null : null
+    }));
+
+    const recentClients = recentClientsRaw.map((c) => ({
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      createdAt: c.createdAt,
+      creator: c.createdBy ? creatorMap.get(c.createdBy) || null : null
+    }));
+
+    const recentUsers = recentUsersRaw.map((u) => ({
+      id: u.id,
+      name: u.name,
+      status: u.status,
+      createdAt: u.createdAt,
+      creator: u.createdBy ? creatorMap.get(u.createdBy) || null : null
+    }));
+
+    const recentActivity = [
+      ...recentProjects.map((p) => ({
+        id: p.id,
+        type: 'project' as const,
+        title: p.name,
+        action: 'New Project Created',
+        createdAt: p.createdAt,
+        creator: p.creator,
+        link: '/projects/' + p.id
+      })),
+      ...recentClients.map((c) => ({
+        id: c.id,
+        type: 'client' as const,
+        title: c.name,
+        action: 'New Client Registered',
+        createdAt: c.createdAt,
+        creator: c.creator,
+        link: '/client/view/' + c.id
+      }))
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 8);
+
+    return {
+      counts: {
+        // Recent counts (last 30 days)
+        projects: recentProjectsCount,
+        clients: recentClientsCount,
+        users: recentUsersCount,
+        tasks: recentTasksCount,
+        notices: recentNoticesCount,
+        // Totals
+        totalProjects: totalProjectsCount,
+        totalClients: totalClientsCount,
+        totalUsers: totalUsersCount,
+        totalTasks: totalPendingTasksCount,
+        totalNotices: totalNoticesCount
+      },
+      recentProjects,
+      recentClients,
+      recentUsers,
+      recentActivity
     };
   }
 }

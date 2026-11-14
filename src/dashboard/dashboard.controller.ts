@@ -44,4 +44,12 @@ export class DashboardController {
   ) {
     return this.dashboardService.getWorkingTimeStats(user, date, period);
   }
+
+  @Get('/sidebar-summary')
+  getSidebarSummary(
+    @GetUser() user: UserEntity,
+    @Query('workingYearId') workingYearId?: string
+  ) {
+    return this.dashboardService.getSidebarSummary(user, workingYearId);
+  }
 }
