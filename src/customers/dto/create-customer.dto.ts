@@ -161,4 +161,31 @@ export class CreateCustomerDto {
   @IsString()
   @Length(0, 100)
   password?: string;
+
+  @IsOptional()
+  @IsUUID()
+  clientGroupId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  partnerInChargeId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 60)
+  bankAccountNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  bankBranch?: string;
+
+  @IsOptional()
+  @IsString()
+  lastEditReason?: string;
 }

@@ -39,6 +39,23 @@ export class CustomersController {
     return this.customersService.findAll();
   }
 
+  @Get('similarity-check')
+  @ApiQuery({ name: 'name', required: false })
+  @ApiQuery({ name: 'pan', required: false })
+  @ApiQuery({ name: 'excludeId', required: false })
+  checkSimilarity(
+    @Query('name') name?: string,
+    @Query('pan') pan?: string,
+    @Query('excludeId') excludeId?: string
+  ) {
+    return this.customersService.checkSimilarity(name, pan, excludeId);
+  }
+
+  @Get('duplication-audit')
+  getDuplicationAuditReport() {
+    return this.customersService.getDuplicationAuditReport();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.customersService.findOne(id);

@@ -119,6 +119,58 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     path: "/dashboard/sidebar-summary",
     method: MethodList.GET
   },
+  {
+    path: "/clients/similarity-check",
+    method: MethodList.GET
+  },
+  {
+    path: "/clients/duplication-audit",
+    method: MethodList.GET
+  },
+  {
+    path: "/client-groups",
+    method: MethodList.GET
+  },
+  {
+    path: "/client-groups/:id",
+    method: MethodList.GET
+  },
+  {
+    path: "/client-groups/:id/ledger",
+    method: MethodList.GET
+  },
+  {
+    path: "/client-groups",
+    method: MethodList.POST
+  },
+  {
+    path: "/client-groups/:id",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/client-groups/:id",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/client-groups/:id/contacts",
+    method: MethodList.POST
+  },
+  {
+    path: "/client-groups/contacts/:contactId",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/client-groups/contacts/:contactId",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/client-groups/:id/assign-clients",
+    method: MethodList.POST
+  },
+  {
+    path: "/client-groups/unassign-client/:clientId",
+    method: MethodList.POST
+  },
 
   // --- Attendance Self-Service ---
   {

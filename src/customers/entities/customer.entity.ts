@@ -9,6 +9,8 @@ import { BusinessSize } from 'src/business-size/entities/business-size.entity';
 import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
 import { LegalStatus } from 'src/legal-status/entities/legal-status.entity';
 import { PortalCredential } from './portal-credential.entity';
+import { ClientGroup } from 'src/client-groups/entities/client-group.entity';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @Entity()
 export class Customer extends CustomBaseEntity {
@@ -131,6 +133,32 @@ export class Customer extends CustomBaseEntity {
 
   @Column({ length: 100, nullable: true })
   password?: string;
+
+  @Column({ nullable: true })
+  clientGroupId?: string;
+
+  @ManyToOne(() => ClientGroup, (group) => group.customers, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'clientGroupId' })
+  clientGroup?: ClientGroup;
+
+  @Column({ nullable: true })
+  partnerInChargeId?: string;
+
+  @ManyToOne(() => UserEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'partnerInChargeId' })
+  partnerInCharge?: UserEntity;
+
+  @Column({ length: 100, nullable: true })
+  bankName?: string;
+
+  @Column({ length: 60, nullable: true })
+  bankAccountNumber?: string;
+
+  @Column({ length: 100, nullable: true })
+  bankBranch?: string;
+
+  @Column({ type: 'text', nullable: true })
+  lastEditReason?: string;
 
   @OneToMany(() => Project, (project) => project.customer)
   projects: Project[];
