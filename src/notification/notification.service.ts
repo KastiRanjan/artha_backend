@@ -103,6 +103,20 @@ export class NotificationService implements OnModuleInit {
     // Target users: all or specific
     let users: UserEntity[] = [];
     if (!createNotificationDto.users || createNotificationDto.users.length === 0) {
+      // Scoped notifications should NEVER be broadcast to all users
+      const scopedTypes = [
+        NotificationType.PROJECT,
+        NotificationType.WORKLOG,
+        NotificationType.TASK,
+        NotificationType.DSA,
+        NotificationType.LEAVE,
+      ];
+      if (scopedTypes.includes(createNotificationDto.type)) {
+        this.logger.warn(
+          `Scoped notification of type ${createNotificationDto.type} has no target users specified. Skipping user distribution.`
+        );
+        return savedNotification;
+      }
       users = await this.userRepository.find(); // all users
     } else {
       users = await this.userRepository.findByIds(createNotificationDto.users);
@@ -131,8 +145,13 @@ export class NotificationService implements OnModuleInit {
       });
     }
 
-    // If metadata contains a module, emit to that module room as well for contextual alerts
-    if (createNotificationDto.metadata?.module) {
+    // If metadata contains a module, emit to that module room ONLY for global alerts (NOTICE, GENERAL, SYSTEM)
+    if (
+      createNotificationDto.metadata?.module &&
+      (createNotificationDto.type === NotificationType.GENERAL ||
+        createNotificationDto.type === NotificationType.NOTICEBOARD ||
+        createNotificationDto.type === NotificationType.SYSTEM)
+    ) {
       this.notificationGateway.broadcast(`module_${createNotificationDto.metadata.module}`, {
         type: savedNotification.type,
         message: savedNotification.message,
@@ -145,6 +164,25 @@ export class NotificationService implements OnModuleInit {
   }
 
   async getUserNotifications(userId: string, type?: NotificationType) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['role']
+    });
+    const isSuperAdmin = user?.role?.name === 'superuser' || user?.role?.name === 'administrator';
+
+    let accessibleProjectIds: Set<string> | null = null;
+    if (!isSuperAdmin) {
+      try {
+        const rows = await this.userNotificationRepository.query(
+          `SELECT DISTINCT p.id FROM project p LEFT JOIN user_project up ON up."projectId" = p.id WHERE (up."userId" = $1 OR p."projectLeadId" = $1 OR p."projectManagerId" = $1 OR p."createdBy" = $1::text)`,
+          [userId]
+        );
+        accessibleProjectIds = new Set(rows.map((r) => String(r.id)));
+      } catch (e) {
+        this.logger.error('Failed to query accessible project IDs for user notifications:', e);
+      }
+    }
+
     const queryBuilder = this.userNotificationRepository
       .createQueryBuilder('userNotification')
       .leftJoinAndSelect('userNotification.notification', 'notification')
@@ -156,7 +194,20 @@ export class NotificationService implements OnModuleInit {
       queryBuilder.andWhere('notification.type = :type', { type });
     }
 
-    return queryBuilder.getMany();
+    const list = await queryBuilder.getMany();
+
+    if (isSuperAdmin || !accessibleProjectIds) {
+      return list;
+    }
+
+    // Filter out notifications associated with projects the user does not have access to
+    return list.filter((un) => {
+      const notifProjectId = un.notification?.metadata?.projectId;
+      if (notifProjectId && !accessibleProjectIds.has(String(notifProjectId))) {
+        return false;
+      }
+      return true;
+    });
   }
 
   async markAsRead(userId: string, notificationId: string) {

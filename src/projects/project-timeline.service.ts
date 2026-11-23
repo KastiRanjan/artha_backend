@@ -23,7 +23,9 @@ export class ProjectTimelineService {
       project,
       user,
       action,
-      details: details || null
+      details: details || null,
+      createdBy: userId || null,
+      updatedBy: userId || null
     });
     return this.timelineRepository.save(timeline);
   }
@@ -31,6 +33,16 @@ export class ProjectTimelineService {
   async getTimeline(projectId: string) {
     return this.timelineRepository.find({
       where: { project: { id: projectId } },
+      relations: ['user'],
+      order: { createdAt: 'ASC' }
+    });
+  }
+
+  async getCreationEvent(projectId: string) {
+    return this.timelineRepository.findOne({
+      where: [
+        { project: { id: projectId }, action: 'project_created' }
+      ],
       relations: ['user'],
       order: { createdAt: 'ASC' }
     });

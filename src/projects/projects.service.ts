@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { WorkingYear } from 'src/working-year/entities/working-year.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,7 +34,7 @@ import * as ExcelJS from 'exceljs';
 import { CalendarUtil } from 'src/calendar/calendar.util';
 
 @Injectable()
-export class ProjectsService {
+export class ProjectsService implements OnModuleInit {
   constructor(
     @InjectRepository(Project) private projectRepository: Repository<Project>,
     @InjectRepository(WorkingYear) private workingYearRepository: Repository<WorkingYear>,
@@ -67,6 +67,64 @@ export class ProjectsService {
     private readonly notificationService: NotificationService,
     private readonly projectTimelineService: ProjectTimelineService
   ) {}
+
+  async onModuleInit() {
+    this.backfillMissingCreators().catch((err) => {
+      console.error('Failed to backfill missing project creators:', err);
+    });
+  }
+
+  async backfillMissingCreators() {
+    try {
+      await this.projectRepository.query(`
+        WITH first_timeline AS (
+          SELECT DISTINCT ON (pt."projectId")
+            pt."projectId",
+            pt."userId"
+          FROM project_timeline pt
+          WHERE (pt.action = 'project_created' OR pt.details ILIKE '%initialized%' OR pt.details ILIKE 'Project created%')
+            AND pt."userId" IS NOT NULL
+          ORDER BY pt."projectId", pt."createdAt" ASC
+        )
+        UPDATE project p
+        SET "createdBy" = COALESCE(ft."userId"::text, p."projectLeadId"::text, p."projectManagerId"::text)
+        FROM first_timeline ft
+        WHERE p.id = ft."projectId"
+          AND (p."createdBy" IS NULL OR p."createdBy" = '');
+      `);
+
+      await this.projectRepository.query(`
+        UPDATE project
+        SET "createdBy" = COALESCE("projectLeadId"::text, "projectManagerId"::text)
+        WHERE ("createdBy" IS NULL OR "createdBy" = '');
+      `);
+
+      await this.projectRepository.query(`
+        WITH latest_timeline AS (
+          SELECT DISTINCT ON (pt."projectId")
+            pt."projectId",
+            pt."userId"
+          FROM project_timeline pt
+          WHERE pt."userId" IS NOT NULL
+          ORDER BY pt."projectId", pt."createdAt" DESC
+        )
+        UPDATE project p
+        SET "updatedBy" = COALESCE(lt."userId"::text, p."createdBy")
+        FROM latest_timeline lt
+        WHERE p.id = lt."projectId"
+          AND (p."updatedBy" IS NULL OR p."updatedBy" = '');
+      `);
+
+      await this.projectRepository.query(`
+        UPDATE project
+        SET "updatedBy" = "createdBy"
+        WHERE ("updatedBy" IS NULL OR "updatedBy" = '');
+      `);
+    } catch (e) {
+      console.error('Error during backfillMissingCreators:', e);
+    }
+  }
+
   async create(createProjectDto: CreateProjectDto, currentUser?: UserEntity) {
     const {
       users: userIds,
@@ -147,6 +205,8 @@ export class ProjectsService {
       workingYearEntity = (await this.workingYearRepository.find({ order: { startDateAD: 'DESC' }, take: 1 }))[0] || null;
     }
 
+    const effectiveCreatorId = currentUser?.id || lead?.id || manager?.id || null;
+
     // Create a new project and assign the fetched users
     const project = this.projectRepository.create({
       ...projectData,
@@ -162,8 +222,8 @@ export class ProjectsService {
       workingYear: workingYearEntity,
       workingYearId: workingYearEntity?.id || null,
       fiscalYear: projectData.fiscalYear || workingYearEntity?.nepaliStartYear || 2081,
-      createdBy: currentUser?.id || null,
-      updatedBy: currentUser?.id || null
+      createdBy: effectiveCreatorId,
+      updatedBy: effectiveCreatorId
     });
 
     const savedProject = await this.projectRepository.save(project);
@@ -193,19 +253,21 @@ export class ProjectsService {
     if (projectManager) recipientSet.add(String(projectManager));
 
     const recipientList = Array.from(recipientSet);
-    await this.notificationService.create({
-      message: `Project ${savedProject.name} created`,
-      users: recipientList.length > 0 ? recipientList : undefined,
-      link: `/projects/${savedProject.id}`,
-      metadata: { module: 'project', projectId: savedProject.id },
-      type: NotificationType.PROJECT
-    });
+    if (recipientList.length > 0) {
+      await this.notificationService.create({
+        message: `Project ${savedProject.name} created`,
+        users: recipientList,
+        link: `/projects/${savedProject.id}`,
+        metadata: { module: 'project', projectId: savedProject.id },
+        type: NotificationType.PROJECT
+      });
+    }
     // Log project creation in timeline
     const userNames = users ? users.map(u => u.name).filter(Boolean) : [];
     const memberSummary = userNames.length > 0 ? userNames.join(', ') : `${userIds?.length || 0} team members`;
     await this.projectTimelineService.log({
       projectId: savedProject.id,
-      userId: lead?.id,
+      userId: currentUser?.id || lead?.id || manager?.id,
       action: 'project_created',
       details: `Project initialized with ${memberSummary}`
     });
@@ -529,7 +591,36 @@ export class ProjectsService {
           (formatted as any).creator = null;
         }
       } else {
-        (formatted as any).creator = null;
+        try {
+          const creationTimeline = await this.projectTimelineService.getCreationEvent(id);
+          if (creationTimeline?.user) {
+            (formatted as any).creator = {
+              id: creationTimeline.user.id,
+              name: creationTimeline.user.name,
+              email: creationTimeline.user.email,
+              avatar: creationTimeline.user.avatar
+            };
+            await this.projectRepository.update(id, { createdBy: creationTimeline.user.id });
+          } else {
+            (formatted as any).creator = null;
+          }
+        } catch (e) {
+          (formatted as any).creator = null;
+        }
+      }
+
+      if (project.updatedBy) {
+        try {
+          const updater = await this.userRepository.findOne({
+            where: { id: project.updatedBy },
+            select: ['id', 'name', 'email', 'avatar']
+          });
+          (formatted as any).updater = updater || null;
+        } catch (e) {
+          (formatted as any).updater = null;
+        }
+      } else {
+        (formatted as any).updater = (formatted as any).creator || null;
       }
     }
 
@@ -723,6 +814,9 @@ export class ProjectsService {
     if (currentUser?.id) {
       project.updatedBy = currentUser.id;
     }
+    if (!project.createdBy) {
+      project.createdBy = currentUser?.id || project.projectLead?.id || project.projectManager?.id || null;
+    }
     const updatedProject = await this.projectRepository.save(project);
 
     // Collect all stakeholder user IDs for the project notification
@@ -755,13 +849,15 @@ export class ProjectsService {
     } catch (e) {}
 
     const recipientUserIds = Array.from(recipientSet);
-    await this.notificationService.create({
-      message: `Project ${updatedProject.name} updated`,
-      users: recipientUserIds.length > 0 ? recipientUserIds : undefined,
-      link: `/projects/${updatedProject.id}`,
-      metadata: { module: 'project', projectId: updatedProject.id },
-      type: NotificationType.PROJECT
-    });
+    if (recipientUserIds.length > 0) {
+      await this.notificationService.create({
+        message: `Project ${updatedProject.name} updated`,
+        users: recipientUserIds,
+        link: `/projects/${updatedProject.id}`,
+        metadata: { module: 'project', projectId: updatedProject.id },
+        type: NotificationType.PROJECT
+      });
+    }
     
     return ProjectDateFormatter.addNepaliDates(updatedProject);
   }
@@ -1052,6 +1148,9 @@ export class ProjectsService {
     if (user?.id) {
       project.updatedBy = user.id;
     }
+    if (!project.createdBy && user?.id) {
+      project.createdBy = user.id;
+    }
     const updatedProject = await this.projectRepository.save(project);
 
     // Log in timeline
@@ -1075,13 +1174,15 @@ export class ProjectsService {
     if (project.projectManager?.id) completeRecipientSet.add(String(project.projectManager.id));
 
     const completeRecipients = Array.from(completeRecipientSet);
-    await this.notificationService.create({
-      message: `Project ${project.name} has been marked as completed`,
-      users: completeRecipients.length > 0 ? completeRecipients : undefined,
-      link: `/projects/${project.id}`,
-      metadata: { module: 'project', projectId: project.id },
-      type: NotificationType.PROJECT
-    });
+    if (completeRecipients.length > 0) {
+      await this.notificationService.create({
+        message: `Project ${project.name} has been marked as completed`,
+        users: completeRecipients,
+        link: `/projects/${project.id}`,
+        metadata: { module: 'project', projectId: project.id },
+        type: NotificationType.PROJECT
+      });
+    }
 
     return updatedProject;
   }

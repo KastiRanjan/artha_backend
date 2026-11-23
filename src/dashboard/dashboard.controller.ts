@@ -52,4 +52,29 @@ export class DashboardController {
   ) {
     return this.dashboardService.getSidebarSummary(user, workingYearId);
   }
+
+  @Get('/recent-changes')
+  getRecentChanges(
+    @GetUser() user: UserEntity,
+    @Query('type') type?: string,
+    @Query('days') days?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('action') action?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string
+  ) {
+    return this.dashboardService.getRecentChanges(
+      {
+        type,
+        days,
+        startDate,
+        endDate,
+        action,
+        search,
+        limit
+      },
+      user
+    );
+  }
 }

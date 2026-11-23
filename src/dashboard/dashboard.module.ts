@@ -13,6 +13,8 @@ import { Customer } from 'src/customers/entities/customer.entity';
 import { Task } from 'src/tasks/entities/task.entity';
 import { NoticeBoard } from 'src/notice-board/entities/notice-board.entity';
 import { WorkingYear } from 'src/working-year/entities/working-year.entity';
+import { ClientReport } from 'src/client-report/entities/client-report.entity';
+import { ClientUser } from 'src/client-report/entities/client-user.entity';
 
 @Module({
   controllers: [DashboardController],
@@ -25,6 +27,8 @@ import { WorkingYear } from 'src/working-year/entities/working-year.entity';
       Task,
       NoticeBoard,
       WorkingYear,
+      ClientReport,
+      ClientUser,
     ]),
     AuthModule, 
     AttendenceModule,

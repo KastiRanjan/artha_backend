@@ -120,6 +120,10 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     method: MethodList.GET
   },
   {
+    path: "/dashboard/recent-changes",
+    method: MethodList.GET
+  },
+  {
     path: "/clients/similarity-check",
     method: MethodList.GET
   },

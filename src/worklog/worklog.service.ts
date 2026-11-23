@@ -181,7 +181,7 @@ export class WorklogService {
 
 
   async findAll(user: UserEntity, status?: 'open' | 'approved' | 'rejected' | 'pending' | 'requested', workingYearId?: string) {
-    const whereCondition: any = { user };
+    const whereCondition: any = { user: { id: user.id } };
     if (status) {
       whereCondition.status = status;
     }
@@ -529,7 +529,8 @@ export class WorklogService {
       where: whereCondition,
       order: {
         createdAt: 'DESC'
-      }
+      },
+      take: (!startDate && !endDate && !date && !userId && !projectId) ? 1000 : undefined
     });
     await this.populateUsers(worklogs);
     return worklogs;
@@ -576,5 +577,18 @@ export class WorklogService {
         if (w.rejectBy) (w as any).rejectByUser = userMap.get(w.rejectBy);
       });
     }
+  }
+
+  async getAggregatedMinutesForPeriod(startDate: Date, endDate: Date): Promise<Array<{ userId: string; date: string; minutes: number }>> {
+    return this.worklogRepository
+      .createQueryBuilder('w')
+      .select('w.userId', 'userId')
+      .addSelect("to_char(w.startTime, 'YYYY-MM-DD')", 'date')
+      .addSelect('SUM(EXTRACT(EPOCH FROM (w.endTime - w.startTime)) / 60)::int', 'minutes')
+      .where('w.startTime BETWEEN :startDate AND :endDate', { startDate, endDate })
+      .andWhere('w.startTime IS NOT NULL AND w.endTime IS NOT NULL')
+      .groupBy('w.userId')
+      .addGroupBy("to_char(w.startTime, 'YYYY-MM-DD')")
+      .getRawMany();
   }
 }
