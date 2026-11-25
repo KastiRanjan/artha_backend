@@ -542,6 +542,52 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
   {
     path: "/dsa/:id/verify",
     method: MethodList.PATCH
+  },
+
+  // --- Phonebook ---
+  {
+    path: "/phonebook",
+    method: MethodList.GET
+  },
+  {
+    path: "/phonebook",
+    method: MethodList.POST
+  },
+  {
+    path: "/phonebook/clients",
+    method: MethodList.GET
+  },
+  {
+    path: "/phonebook/categories",
+    method: MethodList.GET
+  },
+  {
+    path: "/phonebook/categories",
+    method: MethodList.POST
+  },
+  {
+    path: "/phonebook/categories/:id",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/phonebook/categories/:id",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/phonebook/share-options",
+    method: MethodList.GET
+  },
+  {
+    path: "/phonebook/:id",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/phonebook/:id",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/phonebook/:id/history",
+    method: MethodList.GET
   }
 ];
 
