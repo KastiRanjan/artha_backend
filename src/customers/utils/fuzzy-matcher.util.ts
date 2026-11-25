@@ -194,18 +194,18 @@ export class FuzzyMatcher {
       }
     }
 
-    // 3. First Brand Word (e.g. "Hanuman", "Shubhalabh", "Kumari")
+    // 3. Clean Uppercase Brand Token (e.g. "HANUMAN", "SUBHA", "KUMARI")
     const norm = this.normalize(fullName);
     const normTokens = norm.split(' ').filter(Boolean);
     if (normTokens.length > 0) {
-      const brandToken = normTokens[0].charAt(0).toUpperCase() + normTokens[0].slice(1).toLowerCase();
-      if (!suggestions.includes(brandToken)) {
+      const brandToken = normTokens[0].toUpperCase().slice(0, 12);
+      if (brandToken.length >= 2 && !suggestions.includes(brandToken)) {
         suggestions.push(brandToken);
       }
 
-      // If 2 words like "Hanuman DS"
+      // If 2 words like "HANUMAN-DS"
       if (normTokens.length >= 2) {
-        const brandCombo = `${brandToken}-${normTokens[1].toUpperCase()}`;
+        const brandCombo = `${brandToken}-${normTokens[1].toUpperCase()}`.slice(0, 16);
         if (!suggestions.includes(brandCombo)) {
           suggestions.push(brandCombo);
         }

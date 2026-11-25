@@ -5,19 +5,19 @@ import { Customer } from './customer.entity';
 @Entity()
 export class OtherImportantInfo extends CustomBaseEntity {
 
-    @ManyToOne(() => Customer, customer => customer.otherImportantInfos)
-    customer: Customer;
+  @ManyToOne(() => Customer, (customer) => customer.otherImportantInfos, { onDelete: 'CASCADE' })
+  customer: Customer;
 
-    @Column({ length: 200 })
-    particular: string;
+  @Column({ length: 200 })
+  particular: string;
 
-    @Column({ type: 'text', nullable: true })
-    description?: string;
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 
-    @Column({ type: 'text', nullable: true })
-    attachment?: string;
+  @Column({ type: 'text', nullable: true })
+  attachment?: string;
 
-    toString() {
-        return `${this.particular} for ${this.customer.name}`;
-    }
+  toString() {
+    return `${this.particular} for ${this.customer?.name || ''}`;
+  }
 }

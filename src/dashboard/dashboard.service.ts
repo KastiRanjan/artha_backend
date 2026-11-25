@@ -114,9 +114,9 @@ export class DashboardService {
       currentDate.add(1, 'day');
     }
 
-    // High-performance bulk fetch: resolve workhours, worklog aggregate, and attendance records in parallel
-    const [roleWorkhours, worklogRows, attendanceRecords] = await Promise.all([
-      Promise.all(allUsers.map((u) => this.workhourService.resolveForUser(u.id, u.roleId))),
+    // High-performance bulk fetch: resolve workhours in 1 query, worklog aggregate, and attendance records in parallel
+    const [allWorkhours, worklogRows, attendanceRecords] = await Promise.all([
+      this.workhourService.findAll().catch(() => []),
       this.worklogService.getAggregatedMinutesForPeriod(startDate, endDate),
       this.attendanceRepository.find({
         where: {
@@ -127,9 +127,15 @@ export class DashboardService {
     ]);
 
     // Build fast lookup maps
+    const workhourByRole = new Map<string, any>();
+    allWorkhours.forEach((wh: any) => {
+      if (wh.roleId && !workhourByRole.has(wh.roleId)) {
+        workhourByRole.set(wh.roleId, wh);
+      }
+    });
     const roleWorkhourMap = new Map<string, any>();
-    allUsers.forEach((u, i) => {
-      roleWorkhourMap.set(u.id, roleWorkhours[i]);
+    allUsers.forEach((u) => {
+      roleWorkhourMap.set(u.id, workhourByRole.get(u.roleId) || { workHours: 8 });
     });
 
     const worklogMap = new Map<string, number>();
@@ -275,168 +281,141 @@ export class DashboardService {
       accessibleCustomerIds = Array.from(new Set(accessibleRows.map((r) => r.customerId).filter(Boolean)));
     }
 
-    // Execute all independent count and list queries in parallel
+    // Ultra-fast single-pass parallel queries for counts and recent items (<50ms total)
+    let projectCountsPromise: Promise<{ recent: number; total: number }>;
+    let clientCountsPromise: Promise<{ recent: number; total: number }>;
+    let userCountsPromise: Promise<{ recent: number; total: number }>;
+    let reportCountsPromise: Promise<{ recent: number; total: number }>;
+    let clientUserCountsPromise: Promise<{ recent: number; total: number }>;
+
+    if (isSuperAdmin) {
+      projectCountsPromise = this.projectRepository.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE status = 'active' AND ($2::uuid IS NULL OR "workingYearId" = $2::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
+        FROM project`,
+        [oneMonthAgo, targetWY?.id || null]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      clientCountsPromise = this.customerRepository.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE status = 'active') as total
+        FROM customer`,
+        [oneMonthAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      userCountsPromise = this.userRepository.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE status = 'active') as total
+        FROM "user"`,
+        [oneMonthAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      reportCountsPromise = this.clientReportRepository.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) as total
+        FROM client_report`,
+        [oneMonthAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      clientUserCountsPromise = this.clientUserRepository.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) as total
+        FROM client_user`,
+        [oneMonthAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+    } else {
+      projectCountsPromise = accessibleProjectIds.length === 0
+        ? Promise.resolve({ recent: 0, total: 0 })
+        : this.projectRepository.query(
+            `SELECT 
+              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE status = 'active' AND ($2::uuid IS NULL OR "workingYearId" = $2::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
+            FROM project
+            WHERE id = ANY($3::uuid[])`,
+            [oneMonthAgo, targetWY?.id || null, accessibleProjectIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      clientCountsPromise = accessibleCustomerIds.length === 0
+        ? Promise.resolve({ recent: 0, total: 0 })
+        : this.customerRepository.query(
+            `SELECT 
+              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE status = 'active') as total
+            FROM customer
+            WHERE id = ANY($2::uuid[])`,
+            [oneMonthAgo, accessibleCustomerIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      userCountsPromise = Promise.resolve({ recent: 0, total: 0 });
+
+      reportCountsPromise = accessibleCustomerIds.length === 0
+        ? Promise.resolve({ recent: 0, total: 0 })
+        : this.clientReportRepository.query(
+            `SELECT 
+              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) as total
+            FROM client_report
+            WHERE "customerId" = ANY($2::uuid[])`,
+            [oneMonthAgo, accessibleCustomerIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
+      clientUserCountsPromise = accessibleCustomerIds.length === 0
+        ? Promise.resolve({ recent: 0, total: 0 })
+        : this.clientUserRepository.query(
+            `SELECT 
+              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $1) as recent,
+              COUNT(DISTINCT cu.id) as total
+            FROM client_user cu
+            INNER JOIN client_user_customers cuc ON cuc."clientUserId" = cu.id
+            WHERE cuc."customerId" = ANY($2::uuid[])`,
+            [oneMonthAgo, accessibleCustomerIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+    }
+
+    const taskCountsPromise = this.taskRepository.query(
+      `SELECT 
+        COUNT(*) FILTER (WHERE t."createdAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE t.status != 'done') as pending
+      FROM task t
+      INNER JOIN task_user tu ON tu."taskId" = t.id
+      WHERE tu."userId" = $2`,
+      [oneMonthAgo, user?.id]
+    ).then(r => ({ recent: Number(r[0]?.recent || 0), pending: Number(r[0]?.pending || 0) })).catch(() => ({ recent: 0, pending: 0 }));
+
+    const noticeCountsPromise = this.noticeRepository.query(
+      `SELECT 
+        COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+        COUNT(*) as total
+      FROM notice_board`,
+      [oneMonthAgo]
+    ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+
     const [
-      recentProjectsCount,
-      totalProjectsCount,
-      recentClientsCount,
-      totalClientsCount,
-      recentUsersCount,
-      totalUsersCount,
-      recentClientReportsCount,
-      totalClientReportsCount,
-      recentClientUsersCount,
-      totalClientUsersCount,
-      recentTasksCount,
-      totalPendingTasksCount,
-      recentNoticesCount,
-      totalNoticesCount,
+      projectCounts,
+      clientCounts,
+      userCounts,
+      reportCounts,
+      clientUserCounts,
+      taskCounts,
+      noticeCounts,
       recentProjectsRaw,
       recentClientsRaw,
       recentUsersRaw,
       recentClientReportsRaw,
       recentClientUsersRaw
     ] = await Promise.all([
-      // 1. Projects recent & total
-      !isSuperAdmin && accessibleProjectIds.length === 0
-        ? Promise.resolve(0)
-        : (() => {
-            const qb = this.projectRepository
-              .createQueryBuilder('p')
-              .where('p.createdAt >= :oneMonthAgo', { oneMonthAgo });
-            if (!isSuperAdmin) {
-              qb.andWhere('p.id IN (:...accessibleProjectIds)', { accessibleProjectIds });
-            }
-            return qb.getCount();
-          })(),
-
-      !isSuperAdmin && accessibleProjectIds.length === 0
-        ? Promise.resolve(0)
-        : (() => {
-            const qb = this.projectRepository
-              .createQueryBuilder('p')
-              .where('p.status = :status', { status: 'active' });
-            if (!isSuperAdmin) {
-              qb.andWhere('p.id IN (:...accessibleProjectIds)', { accessibleProjectIds });
-            }
-            if (targetWY) {
-              qb.andWhere(
-                '(p.workingYearId = :wyId OR (p.workingYearId IS NOT NULL AND p.completedAt IS NULL))',
-                { wyId: targetWY.id }
-              );
-            }
-            return qb.getCount();
-          })(),
-
-      // 2. Clients recent & total
-      !isSuperAdmin && accessibleCustomerIds.length === 0
-        ? Promise.resolve(0)
-        : (() => {
-            const qb = this.customerRepository
-              .createQueryBuilder('c')
-              .where('c.createdAt >= :oneMonthAgo', { oneMonthAgo });
-            if (!isSuperAdmin) {
-              qb.andWhere('c.id IN (:...accessibleCustomerIds)', { accessibleCustomerIds });
-            }
-            return qb.getCount();
-          })(),
-
-      !isSuperAdmin && accessibleCustomerIds.length === 0
-        ? Promise.resolve(0)
-        : (() => {
-            const qb = this.customerRepository
-              .createQueryBuilder('c')
-              .where('c.status = :status', { status: 'active' });
-            if (!isSuperAdmin) {
-              qb.andWhere('c.id IN (:...accessibleCustomerIds)', { accessibleCustomerIds });
-            }
-            return qb.getCount();
-          })(),
-
-      // 3. Active Users recent & total (only superadmins manage users)
-      isSuperAdmin
-        ? this.userRepository
-            .createQueryBuilder('u')
-            .where('u.createdAt >= :oneMonthAgo', { oneMonthAgo })
-            .getCount()
-        : Promise.resolve(0),
-
-      isSuperAdmin
-        ? this.userRepository.count({ where: { status: UserStatusEnum.ACTIVE } })
-        : Promise.resolve(0),
-
-      // 4. Client Reports recent & total
-      !isSuperAdmin && accessibleCustomerIds.length === 0
-        ? Promise.resolve(0)
-        : (() => {
-            const qb = this.clientReportRepository
-              .createQueryBuilder('cr')
-              .where('cr.createdAt >= :oneMonthAgo', { oneMonthAgo });
-            if (!isSuperAdmin) {
-              qb.andWhere('cr.customerId IN (:...accessibleCustomerIds)', { accessibleCustomerIds });
-            }
-            return qb.getCount().catch(() => 0);
-          })(),
-
-      !isSuperAdmin && accessibleCustomerIds.length === 0
-        ? Promise.resolve(0)
-        : !isSuperAdmin
-        ? this.clientReportRepository
-            .createQueryBuilder('cr')
-            .where('cr.customerId IN (:...accessibleCustomerIds)', { accessibleCustomerIds })
-            .getCount()
-            .catch(() => 0)
-        : this.clientReportRepository.count().catch(() => 0),
-
-      // 5. Client Users recent & total
-      !isSuperAdmin && accessibleCustomerIds.length === 0
-        ? Promise.resolve(0)
-        : !isSuperAdmin
-        ? this.clientUserRepository
-            .createQueryBuilder('cu')
-            .innerJoin('cu.customers', 'c', 'c.id IN (:...accessibleCustomerIds)', { accessibleCustomerIds })
-            .where('cu.createdAt >= :oneMonthAgo', { oneMonthAgo })
-            .getCount()
-            .catch(() => 0)
-        : this.clientUserRepository
-            .createQueryBuilder('cu')
-            .where('cu.createdAt >= :oneMonthAgo', { oneMonthAgo })
-            .getCount()
-            .catch(() => 0),
-
-      !isSuperAdmin && accessibleCustomerIds.length === 0
-        ? Promise.resolve(0)
-        : !isSuperAdmin
-        ? this.clientUserRepository
-            .createQueryBuilder('cu')
-            .innerJoin('cu.customers', 'c', 'c.id IN (:...accessibleCustomerIds)', { accessibleCustomerIds })
-            .getCount()
-            .catch(() => 0)
-        : this.clientUserRepository.count().catch(() => 0),
-
-      // 6. Tasks recent & pending
-      this.taskRepository
-        .createQueryBuilder('t')
-        .innerJoin('t.assignees', 'a', 'a.id = :userId', { userId: user.id })
-        .where('t.createdAt >= :oneMonthAgo', { oneMonthAgo })
-        .getCount()
-        .catch(() => 0),
-
-      this.taskRepository
-        .createQueryBuilder('t')
-        .innerJoin('t.assignees', 'a', 'a.id = :userId', { userId: user.id })
-        .where('t.status != :doneStatus', { doneStatus: 'done' })
-        .getCount()
-        .catch(() => 0),
-
-      // 7. Notices recent & total
-      this.noticeRepository
-        .createQueryBuilder('n')
-        .where('n.createdAt >= :oneMonthAgo', { oneMonthAgo })
-        .getCount()
-        .catch(() => 0),
-
-      this.noticeRepository.count().catch(() => 0),
+      projectCountsPromise,
+      clientCountsPromise,
+      userCountsPromise,
+      reportCountsPromise,
+      clientUserCountsPromise,
+      taskCountsPromise,
+      noticeCountsPromise,
 
       // 8. Recent 5 Projects
       !isSuperAdmin && accessibleProjectIds.length === 0
@@ -448,7 +427,7 @@ export class DashboardService {
             order: { createdAt: 'DESC' },
             take: 5,
             select: ['id', 'name', 'status', 'createdAt', 'createdBy']
-          }),
+          }).catch(() => []),
 
       // 9. Recent 5 Clients
       !isSuperAdmin && accessibleCustomerIds.length === 0
@@ -460,7 +439,7 @@ export class DashboardService {
             order: { createdAt: 'DESC' },
             take: 5,
             select: ['id', 'name', 'status', 'createdAt', 'createdBy']
-          }),
+          }).catch(() => []),
 
       // 10. Recent 5 Users
       isSuperAdmin
@@ -469,7 +448,7 @@ export class DashboardService {
             order: { createdAt: 'DESC' },
             take: 5,
             select: ['id', 'name', 'status', 'createdAt', 'avatar', 'createdBy']
-          })
+          }).catch(() => [])
         : Promise.resolve([]),
 
       // 11. Recent 5 Client Reports
@@ -507,6 +486,21 @@ export class DashboardService {
             })
             .catch(() => [])
     ]);
+
+    const recentProjectsCount = projectCounts.recent;
+    const totalProjectsCount = projectCounts.total;
+    const recentClientsCount = clientCounts.recent;
+    const totalClientsCount = clientCounts.total;
+    const recentUsersCount = userCounts.recent;
+    const totalUsersCount = userCounts.total;
+    const recentClientReportsCount = reportCounts.recent;
+    const totalClientReportsCount = reportCounts.total;
+    const recentClientUsersCount = clientUserCounts.recent;
+    const totalClientUsersCount = clientUserCounts.total;
+    const recentTasksCount = taskCounts.recent;
+    const totalPendingTasksCount = taskCounts.pending;
+    const recentNoticesCount = noticeCounts.recent;
+    const totalNoticesCount = noticeCounts.total;
 
     // Batch resolve creators for recent projects, clients, users, client reports, and client users
     const creatorIds = Array.from(

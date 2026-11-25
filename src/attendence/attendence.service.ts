@@ -650,6 +650,15 @@ export class AttendenceService {
       attendanceMap.set(attendance.userId, attendance);
     });
 
+    // Batch fetch active workhour configurations (eliminates N+1 loop)
+    const allWorkhours = await this.workhourService.findAll().catch(() => []);
+    const workhourByRole = new Map<string, any>();
+    allWorkhours.forEach((wh: any) => {
+      if (wh.roleId && !workhourByRole.has(wh.roleId)) {
+        workhourByRole.set(wh.roleId, wh);
+      }
+    });
+
     // Categorize users
     const usersWithoutClockIn = [];
     const usersWithAttendance = [];
@@ -672,10 +681,10 @@ export class AttendenceService {
         roleName: u.role?.name
       };
 
-      // Get workhour settings for this user's role
-      const workhour = await this.workhourService.resolveForUser(u.id, u.roleId);
-      const defaultStartTime = moment(workhour.startTime, 'HH:mm');
-      const defaultEndTime = moment(workhour.endTime, 'HH:mm');
+      // Get workhour settings from in-memory map
+      const workhour = workhourByRole.get(u.roleId) || { startTime: '09:00', endTime: '17:00', workHours: 8 };
+      const defaultStartTime = moment(workhour.startTime || '09:00', 'HH:mm');
+      const defaultEndTime = moment(workhour.endTime || '17:00', 'HH:mm');
 
       if (!attendance || !attendance.clockIn) {
         // User hasn't done clock-in today

@@ -27,6 +27,8 @@ import { AssignUserToProjectDto } from './dto/assign-user-to-project.dto';
 import { ReleaseUserFromProjectDto } from './dto/release-user-from-project.dto';
 import { UpdateUserAssignmentDto } from './dto/update-user-assignment.dto';
 import { UserAvailabilityService } from './user-availability.service';
+import { RecurringProjectsService } from './recurring-projects.service';
+import { CreateRecurringProjectDto, UpdateRecurringProjectDto } from './dto/recurring-project.dto';
 
 @ApiTags('projects')
 @UseGuards(JwtTwoFactorGuard, PermissionGuard)
@@ -36,8 +38,38 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly projectTimelineService: ProjectTimelineService,
-    private readonly userAvailabilityService: UserAvailabilityService
+    private readonly userAvailabilityService: UserAvailabilityService,
+    private readonly recurringProjectsService: RecurringProjectsService
   ) {}
+
+  @Get('recurring/client/:customerId')
+  getRecurringByClient(@Param('customerId') customerId: string) {
+    return this.recurringProjectsService.findByCustomer(customerId);
+  }
+
+  @Post('recurring')
+  createRecurring(@Body() dto: CreateRecurringProjectDto, @GetUser() user?: UserEntity) {
+    return this.recurringProjectsService.create(dto, user);
+  }
+
+  @Patch('recurring/:id')
+  updateRecurring(
+    @Param('id') id: string,
+    @Body() dto: UpdateRecurringProjectDto,
+    @GetUser() user?: UserEntity
+  ) {
+    return this.recurringProjectsService.update(id, dto, user);
+  }
+
+  @Delete('recurring/:id')
+  removeRecurring(@Param('id') id: string) {
+    return this.recurringProjectsService.remove(id);
+  }
+
+  @Post('recurring/:id/trigger')
+  triggerRecurring(@Param('id') id: string, @GetUser() user?: UserEntity) {
+    return this.recurringProjectsService.triggerNow(id, user);
+  }
 
   @Get(':id/timeline')
   async getTimeline(@Param('id') id: string) {

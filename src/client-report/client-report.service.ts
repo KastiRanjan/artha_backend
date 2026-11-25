@@ -661,21 +661,36 @@ export class ClientReportService {
   }
 
   /**
-   * Get projects by customer ID (for report creation dropdown).
+   * Get projects by customer ID (for report creation dropdown & client view).
    * If user is not superuser, only returns projects they are assigned to.
    */
-  async getProjectsByCustomer(customerId: string, user?: UserEntity): Promise<{ id: string; name: string; status: string }[]> {
+  async getProjectsByCustomer(customerId: string, user?: UserEntity): Promise<any[]> {
     const qb = this.projectRepository
       .createQueryBuilder('project')
-      .select(['project.id', 'project.name', 'project.status'])
+      .leftJoinAndSelect('project.natureOfWork', 'natureOfWork')
+      .leftJoinAndSelect('project.projectLead', 'projectLead')
+      .leftJoinAndSelect('project.projectManager', 'projectManager')
+      .leftJoinAndSelect('project.workingYear', 'workingYear')
+      .leftJoinAndSelect('project.tasks', 'tasks')
       .where('project.customerId = :customerId', { customerId })
-      .orderBy('project.name', 'ASC');
+      .orderBy('project.createdAt', 'DESC');
 
     if (user && user.role?.name !== 'superuser') {
       qb.innerJoin('project.users', 'pu', 'pu.id = :userId', { userId: user.id });
     }
 
-    return qb.getMany();
+    const projects = await qb.getMany();
+    return projects.map((p) => {
+      const totalTasks = p.tasks?.length || 0;
+      const completedTasks = p.tasks?.filter((t: any) => t.status === 'completed' || t.status === 'done').length || 0;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      return {
+        ...p,
+        totalTasks,
+        completedTasks,
+        progress,
+      };
+    });
   }
 
   /**

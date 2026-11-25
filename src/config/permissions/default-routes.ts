@@ -132,6 +132,74 @@ export const AuthenticatedDefaultRoutes: RoutePayloadInterface[] = [
     method: MethodList.GET
   },
   {
+    path: "/clients/:id/timeline",
+    method: MethodList.GET
+  },
+  {
+    path: "/clients/:id/timeline",
+    method: MethodList.POST
+  },
+  {
+    path: "/clients/:id/timeline/:eventId",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/clients/:id/board-members",
+    method: MethodList.POST
+  },
+  {
+    path: "/clients/:id/licenses",
+    method: MethodList.GET
+  },
+  {
+    path: "/clients/:id/licenses",
+    method: MethodList.POST
+  },
+  {
+    path: "/clients/:id/licenses/:licenseId",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/clients/:id/licenses/:licenseId",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/clients/:id/other-info",
+    method: MethodList.GET
+  },
+  {
+    path: "/clients/:id/other-info",
+    method: MethodList.POST
+  },
+  {
+    path: "/clients/:id/other-info/:infoId",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/clients/:id/other-info/:infoId",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/projects/recurring/client/:customerId",
+    method: MethodList.GET
+  },
+  {
+    path: "/projects/recurring",
+    method: MethodList.POST
+  },
+  {
+    path: "/projects/recurring/:id",
+    method: MethodList.PATCH
+  },
+  {
+    path: "/projects/recurring/:id",
+    method: MethodList.DELETE
+  },
+  {
+    path: "/projects/recurring/:id/trigger",
+    method: MethodList.POST
+  },
+  {
     path: "/client-groups",
     method: MethodList.GET
   },

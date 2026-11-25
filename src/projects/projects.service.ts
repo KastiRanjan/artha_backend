@@ -294,7 +294,8 @@ export class ProjectsService implements OnModuleInit {
     if (workingYearId && workingYearId !== 'all') {
       targetWY = await this.workingYearRepository.findOne({ where: { id: workingYearId } });
     }
-    const superuserRelations = [...baseRelations, 'users', 'users.role'];
+    const shouldIncludeUsers = requestedFields.length === 0 || requestedFields.includes('users');
+    const superuserRelations = shouldIncludeUsers ? [...baseRelations, 'users', 'users.role'] : baseRelations;
 
     const isStatusActive = status === 'active';
     const projectOrder: any = isStatusActive ? { createdAt: 'DESC' } : { updatedAt: 'DESC' };
@@ -423,23 +424,26 @@ export class ProjectsService implements OnModuleInit {
     }
 
     const activeUsersMap = new Map<string, any[]>();
-    try {
-      const activeAssignments = await this.assignmentRepository.find({
-        where: { isActive: true },
-        relations: ['user', 'user.role'],
-      });
-      activeAssignments.forEach((assign) => {
-        if (assign.projectId && assign.user) {
-          const pKey = String(assign.projectId);
-          const list = activeUsersMap.get(pKey) || [];
-          if (!list.some(u => String(u.id) === String(assign.user.id))) {
-            list.push(assign.user);
+    const currentProjectIds = (projects || []).map(p => p.id).filter(Boolean);
+    if (currentProjectIds.length > 0) {
+      try {
+        const activeAssignments = await this.assignmentRepository.find({
+          where: { isActive: true, projectId: In(currentProjectIds) },
+          relations: ['user', 'user.role'],
+        });
+        activeAssignments.forEach((assign) => {
+          if (assign.projectId && assign.user) {
+            const pKey = String(assign.projectId);
+            const list = activeUsersMap.get(pKey) || [];
+            if (!list.some(u => String(u.id) === String(assign.user.id))) {
+              list.push(assign.user);
+            }
+            activeUsersMap.set(pKey, list);
           }
-          activeUsersMap.set(pKey, list);
-        }
-      });
-    } catch (e) {
-      console.error('Failed to fetch active assignments:', e);
+        });
+      } catch (e) {
+        console.error('Failed to fetch active assignments:', e);
+      }
     }
 
     // Batch resolve creators

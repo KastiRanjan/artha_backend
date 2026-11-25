@@ -24,6 +24,11 @@ const ormConfig: ConnectionOptions = {
   migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
   cli: {
     migrationsDir: 'src/database/migrations'
+  },
+  extra: {
+    max: 30, // Increase connection pool size from 10 to 30 to prevent connection starvation under concurrent queries
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000
   }
 };
 

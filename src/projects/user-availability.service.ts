@@ -50,27 +50,37 @@ export class UserAvailabilityService {
   async getUserAvailability(date?: Date): Promise<UserAvailability[]> {
     const checkDate = date || new Date();
     
-    // Get all active users with their projects
-    const users = await this.userRepository.find({
-      relations: ['role', 'projects'],
-      where: { status: 'active' }
-    });
+    // Batch fetch active users and all unreleased assignments in parallel (eliminates N+1 loop)
+    const [users, unreleasedAssignments] = await Promise.all([
+      this.userRepository.find({
+        relations: ['role', 'projects'],
+        where: { status: 'active' }
+      }),
+      this.assignmentRepository.find({
+        where: { releaseDate: IsNull() },
+        relations: ['project']
+      })
+    ]);
+
+    // Group assignments by user ID
+    const assignmentsByUser = new Map<string, ProjectUserAssignment[]>();
+    for (const a of unreleasedAssignments) {
+      if (a.userId && a.project) {
+        const list = assignmentsByUser.get(a.userId) || [];
+        list.push(a);
+        assignmentsByUser.set(a.userId, list);
+      }
+    }
 
     const userAvailabilities: UserAvailability[] = [];
 
     for (const user of users) {
-      // Get ALL assignments (both active and inactive) that haven't been released
-      const allAssignments = await this.assignmentRepository.find({
-        where: {
-          userId: user.id,
-          releaseDate: IsNull() // Only exclude if formally released
-        },
-        relations: ['project']
-      });
+      // Get assignments from in-memory map
+      const allAssignments = assignmentsByUser.get(user.id) || [];
 
       // Filter only for active projects
       const activeProjectAssignments = allAssignments.filter(
-        assignment => assignment.project.status === 'active'
+        assignment => assignment.project?.status === 'active'
       );
 
       // For availability calculation, only consider active assignments in projects that count

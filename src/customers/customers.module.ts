@@ -8,6 +8,7 @@ import { BoardMember } from './entities/board-member.entity';
 import { ManagementTeamMember } from './entities/management-team-member.entity';
 import { OtherImportantInfo } from './entities/other-important-info.entity';
 import { PortalCredential } from './entities/portal-credential.entity';
+import { ClientTimeline } from './entities/client-timeline.entity';
 import { BusinessSize } from 'src/business-size/entities/business-size.entity';
 import { BusinessNature } from 'src/business-nature/entities/business-nature.entity';
 import { LegalStatus } from 'src/legal-status/entities/legal-status.entity';
@@ -16,6 +17,7 @@ import { ClientGroup } from 'src/client-groups/entities/client-group.entity';
 import { BusinessSizeModule } from 'src/business-size/business-size.module';
 import { BusinessNatureModule } from 'src/business-nature/business-nature.module';
 import { LegalStatusModule } from 'src/legal-status/legal-status.module';
+import { NotificationModule } from 'src/notification/notification.module';
 import { PortalCredentialsService } from './portal-credentials.service';
 import { PortalCredentialsController } from './portal-credentials.controller';
 import { StandalonePortalCredentialsController } from './standalone-portal-credentials.controller';
@@ -29,6 +31,7 @@ import { StandalonePortalCredentialsController } from './standalone-portal-crede
       ManagementTeamMember,
       OtherImportantInfo,
       PortalCredential,
+      ClientTimeline,
       BusinessSize,
       BusinessNature,
       LegalStatus,
@@ -37,7 +40,8 @@ import { StandalonePortalCredentialsController } from './standalone-portal-crede
     ]),
     BusinessSizeModule,
     BusinessNatureModule,
-    LegalStatusModule
+    LegalStatusModule,
+    NotificationModule
   ],
   controllers: [CustomersController, PortalCredentialsController, StandalonePortalCredentialsController],
   providers: [CustomersService, PortalCredentialsService],

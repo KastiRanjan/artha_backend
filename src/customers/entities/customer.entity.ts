@@ -11,6 +11,7 @@ import { LegalStatus } from 'src/legal-status/entities/legal-status.entity';
 import { PortalCredential } from './portal-credential.entity';
 import { ClientGroup } from 'src/client-groups/entities/client-group.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { ClientTimeline } from './client-timeline.entity';
 
 @Entity()
 export class Customer extends CustomBaseEntity {
@@ -34,23 +35,23 @@ export class Customer extends CustomBaseEntity {
   })
   status: string;
 
-  @Column({ length: 100 })
-  country: string;
+  @Column({ length: 100, nullable: true })
+  country?: string;
 
-  @Column({ length: 100 })
-  state: string;
+  @Column({ length: 100, nullable: true })
+  state?: string;
 
-  @Column({ length: 100 })
-  district: string;
+  @Column({ length: 100, nullable: true })
+  district?: string;
 
-  @Column({ length: 100 })
-  localJurisdiction: string;
+  @Column({ length: 100, nullable: true })
+  localJurisdiction?: string;
 
   @Column({ length: 10, nullable: true })
   wardNo?: string;
 
-  @Column({ length: 100 })
-  locality: string;
+  @Column({ length: 100, nullable: true })
+  locality?: string;
 
   @Column({
     type: 'enum',
@@ -160,6 +161,33 @@ export class Customer extends CustomBaseEntity {
   @Column({ type: 'text', nullable: true })
   lastEditReason?: string;
 
+  @Column({ type: 'text', nullable: true })
+  about?: string;
+
+  @Column({ length: 120, nullable: true })
+  contactPerson?: string;
+
+  @Column({ length: 100, nullable: true })
+  contactPersonDesignation?: string;
+
+  @Column({ length: 30, nullable: true })
+  contactPersonPhone?: string;
+
+  @Column({ length: 120, nullable: true })
+  contactPersonEmail?: string;
+
+  @Column({ nullable: true })
+  contactPersonBoardMemberId?: string;
+
+  @Column({ default: false })
+  isVatRegistered: boolean;
+
+  @Column({ length: 120, nullable: true })
+  taxOffice?: string;
+
+  @Column({ length: 60, nullable: true })
+  ocrRegNo?: string;
+
   @OneToMany(() => Project, (project) => project.customer)
   projects: Project[];
 
@@ -189,6 +217,9 @@ export class Customer extends CustomBaseEntity {
     (portalCredential) => portalCredential.customer
   )
   portalCredentials: PortalCredential[];
+
+  @OneToMany(() => ClientTimeline, (timeline) => timeline.customer)
+  timelines: ClientTimeline[];
 
   toString() {
     return this.name;

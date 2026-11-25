@@ -29,16 +29,18 @@ import { TaskTemplate } from 'src/task-template/entities/task-template.entity';
 import { ProjectUserAssignment } from './entities/project-user-assignment.entity';
 import { UserAvailabilityService } from './user-availability.service';
 import { Worklog } from 'src/worklog/entities/worklog.entity';
+import { RecurringProject } from './entities/recurring-project.entity';
+import { RecurringProjectsService } from './recurring-projects.service';
 
 @Module({
   imports: [
     NotificationModule,
     TypeOrmModule.forFeature([
-      Project, 
-      ProjectTimeline, 
-      UserEntity, 
-      Notification, 
-      Billing, 
+      Project,
+      ProjectTimeline,
+      UserEntity,
+      Notification,
+      Billing,
       NatureOfWork,
       NatureOfWorkGroup,
       Customer,
@@ -50,16 +52,29 @@ import { Worklog } from 'src/worklog/entities/worklog.entity';
       TaskTemplate,
       ProjectUserAssignment,
       Worklog,
-      WorkingYear
+      WorkingYear,
+      RecurringProject,
     ]),
     CustomersModule,
     BusinessSizeModule,
     BusinessNatureModule,
-    LegalStatusModule
+    LegalStatusModule,
   ],
   controllers: [ProjectsController],
-  providers: [ProjectsService, ProjectTimelineService, NotificationService, BillingService, NatureOfWorkService, UserAvailabilityService],
-  exports: [ProjectsService, ProjectTimelineService, UserAvailabilityService]
+  providers: [
+    ProjectsService,
+    ProjectTimelineService,
+    NotificationService,
+    BillingService,
+    NatureOfWorkService,
+    UserAvailabilityService,
+    RecurringProjectsService,
+  ],
+  exports: [
+    ProjectsService,
+    ProjectTimelineService,
+    UserAvailabilityService,
+    RecurringProjectsService,
+  ],
 })
 export class ProjectsModule {}
-
