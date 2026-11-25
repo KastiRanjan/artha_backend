@@ -251,6 +251,7 @@ export class DashboardService {
 
   async getSidebarSummary(user: UserEntity, workingYearId?: string) {
     const oneMonthAgo = moment().subtract(30, 'days').startOf('day').toDate();
+    const oneWeekAgo = moment().subtract(7, 'days').startOf('day').toDate();
 
     let targetWY: WorkingYear = null;
     if (workingYearId && workingYearId !== 'all') {
@@ -282,118 +283,138 @@ export class DashboardService {
     }
 
     // Ultra-fast single-pass parallel queries for counts and recent items (<50ms total)
-    let projectCountsPromise: Promise<{ recent: number; total: number }>;
-    let clientCountsPromise: Promise<{ recent: number; total: number }>;
-    let userCountsPromise: Promise<{ recent: number; total: number }>;
-    let reportCountsPromise: Promise<{ recent: number; total: number }>;
-    let clientUserCountsPromise: Promise<{ recent: number; total: number }>;
+    let projectCountsPromise: Promise<{ recent: number; weekly: number; total: number }>;
+    let clientCountsPromise: Promise<{ recent: number; weekly: number; total: number }>;
+    let userCountsPromise: Promise<{ recent: number; weekly: number; total: number }>;
+    let reportCountsPromise: Promise<{ recent: number; weekly: number; total: number }>;
+    let clientUserCountsPromise: Promise<{ recent: number; weekly: number; total: number }>;
 
     if (isSuperAdmin) {
       projectCountsPromise = this.projectRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
-          COUNT(*) FILTER (WHERE status = 'active' AND ($2::uuid IS NULL OR "workingYearId" = $2::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
+          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+          COUNT(*) FILTER (WHERE status = 'active' AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
         FROM project`,
-        [oneMonthAgo, targetWY?.id || null]
-      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+        [oneMonthAgo, oneWeekAgo, targetWY?.id || null]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
       clientCountsPromise = this.customerRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
           COUNT(*) FILTER (WHERE status = 'active') as total
         FROM customer`,
-        [oneMonthAgo]
-      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+        [oneMonthAgo, oneWeekAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
       userCountsPromise = this.userRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
           COUNT(*) FILTER (WHERE status = 'active') as total
         FROM "user"`,
-        [oneMonthAgo]
-      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+        [oneMonthAgo, oneWeekAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
       reportCountsPromise = this.clientReportRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
           COUNT(*) as total
         FROM client_report`,
-        [oneMonthAgo]
-      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+        [oneMonthAgo, oneWeekAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
       clientUserCountsPromise = this.clientUserRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
           COUNT(*) as total
         FROM client_user`,
-        [oneMonthAgo]
-      ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+        [oneMonthAgo, oneWeekAgo]
+      ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
     } else {
       projectCountsPromise = accessibleProjectIds.length === 0
-        ? Promise.resolve({ recent: 0, total: 0 })
+        ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.projectRepository.query(
             `SELECT 
-              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
-              COUNT(*) FILTER (WHERE status = 'active' AND ($2::uuid IS NULL OR "workingYearId" = $2::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
+              COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+              COUNT(*) FILTER (WHERE status = 'active' AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
             FROM project
-            WHERE id = ANY($3::uuid[])`,
-            [oneMonthAgo, targetWY?.id || null, accessibleProjectIds]
-          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+            WHERE id = ANY($4::uuid[])`,
+            [oneMonthAgo, oneWeekAgo, targetWY?.id || null, accessibleProjectIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
       clientCountsPromise = accessibleCustomerIds.length === 0
-        ? Promise.resolve({ recent: 0, total: 0 })
+        ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.customerRepository.query(
             `SELECT 
-              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
               COUNT(*) FILTER (WHERE status = 'active') as total
             FROM customer
-            WHERE id = ANY($2::uuid[])`,
-            [oneMonthAgo, accessibleCustomerIds]
-          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+            WHERE id = ANY($3::uuid[])`,
+            [oneMonthAgo, oneWeekAgo, accessibleCustomerIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
-      userCountsPromise = Promise.resolve({ recent: 0, total: 0 });
+      userCountsPromise = Promise.resolve({ recent: 0, weekly: 0, total: 0 });
 
       reportCountsPromise = accessibleCustomerIds.length === 0
-        ? Promise.resolve({ recent: 0, total: 0 })
+        ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.clientReportRepository.query(
             `SELECT 
-              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
               COUNT(*) as total
             FROM client_report
-            WHERE "customerId" = ANY($2::uuid[])`,
-            [oneMonthAgo, accessibleCustomerIds]
-          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+            WHERE "customerId" = ANY($3::uuid[])`,
+            [oneMonthAgo, oneWeekAgo, accessibleCustomerIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
       clientUserCountsPromise = accessibleCustomerIds.length === 0
-        ? Promise.resolve({ recent: 0, total: 0 })
+        ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.clientUserRepository.query(
             `SELECT 
-              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $1) as recent,
+              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $1 OR cu."updatedAt" >= $1) as recent,
+              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $2 OR cu."updatedAt" >= $2) as weekly,
               COUNT(DISTINCT cu.id) as total
             FROM client_user cu
             INNER JOIN client_user_customers cuc ON cuc."clientUserId" = cu.id
-            WHERE cuc."customerId" = ANY($2::uuid[])`,
-            [oneMonthAgo, accessibleCustomerIds]
-          ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+            WHERE cuc."customerId" = ANY($3::uuid[])`,
+            [oneMonthAgo, oneWeekAgo, accessibleCustomerIds]
+          ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
     }
 
     const taskCountsPromise = this.taskRepository.query(
       `SELECT 
-        COUNT(*) FILTER (WHERE t."createdAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE t."createdAt" >= $1 OR t."updatedAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE t."createdAt" >= $2 OR t."updatedAt" >= $2) as weekly,
         COUNT(*) FILTER (WHERE t.status != 'done') as pending
       FROM task t
       INNER JOIN task_user tu ON tu."taskId" = t.id
-      WHERE tu."userId" = $2`,
-      [oneMonthAgo, user?.id]
-    ).then(r => ({ recent: Number(r[0]?.recent || 0), pending: Number(r[0]?.pending || 0) })).catch(() => ({ recent: 0, pending: 0 }));
+      WHERE tu."userId" = $3`,
+      [oneMonthAgo, oneWeekAgo, user?.id]
+    ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), pending: Number(r[0]?.pending || 0) })).catch(() => ({ recent: 0, weekly: 0, pending: 0 }));
 
     const noticeCountsPromise = this.noticeRepository.query(
       `SELECT 
-        COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
         COUNT(*) as total
       FROM notice_board`,
-      [oneMonthAgo]
-    ).then(r => ({ recent: Number(r[0]?.recent || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, total: 0 }));
+      [oneMonthAgo, oneWeekAgo]
+    ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
+
+    const phonebookCountsPromise = this.userRepository.query(
+      `SELECT 
+        COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+        COUNT(*) as total
+      FROM phonebook_entries`,
+      [oneMonthAgo, oneWeekAgo]
+    ).then(r => ({ recent: Number(r[0]?.recent || 0), weekly: Number(r[0]?.weekly || 0), total: Number(r[0]?.total || 0) })).catch(() => ({ recent: 0, weekly: 0, total: 0 }));
 
     const [
       projectCounts,
@@ -403,11 +424,23 @@ export class DashboardService {
       clientUserCounts,
       taskCounts,
       noticeCounts,
+      phonebookCounts,
       recentProjectsRaw,
       recentClientsRaw,
       recentUsersRaw,
       recentClientReportsRaw,
-      recentClientUsersRaw
+      recentClientUsersRaw,
+      recentTasksRaw,
+      recentNoticesRaw,
+      recentPhonebookRaw,
+      recentUpdatedProjectsRaw,
+      recentUpdatedClientsRaw,
+      recentUpdatedUsersRaw,
+      recentUpdatedClientReportsRaw,
+      recentUpdatedClientUsersRaw,
+      recentUpdatedTasksRaw,
+      recentUpdatedNoticesRaw,
+      recentUpdatedPhonebookRaw
     ] = await Promise.all([
       projectCountsPromise,
       clientCountsPromise,
@@ -416,6 +449,7 @@ export class DashboardService {
       clientUserCountsPromise,
       taskCountsPromise,
       noticeCountsPromise,
+      phonebookCountsPromise,
 
       // 8. Recent 5 Projects
       !isSuperAdmin && accessibleProjectIds.length === 0
@@ -484,7 +518,117 @@ export class DashboardService {
               take: 5,
               relations: ['customers']
             })
-            .catch(() => [])
+            .catch(() => []),
+
+      // 13. Recent 5 Tasks
+      this.taskRepository.query(
+        `SELECT t.id, t.name, t.status, t."createdAt", t."createdBy"
+         FROM task t
+         INNER JOIN task_user tu ON tu."taskId" = t.id
+         WHERE tu."userId" = $1 AND (t."createdAt" >= $2 OR t."updatedAt" >= $2)
+         ORDER BY t."updatedAt" DESC
+         LIMIT 5`,
+        [user?.id, oneMonthAgo]
+      ).catch(() => []),
+
+      // 14. Recent 5 Notices
+      this.noticeRepository.query(
+        `SELECT id, title as name, "createdAt", "createdBy"
+         FROM notice_board
+         WHERE "createdAt" >= $1 OR "updatedAt" >= $1
+         ORDER BY "updatedAt" DESC
+         LIMIT 5`,
+        [oneMonthAgo]
+      ).catch(() => []),
+
+      // 15. Recent 5 Phonebook Entries
+      this.userRepository.query(
+        `SELECT id, name, "phoneNumber", "createdAt", "createdBy"
+         FROM phonebook_entries
+         WHERE "createdAt" >= $1
+         ORDER BY "createdAt" DESC
+         LIMIT 5`,
+        [oneMonthAgo]
+      ).catch(() => []),
+
+      // 16. Recent 5 Updated Projects
+      !isSuperAdmin && accessibleProjectIds.length === 0
+        ? Promise.resolve([])
+        : this.projectRepository.query(
+            isSuperAdmin
+              ? `SELECT id, name, status, "updatedAt", "updatedBy", "createdBy" FROM project WHERE "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute' ORDER BY "updatedAt" DESC LIMIT 5`
+              : `SELECT id, name, status, "updatedAt", "updatedBy", "createdBy" FROM project WHERE id = ANY($2::uuid[]) AND "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute' ORDER BY "updatedAt" DESC LIMIT 5`,
+            isSuperAdmin ? [oneMonthAgo] : [oneMonthAgo, accessibleProjectIds]
+          ).catch(() => []),
+
+      // 17. Recent 5 Updated Clients
+      !isSuperAdmin && accessibleCustomerIds.length === 0
+        ? Promise.resolve([])
+        : this.customerRepository.query(
+            isSuperAdmin
+              ? `SELECT id, name, status, "updatedAt", "updatedBy", "createdBy" FROM customer WHERE "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute' ORDER BY "updatedAt" DESC LIMIT 5`
+              : `SELECT id, name, status, "updatedAt", "updatedBy", "createdBy" FROM customer WHERE id = ANY($2::uuid[]) AND "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute' ORDER BY "updatedAt" DESC LIMIT 5`,
+            isSuperAdmin ? [oneMonthAgo] : [oneMonthAgo, accessibleCustomerIds]
+          ).catch(() => []),
+
+      // 18. Recent 5 Updated Users
+      isSuperAdmin
+        ? this.userRepository.query(
+            `SELECT id, name, status, "updatedAt", "updatedBy", "createdBy" FROM "user" WHERE "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute' ORDER BY "updatedAt" DESC LIMIT 5`,
+            [oneMonthAgo]
+          ).catch(() => [])
+        : Promise.resolve([]),
+
+      // 19. Recent 5 Updated Client Reports
+      !isSuperAdmin && accessibleCustomerIds.length === 0
+        ? Promise.resolve([])
+        : this.clientReportRepository.query(
+            isSuperAdmin
+              ? `SELECT cr.id, cr.title as name, c.name as "clientName", cr."updatedAt", cr."updatedBy", cr."createdBy" FROM client_report cr LEFT JOIN customer c ON c.id = cr."customerId" WHERE cr."updatedAt" >= $1 AND cr."updatedAt" > cr."createdAt" + interval '1 minute' ORDER BY cr."updatedAt" DESC LIMIT 5`
+              : `SELECT cr.id, cr.title as name, c.name as "clientName", cr."updatedAt", cr."updatedBy", cr."createdBy" FROM client_report cr LEFT JOIN customer c ON c.id = cr."customerId" WHERE cr."customerId" = ANY($2::uuid[]) AND cr."updatedAt" >= $1 AND cr."updatedAt" > cr."createdAt" + interval '1 minute' ORDER BY cr."updatedAt" DESC LIMIT 5`,
+            isSuperAdmin ? [oneMonthAgo] : [oneMonthAgo, accessibleCustomerIds]
+          ).catch(() => []),
+
+      // 20. Recent 5 Updated Client Users
+      !isSuperAdmin && accessibleCustomerIds.length === 0
+        ? Promise.resolve([])
+        : this.clientUserRepository.query(
+            isSuperAdmin
+              ? `SELECT id, name, email, status, "updatedAt", "updatedBy", "createdBy" FROM client_user WHERE "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute' ORDER BY "updatedAt" DESC LIMIT 5`
+              : `SELECT DISTINCT cu.id, cu.name, cu.email, cu.status, cu."updatedAt", cu."updatedBy", cu."createdBy" FROM client_user cu INNER JOIN client_user_customers cuc ON cuc."clientUserId" = cu.id WHERE cuc."customerId" = ANY($2::uuid[]) AND cu."updatedAt" >= $1 AND cu."updatedAt" > cu."createdAt" + interval '1 minute' ORDER BY cu."updatedAt" DESC LIMIT 5`,
+            isSuperAdmin ? [oneMonthAgo] : [oneMonthAgo, accessibleCustomerIds]
+          ).catch(() => []),
+
+      // 21. Recent 5 Updated Tasks
+      this.taskRepository.query(
+        `SELECT t.id, t.name, t.status, t."updatedAt", t."updatedBy", t."createdBy"
+         FROM task t
+         INNER JOIN task_user tu ON tu."taskId" = t.id
+         WHERE tu."userId" = $1 AND t."updatedAt" >= $2 AND t."updatedAt" > t."createdAt" + interval '1 minute'
+         ORDER BY t."updatedAt" DESC
+         LIMIT 5`,
+        [user?.id, oneMonthAgo]
+      ).catch(() => []),
+
+      // 22. Recent 5 Updated Notices
+      this.noticeRepository.query(
+        `SELECT id, title as name, "updatedAt", "updatedBy", "createdBy"
+         FROM notice_board
+         WHERE "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute'
+         ORDER BY "updatedAt" DESC
+         LIMIT 5`,
+        [oneMonthAgo]
+      ).catch(() => []),
+
+      // 23. Recent 5 Updated Phonebook Entries
+      this.userRepository.query(
+        `SELECT id, name, "phoneNumber", "updatedAt", "updatedBy", "createdBy"
+         FROM phonebook_entries
+         WHERE "updatedAt" >= $1 AND "updatedAt" > "createdAt" + interval '1 minute'
+         ORDER BY "updatedAt" DESC
+         LIMIT 5`,
+        [oneMonthAgo]
+      ).catch(() => [])
     ]);
 
     const recentProjectsCount = projectCounts.recent;
@@ -502,7 +646,7 @@ export class DashboardService {
     const recentNoticesCount = noticeCounts.recent;
     const totalNoticesCount = noticeCounts.total;
 
-    // Batch resolve creators for recent projects, clients, users, client reports, and client users
+    // Batch resolve creators & updaters for recent items
     const creatorIds = Array.from(
       new Set(
         [
@@ -510,9 +654,20 @@ export class DashboardService {
           ...recentClientsRaw,
           ...recentUsersRaw,
           ...recentClientReportsRaw,
-          ...recentClientUsersRaw
+          ...recentClientUsersRaw,
+          ...recentTasksRaw,
+          ...recentNoticesRaw,
+          ...recentPhonebookRaw,
+          ...recentUpdatedProjectsRaw,
+          ...recentUpdatedClientsRaw,
+          ...recentUpdatedUsersRaw,
+          ...recentUpdatedClientReportsRaw,
+          ...recentUpdatedClientUsersRaw,
+          ...recentUpdatedTasksRaw,
+          ...recentUpdatedNoticesRaw,
+          ...recentUpdatedPhonebookRaw
         ]
-          .map((r) => r.createdBy)
+          .flatMap((r: any) => [r.createdBy, r.updatedBy])
           .filter(Boolean)
       )
     );
@@ -573,6 +728,51 @@ export class DashboardService {
       creator: u.createdBy ? creatorMap.get(u.createdBy) || null : null
     }));
 
+    const recentTasks = recentTasksRaw.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      status: t.status,
+      createdAt: t.createdAt,
+      creator: t.createdBy ? creatorMap.get(t.createdBy) || null : null
+    }));
+
+    const recentNotices = recentNoticesRaw.map((n: any) => ({
+      id: n.id,
+      name: n.name,
+      createdAt: n.createdAt,
+      creator: n.createdBy ? creatorMap.get(n.createdBy) || null : null
+    }));
+
+    const recentPhonebook = recentPhonebookRaw.map((p: any) => ({
+      id: p.id,
+      name: `${p.name} (${p.phoneNumber})`,
+      createdAt: p.createdAt,
+      creator: p.createdBy ? creatorMap.get(p.createdBy) || null : null
+    }));
+
+    const mapUpdated = (rows: any[], extra?: (r: any) => Record<string, any>) =>
+      (rows || []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        status: r.status,
+        createdAt: r.updatedAt,
+        creator: (r.updatedBy ? creatorMap.get(r.updatedBy) : null) || (r.createdBy ? creatorMap.get(r.createdBy) : null) || null,
+        ...(extra ? extra(r) : {})
+      }));
+
+    const recentUpdatedProjects = mapUpdated(recentUpdatedProjectsRaw);
+    const recentUpdatedClients = mapUpdated(recentUpdatedClientsRaw);
+    const recentUpdatedUsers = mapUpdated(recentUpdatedUsersRaw);
+    const recentUpdatedClientReports = mapUpdated(recentUpdatedClientReportsRaw, (r) => ({
+      clientName: r.clientName || 'N/A'
+    }));
+    const recentUpdatedClientUsers = mapUpdated(recentUpdatedClientUsersRaw);
+    const recentUpdatedTasks = mapUpdated(recentUpdatedTasksRaw);
+    const recentUpdatedNotices = mapUpdated(recentUpdatedNoticesRaw);
+    const recentUpdatedPhonebook = mapUpdated(recentUpdatedPhonebookRaw, (p) => ({
+      name: `${p.name} (${p.phoneNumber})`
+    }));
+
     const recentActivity = [
       ...recentProjects.map((p) => ({
         id: p.id,
@@ -624,6 +824,16 @@ export class DashboardService {
         clientUsers: recentClientUsersCount,
         tasks: recentTasksCount,
         notices: recentNoticesCount,
+        phonebook: phonebookCounts.recent,
+        // Weekly counts (last 7 days - shown as sidebar badge when > 0)
+        weeklyProjects: projectCounts.weekly,
+        weeklyClients: clientCounts.weekly,
+        weeklyUsers: userCounts.weekly,
+        weeklyClientReports: reportCounts.weekly,
+        weeklyClientUsers: clientUserCounts.weekly,
+        weeklyTasks: taskCounts.weekly,
+        weeklyNotices: noticeCounts.weekly,
+        weeklyPhonebook: phonebookCounts.weekly,
         // Totals
         totalProjects: totalProjectsCount,
         totalClients: totalClientsCount,
@@ -631,13 +841,25 @@ export class DashboardService {
         totalClientReports: totalClientReportsCount,
         totalClientUsers: totalClientUsersCount,
         totalTasks: totalPendingTasksCount,
-        totalNotices: totalNoticesCount
+        totalNotices: totalNoticesCount,
+        totalPhonebook: phonebookCounts.total
       },
       recentProjects,
       recentClients,
       recentUsers,
       recentClientReports,
       recentClientUsers,
+      recentTasks,
+      recentNotices,
+      recentPhonebook,
+      recentUpdatedProjects,
+      recentUpdatedClients,
+      recentUpdatedUsers,
+      recentUpdatedClientReports,
+      recentUpdatedClientUsers,
+      recentUpdatedTasks,
+      recentUpdatedNotices,
+      recentUpdatedPhonebook,
       recentActivity
     };
   }

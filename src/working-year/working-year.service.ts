@@ -365,9 +365,10 @@ export class WorkingYearService implements OnModuleInit {
           }
 
           if (matchedWY) {
-            proj.workingYear = matchedWY;
-            proj.workingYearId = matchedWY.id;
-            await this.projectRepository.save(proj);
+            await this.projectRepository.query(
+              `UPDATE project SET "workingYearId" = $1 WHERE id = $2`,
+              [matchedWY.id, proj.id]
+            );
           }
         }
       }
@@ -390,8 +391,11 @@ export class WorkingYearService implements OnModuleInit {
             .getOne();
 
           if (earliestWorklog) {
-            p.firstWorklogAt = earliestWorklog.startTime || earliestWorklog.createdAt;
-            await this.projectRepository.save(p);
+            const firstWlDate = earliestWorklog.startTime || earliestWorklog.createdAt;
+            await this.projectRepository.query(
+              `UPDATE project SET "firstWorklogAt" = $1 WHERE id = $2`,
+              [firstWlDate, p.id]
+            );
           }
         }
       }
@@ -436,17 +440,15 @@ export class WorkingYearService implements OnModuleInit {
             compDate = cp.endingDate ? new Date(cp.endingDate) : (cp.createdAt ? new Date(cp.createdAt) : new Date());
           }
 
-          cp.completedAt = compDate;
           const matchedWY = workingYears.find((wy) => {
             const s = new Date(wy.startDateAD);
             const e = new Date(wy.endDateAD);
             return compDate >= s && compDate <= e;
           });
-          if (matchedWY) {
-            cp.completedInWorkingYear = matchedWY;
-            cp.completedInWorkingYearId = matchedWY.id;
-          }
-          await this.projectRepository.save(cp);
+          await this.projectRepository.query(
+            `UPDATE project SET "completedAt" = $1, "completedInWorkingYearId" = $2 WHERE id = $3`,
+            [compDate, matchedWY?.id || null, cp.id]
+          );
         }
       }
     } catch (e) {
