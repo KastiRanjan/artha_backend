@@ -292,8 +292,8 @@ export class DashboardService {
     if (isSuperAdmin) {
       projectCountsPromise = this.projectRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1 AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2 AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as weekly,
           COUNT(*) FILTER (WHERE status = 'active' AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
         FROM project`,
         [oneMonthAgo, oneWeekAgo, targetWY?.id || null]
@@ -301,8 +301,8 @@ export class DashboardService {
 
       clientCountsPromise = this.customerRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
           COUNT(*) FILTER (WHERE status = 'active') as total
         FROM customer`,
         [oneMonthAgo, oneWeekAgo]
@@ -310,8 +310,8 @@ export class DashboardService {
 
       userCountsPromise = this.userRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
           COUNT(*) FILTER (WHERE status = 'active') as total
         FROM "user"`,
         [oneMonthAgo, oneWeekAgo]
@@ -319,8 +319,8 @@ export class DashboardService {
 
       reportCountsPromise = this.clientReportRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
           COUNT(*) as total
         FROM client_report`,
         [oneMonthAgo, oneWeekAgo]
@@ -328,8 +328,8 @@ export class DashboardService {
 
       clientUserCountsPromise = this.clientUserRepository.query(
         `SELECT 
-          COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-          COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+          COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+          COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
           COUNT(*) as total
         FROM client_user`,
         [oneMonthAgo, oneWeekAgo]
@@ -339,8 +339,8 @@ export class DashboardService {
         ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.projectRepository.query(
             `SELECT 
-              COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-              COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+              COUNT(*) FILTER (WHERE "createdAt" >= $1 AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $2 AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as weekly,
               COUNT(*) FILTER (WHERE status = 'active' AND ($3::uuid IS NULL OR "workingYearId" = $3::uuid OR ("workingYearId" IS NOT NULL AND "completedAt" IS NULL))) as total
             FROM project
             WHERE id = ANY($4::uuid[])`,
@@ -351,8 +351,8 @@ export class DashboardService {
         ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.customerRepository.query(
             `SELECT 
-              COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-              COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
               COUNT(*) FILTER (WHERE status = 'active') as total
             FROM customer
             WHERE id = ANY($3::uuid[])`,
@@ -365,8 +365,8 @@ export class DashboardService {
         ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.clientReportRepository.query(
             `SELECT 
-              COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-              COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+              COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+              COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
               COUNT(*) as total
             FROM client_report
             WHERE "customerId" = ANY($3::uuid[])`,
@@ -377,8 +377,8 @@ export class DashboardService {
         ? Promise.resolve({ recent: 0, weekly: 0, total: 0 })
         : this.clientUserRepository.query(
             `SELECT 
-              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $1 OR cu."updatedAt" >= $1) as recent,
-              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $2 OR cu."updatedAt" >= $2) as weekly,
+              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $1) as recent,
+              COUNT(DISTINCT cu.id) FILTER (WHERE cu."createdAt" >= $2) as weekly,
               COUNT(DISTINCT cu.id) as total
             FROM client_user cu
             INNER JOIN client_user_customers cuc ON cuc."clientUserId" = cu.id
@@ -389,8 +389,8 @@ export class DashboardService {
 
     const taskCountsPromise = this.taskRepository.query(
       `SELECT 
-        COUNT(*) FILTER (WHERE t."createdAt" >= $1 OR t."updatedAt" >= $1) as recent,
-        COUNT(*) FILTER (WHERE t."createdAt" >= $2 OR t."updatedAt" >= $2) as weekly,
+        COUNT(*) FILTER (WHERE t."createdAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE t."createdAt" >= $2) as weekly,
         COUNT(*) FILTER (WHERE t.status != 'done') as pending
       FROM task t
       INNER JOIN task_user tu ON tu."taskId" = t.id
@@ -400,8 +400,8 @@ export class DashboardService {
 
     const noticeCountsPromise = this.noticeRepository.query(
       `SELECT 
-        COUNT(*) FILTER (WHERE "createdAt" >= $1 OR "updatedAt" >= $1) as recent,
-        COUNT(*) FILTER (WHERE "createdAt" >= $2 OR "updatedAt" >= $2) as weekly,
+        COUNT(*) FILTER (WHERE "createdAt" >= $1) as recent,
+        COUNT(*) FILTER (WHERE "createdAt" >= $2) as weekly,
         COUNT(*) as total
       FROM notice_board`,
       [oneMonthAgo, oneWeekAgo]
