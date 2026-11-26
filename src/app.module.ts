@@ -62,6 +62,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { WorkingYearModule } from './working-year/working-year.module';
 import { ClientGroupsModule } from './client-groups/client-groups.module';
 import { PhonebookModule } from './phonebook/phonebook.module';
+import { TrainingModule } from './training/training.module';
 // import { SocketTestGateway } from './socket-test.gateway';
 
 // const appConfig = config.get('app');
@@ -138,7 +139,8 @@ import { PhonebookModule } from './phonebook/phonebook.module';
   AuditLogModule,
   WorkingYearModule,
   ClientGroupsModule,
-  PhonebookModule
+  PhonebookModule,
+  TrainingModule
   ],
   providers: [
     {
